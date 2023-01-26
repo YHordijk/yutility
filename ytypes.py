@@ -7,7 +7,7 @@ from functools import wraps
 import warnings
 
 
-enabled: bool = False
+enabled: bool = True
 
 
 def check_hints(func):
@@ -133,16 +133,18 @@ class Matrix(GenericType):
         return True
 
 
-class Scalar(GenericType):
-    @classmethod
-    def check(cls, var_name, val):
-        if isinstance(val, np.ndarray):
-            if type(val[0].item()) not in [int, float]:
-                raise TypeHintError(cls, var_name, val)
-        else:
-            if type(val) not in [int, float]:
-                raise TypeHintError(cls, var_name, val)
-        return True
+
+# class Scalar(GenericType):
+    # @classmethod
+    # def check(cls, var_name, val):
+    #     if isinstance(val, np.ndarray):
+    #         if type(val[0].item()) not in [int, float]:
+    #             raise TypeHintError(cls, var_name, val)
+    #     else:
+    #         if type(val) not in [int, float]:
+    #             raise TypeHintError(cls, var_name, val)
+    #     return True
+
 
 
 class List(GenericType):
@@ -243,8 +245,11 @@ class Either(GenericType):
 
 class Any(GenericType):
     @classmethod
-    def check(self, var_name, val):
+    def check(cls, var_name, val):
         return True
+
+
+Scalar = Either(float, int)
 
 
 def _check(typ, key, val):
