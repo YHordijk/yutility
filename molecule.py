@@ -1,7 +1,7 @@
 import scm.plams as plams
 import json
 import numpy as np
-from ReactionRunner.utility import parse_string
+from yutility import parse_string
 
 
 def el2num(elements):
