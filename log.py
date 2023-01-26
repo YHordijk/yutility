@@ -25,9 +25,9 @@ emojis = {
     'question': '❔ ',
 }
 
-rarrow = '─🢖'
-larrow = '🢔─'
-lrarrow = rlarrow = '🢔─🢖'
+rarrow = '─>'
+larrow = '<─'
+lrarrow = rlarrow = '<─>'
 angstrom = 'Å' 
 
 
@@ -76,19 +76,19 @@ def arrow(txt, tags=['split']):
         elif tag == 'startinv':
             s += '┷ '
         elif tag == 'end':
-            s += '╰─🢖 '
+            s += '╰─> '
         elif tag == 'straight':
             s += '│   '
         elif tag == 'split':
-            s += '├─🢖 '
+            s += '├─> '
         elif tag == 'skip':
             s += '    '
         elif tag == 'vert':
             s += '────'
         elif tag == 'endvert':
-            s += '╰──🢖 '
+            s += '╰──> '
         elif tag == 'splitvert':
-            s += '├──🢖 '
+            s += '├──> '
     log(s + txt)
 
 
