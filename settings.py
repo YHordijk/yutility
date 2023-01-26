@@ -134,6 +134,16 @@ def distance_constraint(*args, sett=None, preset='BLYP-D3(BJ)/TZ2P/Good'):
     return sett
 
 
+def frozen_atoms(idxs, sett=None, preset='BLYP-D3(BJ)/TZ2P/Good'):
+    for idx in idxs:
+        if type(sett.input.ams.Constraints.Atom) is list:
+            sett.input.ams.Constraints.Atom.append(str(idx))
+        else:
+            sett.input.ams.Constraints.Atom = [str(idx)]
+    return sett
+
+
+
 def charge(ch=0, sett=None, preset='BLYP-D3(BJ)/TZ2P/Good'):
     if sett is None:
         sett = default(preset)
