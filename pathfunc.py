@@ -1,6 +1,8 @@
 import os
 from yutility import log
 
+j = os.path.join
+
 
 def get_server_path(path):
     server = j('/scistor', 'tc', 'yhk800', 'PhD', 'ychem')
