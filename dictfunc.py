@@ -76,6 +76,22 @@ def invert(dic):
     return {val: key for key, val in dic.items()}
 
 
+def key_from_value(value, dic):
+    for key, val in dic.items():
+        if val == value:
+            return key
+
+
+def remove_false_keys(dic):
+    to_remove = []
+    for key, value in dic.items():
+        if not value:
+            to_remove.append(key)
+    for key in to_remove:
+        del(dic[key])
+    return dic
+
+
 if __name__ == '__main__':
     d = {'name': 'transitionstate',
  'reactants': {'catalyst': 'catalyst',
