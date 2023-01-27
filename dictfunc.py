@@ -92,6 +92,11 @@ def remove_false_keys(dic):
     return dic
 
 
+def merged_dict(a, b):
+    a.update(b)
+    return a
+
+
 if __name__ == '__main__':
     d = {'name': 'transitionstate',
  'reactants': {'catalyst': 'catalyst',
