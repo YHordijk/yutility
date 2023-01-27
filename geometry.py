@@ -56,6 +56,13 @@ def center(mol, atom):
     mol.translate(-center_coords)
 
 
+def random_point_on_sphere(radius, center=np.array([0, 0, 0])):
+    x = np.random.randn(3)
+    x = x/np.linalg.norm(x) * radius
+    return x
+
+
+
 def get_rotation_matrix(x=None, y=None, z=None):
     R = np.eye(3)
 
@@ -121,3 +128,7 @@ def align_molecule(molecule, origin=None):
                 molecule,
                 'center',
                 origin=origin)[0])
+
+
+if __name__ == '__main__':
+    print(random_point_on_sphere(5))
