@@ -7,7 +7,7 @@ from functools import wraps
 import warnings
 
 
-enabled: bool = True
+enabled: bool = False
 
 
 def check_hints(func):
