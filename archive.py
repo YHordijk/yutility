@@ -1,8 +1,6 @@
 import tarfile
 import os
 from ychem.utility import paths
-from yutility import ensure_list
-import shutil
 
 j = os.path.join
 
