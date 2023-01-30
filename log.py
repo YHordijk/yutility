@@ -92,7 +92,7 @@ def arrow(txt, tags=['split']):
     log(s + txt)
 
 
-def print_list(items, sep='   ', header=None, return_str=False):
+def print_list(items, sep='   ', header=None, return_str=False, hline=[]):
     if return_str:
         returns = ''
     # if two-dimensional
@@ -102,6 +102,8 @@ def print_list(items, sep='   ', header=None, return_str=False):
             sep_lens = [len(s) for s in sep]
         else:
             sep_lens = [len(sep) for _ in range(len(items[0]))]
+
+        hline = [h % len(items[0]) - 1 for h in hline]
 
         if header is not None:
             header_lens = [len(head) - head.count('⠀')//2 for head in header]
@@ -131,10 +133,15 @@ def print_list(items, sep='   ', header=None, return_str=False):
 
             if return_str:
                 returns += line + '\n'
+                if col in hline:
+                    returns += '─' * (sum(column_lens) + sum(sep_lens))
             else:
                 log(line)
+                if col in hline:
+                    log('─' * (sum(column_lens) + sum(sep_lens)))
     else:
-        [log(str(item)) for item in items]
+        for i, item in enumerate(items):
+            log(str(item))
 
     if return_str:
         return returns
