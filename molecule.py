@@ -1,7 +1,7 @@
 import scm.plams as plams
 import json
 import numpy as np
-from yutility import parse_string
+from yutility import parse
 
 
 def el2num(elements):
@@ -83,7 +83,7 @@ def load(path):
 
         for flag, val in mol_identifier_data.items():
             if len(val) == 1:
-                mol_identifier_data[flag] = parse_string.parse_str(val[0])
+                mol_identifier_data[flag] = parse.parse_str(val[0])
         mol.identifier_data = mol_identifier_data
 
         data['natoms'] = natoms
