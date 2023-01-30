@@ -12,7 +12,6 @@ exec_start = perf_counter()
 enabled: bool = True
 
 
-
 class Timer:
     def __init__(self, name=None):
         self.__qualname__ = name
@@ -44,18 +43,19 @@ def time(func):
 
 
 def print_timings():
-    funcs = [func if not hasattr(func, '__qualname__') else func.__qualname__ for func in times.keys()]
+    funcs = [func if not hasattr(func, '__qualname__') else func.__qualname__ for func in times.keys()] + ['TOTAL']
     ncalls = [str(time['calls']) for time in times.values()]
-    means = ['None' if time['calls'] == 0 else f"{np.mean(time['timings']): .3f}" for time in times.values()]
-    stds = ['None' if time['calls'] == 0 else f"{np.std(time['timings']): .3f}" for time in times.values()]
+    ncalls = ncalls + [str(sum(int(n) for n in ncalls))]
+    means = ['None' if time['calls'] == 0 else f"{np.mean(time['timings']): .3f}" for time in times.values()] + ['']
+    stds = ['None' if time['calls'] == 0 else f"{np.std(time['timings']): .3f}" for time in times.values()] + ['']
 
     total_time = [sum(time['timings']) for time in times.values()]
     total_total_time = perf_counter() - exec_start
-    rel_time = [f'{tt: .3f} ({tt/total_total_time:.1%})' for tt in total_time]
+    rel_time = [f'{tt: .3f} ({tt/total_total_time:.1%})' for tt in total_time] + [f'{total_total_time: .3f} (100%)']
 
     header = ['Function', 'Calls', 'Mean (s)', 'Std. dev. (s)', 'Time Spent (s)']
     data = [x for x in zip(funcs, ncalls, means, stds, rel_time)]
-    log.print_list(data, header=header)
+    log.print_list(data, header=header, hline=[-2])
 
 
 if __name__ == '__main__':
@@ -71,7 +71,6 @@ if __name__ == '__main__':
 
     [test() for _ in range(3)]
     [test2() for _ in range(5)]
-
 
     for i in range(100):
         with Timer('inner'):
