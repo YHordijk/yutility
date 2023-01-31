@@ -8,7 +8,7 @@ from math import floor, ceil
 
 logfile = sys.stdout
 tab_level = 0
-max_width = -1
+max_width = 200
 print_date = True
 
 
@@ -61,8 +61,8 @@ def log(message='', end='\n'):
     message = str(message)
     message = message.split('\n')
     for m in message:
-        if maxwidth > 0 and m > maxwidth:
-            m = m[:maxwidth - 4] + ' ...' 
+        if max_width > 0 and len(m) > max_width:
+            m = m[:max_width - 4] + ' ...' 
         if print_date:
             print(time_stamp() + '\t'*tab_level + m, file=logfile, end=end)
         else:
