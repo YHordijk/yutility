@@ -92,7 +92,7 @@ def arrow(txt, tags=['split']):
     log(s + txt)
 
 
-def print_list(items, sep='   ', header=None, return_str=False, hline=[]):
+def print_list(items, sep='   ', header=None, return_str=False, hline=[], maxwidth=200):
     if return_str:
         returns = ''
     # if two-dimensional
@@ -114,11 +114,18 @@ def print_list(items, sep='   ', header=None, return_str=False, hline=[]):
                 if i < len(header) - 1:
                     line += ' '*sep_lens[i]
             if return_str:
-                returns += line + '\n'
-                returns += '─' * (sum(column_lens) + sum(sep_lens)) + '\n'
+                if len(line) > maxwidth:
+                    returns += line[:maxwidth-4] + ' ...' + '\n'
+                else:
+                    returns += line + '\n'
+                
+                returns += '─' * min((sum(column_lens) + sum(sep_lens)), maxwidth) + '\n'
             else:
-                log(line)
-                log('─' * (sum(column_lens) + sum(sep_lens)))
+                if len(line) > maxwidth:
+                    log(line[:maxwidth-4] + ' ...')
+                else:
+                    log(line)
+                log('─' * min((sum(column_lens) + sum(sep_lens)), maxwidth))
 
         for col, item in enumerate(items):
             line = ''
@@ -132,13 +139,19 @@ def print_list(items, sep='   ', header=None, return_str=False, hline=[]):
                     line += s
 
             if return_str:
-                returns += line + '\n'
+                if len(line) > maxwidth:
+                    returns += line[:maxwidth-4] + ' ...' + '\n'
+                else:
+                    returns += line + '\n'
                 if col in hline:
-                    returns += '─' * (sum(column_lens) + sum(sep_lens))
+                    returns += '─' * min((sum(column_lens) + sum(sep_lens)), maxwidth) + '\n'
             else:
-                log(line)
+                if len(line) > maxwidth:
+                    log(line[:maxwidth-4] + ' ...')
+                else:
+                    log(line)
                 if col in hline:
-                    log('─' * (sum(column_lens) + sum(sep_lens)))
+                    log('─' * min((sum(column_lens) + sum(sep_lens)), maxwidth))
     else:
         for i, item in enumerate(items):
             log(str(item))
