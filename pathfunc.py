@@ -4,7 +4,7 @@ from yutility import log
 j = os.path.join
 
 
-def get_server_path(path):
+def get_server_path(path, root='~'):
     server = j('/scistor', 'tc', 'yhk800', 'PhD', 'ychem')
     rel = os.path.relpath(path, base)
     return j(server, rel).replace('\\', r'/')
