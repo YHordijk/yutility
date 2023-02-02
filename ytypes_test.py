@@ -1,6 +1,10 @@
+import ytypes
 from ytypes import Vector, check_hints, Matrix, Scalar, List, Either, Any, Tuple, TypeHintError
 import unittest
 import numpy as np
+
+
+ytypes.enabled = True
 
 
 class TestClass:
