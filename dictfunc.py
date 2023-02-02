@@ -99,20 +99,20 @@ def merged_dict(a, b):
 
 if __name__ == '__main__':
     d = {'name': 'transitionstate',
- 'reactants': {'catalyst': 'catalyst',
-               'radical': 'methyl',
-               'substrate': 'acrolein_E'},
- 'reaction': 'Radical Addition',
- 'reaction_specific': {},
- 'settings_preset': 'BLYP-D3(BJ)/TZ2P/Good',
- 'solvent': 'vacuum',
- 'substituents': {'catalyst': {'Rcat': 'I2'},
-                  'radical': {},
-                  'substrate': {'R1': 'pyrrolidine',
-                                'R2': 'm-HOPh',
-                                'R3': 'H',
-                                'R4': 'H',
-                                'Rch': 'O'}}}
+         'reactants': {'catalyst': 'catalyst',
+                       'radical': 'methyl',
+                       'substrate': 'acrolein_E'},
+         'reaction': 'Radical Addition',
+         'reaction_specific': {},
+         'settings_preset': 'BLYP-D3(BJ)/TZ2P/Good',
+         'solvent': 'vacuum',
+         'substituents': {'catalyst': {'Rcat': 'I2'},
+                          'radical': {},
+                          'substrate': {'R1': 'pyrrolidine',
+                                        'R2': 'm-HOPh',
+                                        'R3': 'H',
+                                        'R4': 'H',
+                                        'Rch': 'O'}}}
     lst = dict_to_list(d)
     print(d)
     print(list_to_dict(lst))
