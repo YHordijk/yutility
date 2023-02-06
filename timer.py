@@ -55,7 +55,7 @@ def print_timings():
 
     header = ['Function', 'Calls', 'Mean (s)', 'Std. dev. (s)', 'Time Spent (s)']
     data = [x for x in zip(funcs, ncalls, means, stds, rel_time)]
-    log.print_list(data, header=header, hline=[-2])
+    log.print_list(data, header=header, hline=[-1])
 
 
 if __name__ == '__main__':
