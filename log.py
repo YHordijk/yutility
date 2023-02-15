@@ -61,13 +61,16 @@ def log(message='', /, end='\n'):
     message = str(message)
     message = message.split('\n')
     for m in message:
+        # print(m)
+        # m = m.encode('utf-8')
+        # print(m)
         if max_width > 0 and len(m) > max_width:
             m = m[:max_width - 4] + ' ...' 
         if print_date:
-            print(time_stamp() + '\t'*tab_level + m, file=logfile, end=end)
+            print(time_stamp() + '\t'*tab_level + m, file=logfile, end=end, flush=True)
         else:
-            print('\t'*tab_level + m, file=logfile, end=end)
-    logfile.flush()
+            print('\t'*tab_level + m, file=logfile, end=end, flush=True)
+    # logfile.flush()
 
 
 arrow_prefix = []
@@ -182,8 +185,9 @@ def loading_bar(i, N, Nsegments=50, Nsteps=10, start_char='├', end_char='│',
 
 
 def print_matrix(a, xlabels=[], ylabels=[], round_edge=True, dither=False, empty_where=None):
+    a = np.array(a)
     if empty_where is None:
-        empty_where = np.ones_like(a)
+        empty_where = np.zeros_like(a)
     if round_edge:
         corners = ['╭', '╮', '╯', '╰']
     else:
@@ -216,10 +220,10 @@ def print_matrix(a, xlabels=[], ylabels=[], round_edge=True, dither=False, empty
 
             if not empty_where[i, j]:
                 if dither:
-                    d = dither_chars[int(a[i, j]/a.max() * (len(dither_chars))-1)]
+                    d = dither_chars[int(y/a.max() * (len(dither_chars))-1)]
                     row2 += f' {d} │'
                 else:
-                    row2 += f' {a[i,j]} │'
+                    row2 += f' {y} │'
             else:
                 row2 += '   │'
 
