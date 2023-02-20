@@ -316,10 +316,11 @@ def boxed_text(txt, round_edge=True, align='left', double_edge=False, title=None
 
 
 if __name__ == '__main__':
-    boxed_text('testing, 1, 2, 3, 4, 5, 6, 7, 8\nsecond row, 1, 2 3, 4, 5, 6\n...\n...\n\n...\n...\nLast row here', title='ReactionRunner')
+    boxed_text('testing, 1, 2, 3, 4, 5, 6, 7, 8\nsecond row, 1, 2, 3, 4, 5, 6\n...\n...\n\n...\n...\nLast row here', title='ReactionRunner')
     mat = np.arange(3 * 3).reshape(3, 3)
     print_matrix(mat, xlabels=['a', 'ab', 'abc'], ylabels=['a', 'ab', 'abc'])
     mat = np.arange(3 * 4).reshape(3, 4)
+    mat[0, 0] = 41203
     print_matrix(mat, xlabels=['a', 'ab', 'abc', 'abcd'], ylabels=['a', 'ab', 'abc'], round_edge=False)
     X, Y = np.meshgrid(np.linspace(-10, 10, 40), np.linspace(-10, 10, 20))
     mat = np.exp(-(X**2 + Y**2)/100)
