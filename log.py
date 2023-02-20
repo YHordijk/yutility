@@ -61,20 +61,18 @@ def log(message='', /, end='\n'):
     message = str(message)
     message = message.split('\n')
     for m in message:
-        # print(m)
-        # m = m.encode('utf-8')
-        # print(m)
         if max_width > 0 and len(m) > max_width:
             m = m[:max_width - 4] + ' ...' 
+
+        m = '\t'*tab_level + m
         if print_date:
-            print(time_stamp() + '\t'*tab_level + m, file=logfile, end=end, flush=True)
-        else:
-            print('\t'*tab_level + m, file=logfile, end=end, flush=True)
-    # logfile.flush()
+            m = time_stamp() + m
+
+        print(m, file=logfile, end=end, flush=True)
 
 
 arrow_prefix = []
-def arrow(txt, tags=['split']):
+def arrow(txt='', tags=['straight']):
     s = ''
     for tag in arrow_prefix + tags:
         if tag == 'start':
@@ -221,48 +219,50 @@ def print_matrix(a, xlabels=[], ylabels=[], round_edge=True, dither=False, empty
 
     dither_chars = [' ', '░', '▒', '▓', '█']
 
-    if xlabels == []:
-        ylabel_max_len = 0
-    else:
-        ylabel_max_len = max(len(yl) for yl in ylabels) + 1
+    cell_widths = [max(len(str(x)) for x in a[:, i]) for i in range(a.shape[1])]
+
     rows = []
     for i, x in enumerate(a):
         if i == 0:
-            row1 = ' '*ylabel_max_len + corners[0]
+            row1 = corners[0]
         if ylabels == []:
-            row2 = ' '*ylabel_max_len + '│'
+            row2 = '│'
         else:
-            row2 = ylabels[i].rjust(ylabel_max_len) + '│'
+            row2 = '│'
         if i == a.shape[0]-1:
-            row3 = ' '*ylabel_max_len + corners[3]
+            row3 = corners[3]
         else:
-            row3 = ' '*ylabel_max_len + '├'
+            row3 = '├'
 
         for j, y in enumerate(x):
+            cw = cell_widths[j]
             if j == (a.shape[1]-1) and i == 0:
-                row1 += '───' + corners[1]
+                row1 += '─'*cw + '──' + corners[1]
             elif i == 0:
-                row1 += '───┬'
+                row1 += '─'*cw + '──┬'
 
             if not empty_where[i, j]:
                 if dither:
                     d = dither_chars[int(y/a.max() * (len(dither_chars))-1)]
-                    row2 += f' {d} │'
+                    row2 += f' {d.center(cw)} │'
                 else:
-                    row2 += f' {y} │'
+                    row2 += f' {str(y).center(cw)} │'
             else:
-                row2 += '   │'
+                row2 += ' '*cw + '  │'
+
+            if j == (a.shape[1]-1) and ylabels != []:
+                row2 += ' '*cw + ' ' + ylabels[i]
 
             if i == a.shape[0]-1:
                 if j == (a.shape[1]-1):
-                    row3 += '───' + corners[2]
+                    row3 += '─'*cw + '──' + corners[2]
                 else:
-                    row3 += '───┴'
+                    row3 += '─'*cw + '──┴'
             else:
                 if j == (a.shape[1]-1):
-                    row3 += '───┤'
+                    row3 += '─'*cw + '──┤'
                 else:
-                    row3 += '───┼'
+                    row3 += '─'*cw + '──┼'
 
         if i == 0:
             rows.append(row1)
