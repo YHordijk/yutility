@@ -184,6 +184,32 @@ def loading_bar(i, N, Nsegments=50, Nsteps=10, start_char='├', end_char='│',
             loading_bar_start_time = 0
 
 
+def print_image(a, draw_edge=True, round_edge=True):
+    dither_chars = [' ', '░', '▒', '▓', '█']
+    a = (a - a.min())/(a.max() - a.min()) * (len(dither_chars)-1)
+    a = a.astype(int)
+    width = a.shape[1]
+    if draw_edge:
+        s = '╭' if round_edge else '┌'
+        s += '─' * width
+        s += '╮' if round_edge else '┐'
+        log(s)
+
+    for row in a:
+        s = '│' if draw_edge else ''
+        for y in row:
+            d = dither_chars[y]
+            s += d
+        s += '│' if draw_edge else ''
+        log(s)
+
+    if draw_edge:
+        s = '╰' if round_edge else '└'
+        s += '─' * width
+        s += '╯' if round_edge else '┘'
+        log(s)
+
+
 def print_matrix(a, xlabels=[], ylabels=[], round_edge=True, dither=False, empty_where=None):
     a = np.array(a)
     if empty_where is None:
