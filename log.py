@@ -275,10 +275,10 @@ def print_matrix(a, xlabels=[], ylabels=[], round_edge=True, dither=False, empty
 
     if xlabels is not None:
         for yl in itertools.zip_longest(*xlabels, fillvalue=' '):
-            log(' '*ylabel_max_len + ''.join([f'  {l} ' for l in yl]))
+            log(''.join([' '*cell_widths[j] + f' {l} ' for j, l in enumerate(yl)]))
 
 
-def boxed_text(txt, round_edge=True, align='left', double_edge=True, title=None):
+def boxed_text(txt, round_edge=True, align='left', double_edge=False, title=None, title_align='left'):
     straights = ['│', '─']
     if round_edge and not double_edge:
         corners = ['╭', '╮', '╯', '╰']
@@ -291,10 +291,17 @@ def boxed_text(txt, round_edge=True, align='left', double_edge=True, title=None)
     txts = txt.split('\n')
     maxlen = max(len(txt) for txt in txts)
 
+    # build first row
     if title is not None:
-        s = corners[0] + straights[1]*floor((maxlen+2 - len(title))/2-1) + ' ' + title + ' ' + straights[1]*ceil((maxlen+2 - len(title))/2-1) + corners[1] + '\n'
+        if title_align == 'left':
+            s = corners[0] + (' ' + title + ' ').ljust(maxlen+2, straights[1]) + corners[1] + '\n'
+        elif title_align == 'right':
+            s = corners[0] + (' ' + title + ' ').rjust(maxlen+2, straights[1]) + corners[1] + '\n'
+        else:
+            s = corners[0] + (' ' + title + ' ').center(maxlen+2, straights[1]) + corners[1] + '\n'
     else:
         s = corners[0] + straights[1]*(maxlen+2) + corners[1] + '\n'
+    # build main body of box
     for txt in txts:
         if align == 'left':
             s += f'{straights[0]} ' + txt.ljust(maxlen) + f' {straights[0]}\n'
@@ -302,6 +309,37 @@ def boxed_text(txt, round_edge=True, align='left', double_edge=True, title=None)
             s += f'{straights[0]} ' + txt.rjust(maxlen) + f' {straights[0]}\n'
         if align == 'center':
             s += f'{straights[0]} ' + txt.center(maxlen) + f' {straights[0]}\n'
+    # build final row
     s += corners[3] + straights[1]*(maxlen+2) + corners[2] + '\n'
 
     log(s)
+
+
+if __name__ == '__main__':
+    boxed_text('testing, 1, 2, 3, 4, 5, 6, 7, 8\nsecond row, 1, 2 3, 4, 5, 6\n...\n...\n\n...\n...\nLast row here', title='ReactionRunner')
+    mat = np.arange(3 * 3).reshape(3, 3)
+    print_matrix(mat, xlabels=['a', 'ab', 'abc'], ylabels=['a', 'ab', 'abc'])
+    mat = np.arange(3 * 4).reshape(3, 4)
+    print_matrix(mat, xlabels=['a', 'ab', 'abc', 'abcd'], ylabels=['a', 'ab', 'abc'], round_edge=False)
+    X, Y = np.meshgrid(np.linspace(-10, 10, 40), np.linspace(-10, 10, 20))
+    mat = np.exp(-(X**2 + Y**2)/100)
+    print_image(mat)
+    mat = np.cos(X/2) * np.sin(Y/2)
+    print_image(mat, draw_edge=False)
+
+    log()
+    arrow('Start', ['start'])
+    arrow()
+    arrow('First step', ['split'])
+    arrow('First substep of first step', ['straight', 'split'])
+    arrow('Second substep of first step', ['straight', 'split'])
+    arrow('Third and final substep of first step', ['straight', 'end'])
+    arrow()
+    arrow('Second step', ['split'])
+    arrow('Substep of second step', ['straight', 'end'])
+    arrow('Substep of substep of second step', ['straight', 'skip', 'end'])
+    arrow('Substep of substep of substep of second step', ['straight', 'skip', 'skip', 'end'])
+    arrow()
+    arrow('Final step', ['split'])
+    arrow()
+    arrow('The end', ['startinv'])
