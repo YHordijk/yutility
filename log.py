@@ -275,7 +275,7 @@ def print_matrix(a, xlabels=[], ylabels=[], round_edge=True, dither=False, empty
 
     if xlabels is not None:
         for yl in itertools.zip_longest(*xlabels, fillvalue=' '):
-            log(''.join([' '*cell_widths[j] + f' {l} ' for j, l in enumerate(yl)]))
+            log(' ' + ''.join([f' {l} '.center(cell_widths[j]+3) for j, l in enumerate(yl)]))
 
 
 def boxed_text(txt, round_edge=True, align='left', double_edge=False, title=None, title_align='left'):
@@ -312,7 +312,15 @@ def boxed_text(txt, round_edge=True, align='left', double_edge=False, title=None
     # build final row
     s += corners[3] + straights[1]*(maxlen+2) + corners[2] + '\n'
 
-    log(s)
+    log(s.removesuffix('\n'))
+
+
+def info(txt):
+    boxed_text(txt, round_edge=True, double_edge=False, title='Info')
+
+
+def warn(txt):
+    boxed_text(txt, double_edge=True, title='Warning', title_align='center')
 
 
 if __name__ == '__main__':
@@ -344,3 +352,6 @@ if __name__ == '__main__':
     arrow('Final step', ['split'])
     arrow()
     arrow('The end', ['startinv'])
+
+    info('This is important info')
+    warn('This is an important warning!')
