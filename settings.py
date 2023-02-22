@@ -13,6 +13,7 @@ def default(preset='BLYP-D3(BJ)/TZ2P/Good'):
     if preset == 'Cheap':
         sett.input.adf.Relativity.Level = 'Scalar'
         sett.input.adf.Basis.Core = 'None'
+        sett.input.adf.symmetry = 'NOSYM'
         return sett
     if preset == 'DFTB':
         sett.input.ams.task = 'SinglePoint'
@@ -25,6 +26,7 @@ def default(preset='BLYP-D3(BJ)/TZ2P/Good'):
     functional, basis_size, numerical_quality = decode
     sett.input.adf.basis.Type = basis_size
     sett.input.adf.basis.Core = 'None'
+    sett.input.adf.symmetry = 'NOSYM'
 
     sett.input.adf.Relativity.Level = 'Scalar'
 
