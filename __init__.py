@@ -19,3 +19,27 @@ def download_from_github(file, out, repo=None, token=None):
     r = requests.get(url, allow_redirects=True)
     with open(out, 'wb') as outf:
         outf.write(r.content)
+
+
+def dowhile(main_func, condition_func):
+    main_func()
+    while condition_func():
+        main_func()
+
+
+if __name__ == '__main__':
+    x = 10
+
+
+    def f():
+        global x
+        x *= 2
+
+
+    def cond():
+        global x
+        return x*2 <= 20480*2*2
+
+
+    dowhile(f, cond)
+    print(x)
