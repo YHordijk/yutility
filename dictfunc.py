@@ -1,3 +1,9 @@
+def remove_empty(a: dict):
+    lst = dict_to_list(a)
+    lst = [branch for branch in lst if branch[-1] is not None]
+    return list_to_dict(lst)
+
+
 def dict_match(a, b):
     matched_keys = [key for key in a.keys() if key in b.keys()]
     match = True
