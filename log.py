@@ -11,20 +11,28 @@ tab_level = 0
 max_width = 200
 print_date = True
 
+class Emojis:
+    wait = '🕒'
+    good = '✅'
+    cancel = '🛑'
+    sleep = '💤'
+    fail = '❌'
+    send = '📤'
+    receive = '📥'
+    empty = '⠀⠀'
+    finish = '🏁'
+    warning = '⚠️'
+    question = '❔ '
+    rarrow = '─>'
+    larrow = '<─'
+    lrarrow = rlarrow = '<─>'
+    angstrom = 'Å' 
 
-emojis = {
-    'wait':     '🕒', 
-    'good':     '✅', 
-    'cancel':   '🛑', 
-    'sleep':    '💤',
-    'fail':     '❌',
-    'send':     '📤',
-    'receive':  '📥',
-    'empty':    '⠀⠀',
-    'finish':   '🏁',
-    'warning':  '⚠️',
-    'question': '❔ ',
-}
+    def __getitem__(cls, key):
+        return getattr(cls, key)
+
+
+emojis = Emojis()
 
 rarrow = '─>'
 larrow = '<─'
@@ -335,7 +343,6 @@ if __name__ == '__main__':
     print_image(mat)
     mat = np.cos(X/2) * np.sin(Y/2)
     print_image(mat, draw_edge=False)
-
     log()
     arrow('Start', ['start'])
     arrow()
@@ -351,7 +358,7 @@ if __name__ == '__main__':
     arrow()
     arrow('Final step', ['split'])
     arrow()
-    arrow('The end', ['startinv'])
+    arrow(f'{emojis.good} The end', ['startinv'])
 
     info('This is important info')
     warn('This is an important warning!')
