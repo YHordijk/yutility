@@ -74,3 +74,18 @@ def print_paths(pathlist):
         l.append(f'{v:.1f} {u}')
         ls.append(l)
     log.print_list(ls, header=header)
+
+
+def split_all(path):
+    parts = []
+    while True:
+        a, b = os.path.split(path)
+        if not a or not b:
+            return parts[::-1]
+        parts.append(b)
+        path = a
+
+
+if __name__ == '__main__':
+    p = '/Users/yumanhordijk/PhD/ychem/calculations'
+    print(split_all(p))
