@@ -59,6 +59,13 @@ def get_path_versions(path):
     return ret
 
 
+def next_path_version(path):
+    i = 1
+    while os.path.exists(path + [f'.{str(i).zfill(3)}', ''][i == 1]):
+        i += 1
+    return path + [f'.{str(i).zfill(3)}', ''][i == 1]
+
+
 def print_paths(pathlist):
     from yutility import log, units
     header = [log.emojis['empty'], 'Path', 'Size']
@@ -89,3 +96,5 @@ def split_all(path):
 if __name__ == '__main__':
     p = '/Users/yumanhordijk/PhD/ychem/calculations'
     print(split_all(p))
+
+    print(next_path_version(p))
