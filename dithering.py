@@ -80,9 +80,10 @@ def dither_braille(array, size=(10, 10), thresh=0.5):
     [print(c) for c in cs]
 
 
-# inp = r"Z:\Downloads\IMG-20220813-WA0007.jpg"
-inp = '/Users/yumanhordijk/PhD/ychem/utility/Sxazg5f.png'
-img = np.array(Image.open(inp).convert('L'))
+if __name__ == '__main__':
+    # inp = r"Z:\Downloads\IMG-20220813-WA0007.jpg"
+    inp = '/Users/yumanhordijk/PhD/ychem/utility/Sxazg5f.png'
+    img = np.array(Image.open(inp).convert('L'))
 
-dither_text(img, size=(120, 20))
-dither_braille(img, size=(50, 200))
+    dither_text(img, size=(120, 20))
+    dither_braille(img, size=(50, 200))
