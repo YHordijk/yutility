@@ -72,6 +72,14 @@ def common_dict(dicts):
     return _d
 
 
+def union(dicts):
+    lsts = [dict_to_list(dic) for dic in dicts]
+    print(lsts)
+
+def intersection(dicts):
+    ...
+
+
 def get_inverse(key, dic):
     keys, values = list(dic.keys()), list(dic.values())
     idx = values.index(key)
