@@ -73,7 +73,7 @@ def common_dict(dicts):
 
 
 def union(*dicts):
-    sets = [[set(lst) for lst in dict_to_list(dic)] for dic in dicts]
+    sets = [set([tuple(lst) for lst in dict_to_list(dic)]) for dic in dicts]
     ret = set()
     for set_ in sets:
         ret = ret.union(set_)
@@ -81,7 +81,7 @@ def union(*dicts):
 
 
 def intersection(*dicts):
-    sets = [[set(lst) for lst in dict_to_list(dic)] for dic in dicts]
+    sets = [set([tuple(lst) for lst in dict_to_list(dic)]) for dic in dicts]
     ret = sets[0]
     for set_ in sets:
         ret = ret.intersection(set_)
