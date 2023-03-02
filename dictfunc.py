@@ -72,12 +72,20 @@ def common_dict(dicts):
     return _d
 
 
-def union(dicts):
-    lsts = [dict_to_list(dic) for dic in dicts]
-    print(lsts)
+def union(*dicts):
+    sets = [set([tuple(lst) for lst in dict_to_list(dic)]) for dic in dicts]
+    ret = set()
+    for set_ in sets:
+        ret = ret.union(set_)
+    return list_to_dict(list(ret))
 
-def intersection(dicts):
-    ...
+
+def intersection(*dicts):
+    sets = [set([tuple(lst) for lst in dict_to_list(dic)]) for dic in dicts]
+    ret = sets[0]
+    for set_ in sets:
+        ret = ret.intersection(set_)
+    return list_to_dict(list(ret))
 
 
 def get_inverse(key, dic):
@@ -130,3 +138,10 @@ if __name__ == '__main__':
     lst = dict_to_list(d)
     print(d)
     print(list_to_dict(lst))
+
+    a = {'test1': 1, 'test2': 2}
+    b = {'test1': 1, 'test3': 3}
+    c = {'test1': 1, 'test2': 2, 'test3': 3}
+
+    print(union(a, b, c))
+    print(intersection(a, b, c))
