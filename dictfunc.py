@@ -119,6 +119,25 @@ def merged_dict(a, b):
     return a
 
 
+def union_non_duplicates(*dicts):
+    ''' 
+    Merges dicts, but skips keys that occur in multiple dicts but are different
+
+    example:
+    a = {"a": 1, "b": 3}
+    b = {"a": 2, "b": 3}
+    c = {"c": 4}
+    union_non_duplicates(a, b, c) == {"b": 3, "c": 4}
+    '''
+    sets = [set([tuple(lst) for lst in dict_to_list(dic)]) for dic in dicts]
+    ret = set()
+    for set_ in sets:
+        ret = ret.union(set_)
+    keys = [ret_[:-1] for ret_ in ret]
+    non_duplicates = [key for key in keys if keys.count(key) == 1]
+    return list_to_dict([lst for lst in ret if lst[:-1] in non_duplicates])
+
+
 if __name__ == '__main__':
     d = {'name': 'transitionstate',
          'reactants': {'catalyst': 'catalyst',
@@ -145,3 +164,8 @@ if __name__ == '__main__':
 
     print(union(a, b, c))
     print(intersection(a, b, c))
+
+    a = {"a": 1, "b": 3}
+    b = {"a": 2, "b": 3}
+    c = {"c": 4}
+    print(union_non_duplicates(a, b, c) == {"b": 3, "c": 4})
