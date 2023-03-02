@@ -88,6 +88,7 @@ def crest(mol, folder=None, path=DEFAULT_RUN_PATH, frozen_idxs=None, crest_path=
         with open(j(path, folder + '_crest', 'crest_conformers.xyz')) as confs:
             lines = [line.strip() for line in confs.readlines()]
 
+        # separate conformers into individual molecules
         natoms = int(lines[0])
         nmols = len(lines)//(natoms+2)
         mols = []
