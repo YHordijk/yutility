@@ -176,7 +176,7 @@ def constant_bond_dists(mol, sett=None, preset='BLYP-D3(BJ)/TZ2P/Good'):
     return sett
 
 
-def solvent(name=None, eps=None, rad=None, sett=None, preset='BLYP-D3(BJ)/TZ2P/Good'):
+def solvent(name=None, eps=None, rad=None, sett=None, use_klamt=False, preset='BLYP-D3(BJ)/TZ2P/Good'):
     if sett is None:
         sett = default(preset)
 
@@ -189,20 +189,21 @@ def solvent(name=None, eps=None, rad=None, sett=None, preset='BLYP-D3(BJ)/TZ2P/G
     sett.input.adf.Solvation['C-Mat'] = 'POT'
     sett.input.adf.Solvation.SCF = 'VAR ALL'
     sett.input.adf.Solvation.CSMRSP = None
-    radii = {
-        'H': 1.30,
-        'C': 2.00,
-        'N': 1.83,
-        'O': 1.72,
-        'F': 1.72,
-        'Si': 2.48,
-        'P': 2.13,
-        'S': 2.16,
-        'Cl': 2.05,
-        'Br': 2.16,
-        'I': 2.32
-    }
-    sett.input.adf.solvation.radii = radii
+    if use_klamt:
+        radii = {
+            'H': 1.30,
+            'C': 2.00,
+            'N': 1.83,
+            'O': 1.72,
+            'F': 1.72,
+            'Si': 2.48,
+            'P': 2.13,
+            'S': 2.16,
+            'Cl': 2.05,
+            'Br': 2.16,
+            'I': 2.32
+        }
+        sett.input.adf.solvation.radii = radii
 
     return sett
 
