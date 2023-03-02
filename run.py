@@ -65,7 +65,7 @@ def pes_scan(mol, sett, name='pes_scan', folder=None, path=DEFAULT_RUN_PATH, do_
         return {'transitionstate': ts, 'product': product}
 
 
-def crest(mol, folder=None, path=DEFAULT_RUN_PATH, frozen_idxs=None, crest_path='crest', xtb_path='xtb', spinpol=0, charge=0, temp=298.15):
+def crest(mol, folder=None, path=DEFAULT_RUN_PATH, frozen_idxs=None, crest_path='crest', xtb_path='xtb', spinpol=0, charge=0, temp=298.15, mdlen='x1'):
     with log.NoPrint():
         os.makedirs(j(path, folder + '_crest'), exist_ok=True)
         mol_path = j(path, folder + '_crest', 'coords.xyz')
@@ -79,7 +79,7 @@ def crest(mol, folder=None, path=DEFAULT_RUN_PATH, frozen_idxs=None, crest_path=
                 constr = '-cinp .xcontrol.sample'
             else:
                 constr = ''
-            runsh.write(f'{crest_path} coords.xyz -xnam "{xtb_path}" --noreftopo -rthr 1 -c {charge} -u {spinpol} {constr} -tnmd {temp}\n')
+            runsh.write(f'{crest_path} coords.xyz -xnam "{xtb_path}" --noreftopo -rthr 1 -c {charge} -u {spinpol} {constr} -tnmd {temp} -mdlen {mdlen}\n')
         runshp = j(path, folder + '_crest', 'run.sh').replace('\\', '/').replace('D:', '/mnt/d')
         with open(j(path, folder + '_crest', 'crest.log'), 'w+', newline='') as outfile:
             subprocess.call(['bash', f'{runshp}'], stdout=outfile)
