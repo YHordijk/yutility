@@ -181,14 +181,22 @@ def solvent(name=None, eps=None, rad=None, sett=None, use_klamt=False, preset='B
         sett = default(preset)
 
     sett.input.adf.Solvation.Surf = 'Delley'
+    solv_string = ''
     if name:
-        sett.input.adf.Solvation.Solv = f'name={name} cav0=0.0 cav1=0.0'
+        solv_string += f'name={name} '
     else:
-        sett.input.adf.Solvation.Solv = f'eps={eps} rad={rad} cav0=0.0 cav1=0.0'
+        sett.input.adf.Solvation.Solv = f'eps={eps} rad={rad} '
+    if use_klamt:
+        solv_string += 'cav0=0.0 cav1=0.0'
+    else:
+        solv_string += 'cav0=0.0 cav1=0.0067639'
+    sett.input.adf.Solvation.Solv = solv_string
+
     sett.input.adf.Solvation.Charged = 'method=CONJ corr'
     sett.input.adf.Solvation['C-Mat'] = 'POT'
     sett.input.adf.Solvation.SCF = 'VAR ALL'
     sett.input.adf.Solvation.CSMRSP = None
+
     if use_klamt:
         radii = {
             'H': 1.30,
@@ -210,7 +218,7 @@ def solvent(name=None, eps=None, rad=None, sett=None, use_klamt=False, preset='B
 
 if __name__ == '__main__':
     s = default('LDA/SZ/Basic')
-    s = solvent('AceticAcid', sett=s)
+    s = solvent('AceticAcid', sett=s, use_klamt=True)
     print(s)
     # optimization(s)
     # print(s)
