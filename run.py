@@ -148,3 +148,37 @@ def get_job_status(path):
         return 'failed', reason
     else:
         return 'canceled', reason
+
+
+
+# class ADFFragmentJob(plams.MultiJob):
+#     _result_type = plams.ADFFragmentResults
+
+#     def __init__(self, fragment1=None, fragment2=None, full_settings=None, frag1_settings=None, frag2_settings=None, fragment_names=None, **kwargs):
+#         plams.MultiJob.__init__(self, **kwargs)
+#         self.fragment1 = fragment1.copy() if isinstance(fragment1, plams.Molecule) else fragment1
+#         self.fragment2 = fragment2.copy() if isinstance(fragment2, plams.Molecule) else fragment2
+#         self.fragment_names = fragment_names or ['frag1', 'frag2']
+#         self.full_settings = full_settings or plams.Settings()
+#         self.frag1_settings = frag1_settings or plams.Settings()
+#         self.frag2_settings = frag2_settings or plams.Settings()
+
+#     def prerun(self):
+#         self.f1 = plams.AMSJob(name=self.fragment_names[0], molecule=self.fragment1, settings=self.settings + self.frag1_settings)
+#         self.f2 = plams.AMSJob(name=self.fragment_names[1], molecule=self.fragment2, settings=self.settings + self.frag2_settings)
+
+#         for at in self.fragment1:
+#             at.properties.suffix = 'adf.f=subsystem1'
+#         for at in self.fragment2:
+#             at.properties.suffix = 'adf.f=subsystem2'
+
+#         self.full = plams.AMSJob(name='full',
+#                                  molecule=self.fragment1 + self.fragment2,
+#                                  settings=self.settings + self.full_settings)
+
+#         self.full.settings.input.adf.fragments.subsystem1 = (self.f1, 'adf')
+#         self.full.settings.input.adf.fragments.subsystem2 = (self.f2, 'adf')
+
+#         self.children = [self.f1, self.f2, self.full]
+
+# def fragment(mol1, mol2, sett)
