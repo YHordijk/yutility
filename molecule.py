@@ -16,6 +16,38 @@ def get_xyz(mol):
     return s
 
 
+def save(mol, path):
+    ''' Method used to save generated molecules
+
+    Parameters
+    ==========
+    save_string: bash-style string used to determine the name to save the file as. 
+    '''
+    with open(path, 'w+') as f:
+        f.write(f'{len(mol.atoms)}\n\n')
+        for atom in mol.atoms:
+            identifier = ''
+            for key, value in atom.identifier_data.items():
+                if key == 'labels':
+                    if len(value) > 0:
+                        identifier += ' '.join(value) + ' '
+                    else:
+                        continue
+                else:
+                    identifier += f'{key}={value} '
+
+            f.write(f'{atom.symbol}\t{atom.coords[0]: .10f}\t{atom.coords[1]: .10f}\t{atom.coords[2]: .10f}\t{identifier}\n')
+
+        f.write('\n')
+        for key, value in mol.identifier_data.items():
+            if key == 'reaction_specific':
+                continue
+            if any(key.startswith(k) for k in ['default_', 'filter_whitelist_', 'filter_blacklist_']):
+                continue
+            f.write(f'{key} = {value}\n')
+
+
+
 def load(path):
     data = {}
     with open(path) as f:
