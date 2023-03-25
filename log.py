@@ -162,6 +162,7 @@ def print_list(items, sep='   ', header=None, return_str=False, hline=[]):
 loading_bar_start_time = 0
 def loading_bar(i, N, Nsegments=50, Nsteps=10, start_char='├', end_char='│', fill_char='─', empty_char=' ', center_char='>', comment=''):
     N = max(1, N)
+    Nsteps = N if logfile.isatty() else Nsteps
 
     global loading_bar_start_time
     if loading_bar_start_time == 0:
