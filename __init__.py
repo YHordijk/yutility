@@ -1,3 +1,5 @@
+from yutility import log
+
 ensure_list = lambda x: [x] if not isinstance(x, (list, tuple, set)) else x
 
 
@@ -25,6 +27,29 @@ def dowhile(main_func, condition_func):
     main_func()
     while condition_func():
         main_func()
+
+
+def print_kf(path, print_variables=False):
+    from yutility import units
+    from scm import plams
+    import sys
+    kf = plams.KFFile(path)
+
+    lines = []
+    unit = units.Binary('B')
+
+    header = ['Section', 'Size', 'Unit']
+    if print_variables:
+        header = ['Section/Variable', 'Size', 'Unit']
+
+    for section in kf.sections():
+        total, un = unit.convert(sum(sys.getsizeof(x) for x in kf.read_section(section).values()), 'B', use_si=True)
+        lines.append((section, round(total, 1), un))
+        if print_variables:
+            for var, val in kf.read_section(section).items():
+                size, un = unit.convert(sys.getsizeof(val), 'B', use_si=True)
+                lines.append(('    ' + var, round(size, 1), un))
+    log.print_list(lines, header=header)
 
 
 if __name__ == '__main__':
