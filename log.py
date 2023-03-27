@@ -11,6 +11,7 @@ tab_level = 0
 max_width = 200
 print_date = True
 
+
 class Emojis:
     wait = '🕒'
     good = '✅'
@@ -322,6 +323,18 @@ def boxed_text(txt, round_edge=True, align='left', double_edge=False, title=None
     s += corners[3] + straights[1]*(maxlen+2) + corners[2] + '\n'
 
     log(s.removesuffix('\n'))
+
+
+class BoxedText:
+    def __init__(self, title=None):
+        self.lines = []
+        self.title = title
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args, **kwargs):
+        ...
 
 
 def info(txt):
