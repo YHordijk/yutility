@@ -151,8 +151,17 @@ def get_job_status(path):
         return 'canceled', reason
 
 
+# class NMRResults(plams.Results):
+    # def __init__(self)
+
+
+class NMRJob(plams.Job):
+    ...
+
+
+
 def nmr(mol, dft_settings, nmr_settings=None, folder=None, path=DEFAULT_RUN_PATH, do_init=True):
-     with log.NoPrint():
+    with log.NoPrint():
         os.makedirs(path, exist_ok=True)
         if do_init:
             init(path, folder)
@@ -167,10 +176,15 @@ def nmr(mol, dft_settings, nmr_settings=None, folder=None, path=DEFAULT_RUN_PATH
             except BaseException:
                 pass
 
+        # copy files to new folder, NMR jobs need both TAPE21 and TAPE10 in the rundirectory
+        # in this case, TAPE10 was written by the DFT job and TAPE21 is the adf.rkf file
         os.makedirs(j(workdir(), 'nmr'), exist_ok=True)
         shutil.copy2(j(workdir(), 'pre_nmr', 'adf.rkf'), j(workdir(), 'nmr', 'TAPE21'))
         shutil.copy2(j(workdir(), 'pre_nmr', 'TAPE10'), j(workdir(), 'nmr', 'TAPE10'))
 
+
+        job = NMRJob(molecule=mol)
+        # generate a runscript
         runshp = j(workdir(), 'nmr', 'nmr.run')
         with open(runshp, 'w+') as infile:
             infile.write(f'cd {j(workdir(), "nmr")}\n')
@@ -184,13 +198,13 @@ def nmr(mol, dft_settings, nmr_settings=None, folder=None, path=DEFAULT_RUN_PATH
             infile.write('eor\n')
             infile.write('mv TAPE21 adf.rkf\n')
 
+        # run the job
         with open(j(workdir(), 'nmr', 'nmr.out'), 'w+', newline='') as outfile:
             subprocess.call(['bash', f'{runshp}'], stdout=outfile)
 
         plams.finish()
 
-
-
+        return plams.KFReader(j(workdir(), 'nmr', 'adf.rkf'))
 
 
 # class ADFFragmentJob(plams.MultiJob):
