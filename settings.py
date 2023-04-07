@@ -63,6 +63,8 @@ def default(preset='BLYP-D3(BJ)/TZ2P/Good'):
     # LDA is standard functional
     elif functional == 'LDA':
         pass
+    elif functional == 'SAOP':
+        sett.input.adf.XC.model = 'SAOP'
 
     # numerical quality
     sett.input.adf.NumericalQuality = numerical_quality
