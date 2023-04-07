@@ -5,6 +5,7 @@ import sys
 import numpy as np
 import subprocess
 import shutil
+import matplotlib.pyplot as plt
 
 j = os.path.join
 
@@ -154,38 +155,113 @@ def get_job_status(path):
 class NMRResults:
     def __init__(self, kffile):
         self.kf = plams.KFReader(kffile)
+        self.default_standards = {
+            'H': 31.7,
+            'C': 181.1,
+        }
 
     def read(self, section, variable):
         return self.kf.read(section, variable)
 
     @property
     def chemical_shifts(self):
-        return self.read('Properties', 'NMR Shieldings InputOrder')
+        peaks = {}
+        for element in self.read('Geometry', 'atomtype').split():
+            peaks[element] = self.chemical_shift_by_element(element)
+        return peaks 
+
+    def chemical_shift_by_element(self, element):
+        nnuc = self.read('Geometry', 'nnuc')
+        atom_order_index = self.read('Geometry', 'atom order index')[nnuc:]
+        element_order_index = self.read('Geometry', 'fragment and atomtype index')[nnuc:]
+        elements = self.read('Geometry', 'atomtype').split()
+        peaks = self.read('Properties', 'NMR Shieldings InputOrder')
+
+        elements_ordered = [elements[element_order_index[atom_order_index[i]-1]-1] for i in range(nnuc)]
+        return [peaks[i] for i in range(nnuc) if elements_ordered[i] == element]
+
+    def chemical_shift_by_element_and_atom(self, element):
+        nnuc = self.read('Geometry', 'nnuc')
+        atom_order_index = self.read('Geometry', 'atom order index')[nnuc:]
+        element_order_index = self.read('Geometry', 'fragment and atomtype index')[nnuc:]
+        elements = self.read('Geometry', 'atomtype').split()
+        peaks = self.read('Properties', 'NMR Shieldings InputOrder')
+
+        elements_ordered = [elements[element_order_index[atom_order_index[i]-1]-1] for i in range(nnuc)]
+        return {i: peaks[i] for i in range(nnuc) if elements_ordered[i] == element}
+
+    # method to evaluate the NMR spectrum at given chemical shift(s)
+    def __call__(self, *args, **kwargs):
+        return self.evaluate(*args, **kwargs)
+
+    def evaluate(self, shifts=None, element='H', width=0.1, standard=None, lineshape='lorentz', **kwargs):
+        lineshape_func = {
+            'lorentz': lambda peak: 1/(1 + 4*(shifts - peak)**2/width**2),
+            'gaussian': lambda peak: np.exp(-.6931471806 * (4*(shifts - peak)**2/width**2))
+        }
+
+        # default reference standard chemical shifts for some nuclei
+        if standard is None:
+            # default reference chemical shift is 0
+            standard = self.default_standards.get(element, 0)
+
+        peaks = [standard - peak for peak in self.chemical_shift_by_element(element)]
+
+        # if shifts were not given we will find them ourselves
+        if shifts is None:
+            # we find the lowest and highest and offset them to prevent errors for elements with only 1 atom
+            low = min(peaks) - width * 2
+            high = max(peaks) + width * 2
+            # move window 10% to low and high field and create a large space
+            # partitioning could be improved by sampling more points close to peaks
+            shifts = np.linspace(low - (high - low)*.1, high + (high - low)*.1, 10000)
+
+        shifts = np.asarray(shifts)
+
+        # iteratively add lines to spectrum
+        spectrum = np.zeros_like(shifts)
+        for peak in peaks:
+            spectrum += lineshape_func[lineshape](peak)
+
+        return shifts, spectrum
+
+    def draw_spectrum(self, *args, **kwargs):
+        x, y = self.evaluate(*args, **kwargs)
+        element = kwargs.pop('element', 'H')
+        kwargs.pop('shifts', None)
+        kwargs.pop('width', None)
+        standard = kwargs.pop('standard', self.default_standards.get(element, 0))
+        kwargs.pop('lineshape', None)
+        plt.plot(x, y, **kwargs)
+        for atom, peak in self.chemical_shift_by_element_and_atom(element).items():
+            plt.vlines(standard - peak, 0, max(y) * 1.1, colors='grey', linestyles='dashed')
+            plt.gca().annotate(f'{element}{atom+1}', xycoords='data', va='top', ha='left', xy=(standard - peak, self.evaluate(standard - peak)[1]), textcoords='offset pixels', xytext=(10, 50))
+        plt.xlabel(rf'{element}-NMR $\delta$ (PPM)')
+        plt.ylabel('Intensity')
 
 
 
-def nmr(mol, dft_settings, nmr_settings=None, folder=None, path=DEFAULT_RUN_PATH, do_init=True):
+def nmr(mol, dft_settings=None, nmr_settings=None, folder=None, path=DEFAULT_RUN_PATH, do_init=True):
     with log.NoPrint():
         os.makedirs(path, exist_ok=True)
         if do_init:
             init(path, folder)
 
         # first run a dft calculation
+        if dft_settings is None:
+            # SAOP is supposed to be the best model potential for NMR
+            dft_settings = settings.default('SAOP/TZ2P/Good')
+        # we require TAPE10 file from dft
         dft_settings.input.adf.save = 'TAPE10'
+
         job = plams.AMSJob(molecule=mol, settings=dft_settings, name='pre_nmr')
-        results = job.run()
-        if not check_success(job) is True:
-            try:
-                job.pickle()
-            except BaseException:
-                pass
+        job.run()
 
         # copy files to new folder, NMR jobs need both TAPE21 and TAPE10 in the rundirectory
         # in this case, TAPE10 was written by the DFT job and TAPE21 is the adf.rkf file
         os.makedirs(j(workdir(), 'nmr'), exist_ok=True)
         shutil.copy2(j(workdir(), 'pre_nmr', 'adf.rkf'), j(workdir(), 'nmr', 'TAPE21'))
         shutil.copy2(j(workdir(), 'pre_nmr', 'TAPE10'), j(workdir(), 'nmr', 'TAPE10'))
-
 
         # generate a runscript
         runshp = j(workdir(), 'nmr', 'nmr.run')
@@ -244,13 +320,20 @@ def nmr(mol, dft_settings, nmr_settings=None, folder=None, path=DEFAULT_RUN_PATH
 
 
 if __name__ == '__main__':
-    d = '/Users/yumanhordijk/PhD/ychem/calculations2/0b1794d72ee3b1eed65d7c6e50cf9deb7ff567a663d19e27675df55a084bf3a3'
-    dft_settings = settings.default('SAOP/TZ2P/Good')
-    # settings.optimization(dft_settings)
-    mol = plams.Molecule(j(d, 'substrate', 'geometry', 'output.xyz'))
-    sub_res = nmr(mol, dft_settings, path=j(d, 'substrate'), folder='NMR')
-    print(sub_res.chemical_shifts)
+    # d = '/Users/yumanhordijk/PhD/ychem/calculations2/0b1794d72ee3b1eed65d7c6e50cf9deb7ff567a663d19e27675df55a084bf3a3'
+    # mol = plams.Molecule(j(d, 'substrate', 'geometry', 'output.xyz'))
+    # substrate_spectrum = nmr(mol, dft_settings=settings.default('Cheap'), path=j(d, 'substrate'), folder='NMR')
+    # print(substrate_spectrum.chemical_shifts)
+    # print(chemical_shift_by_element)
 
-    mol = plams.Molecule(j(d, 'substrate_cat_complex', 'geometry', 'output.xyz'))
-    subcat_res = nmr(mol, dft_settings, path=j(d, 'substrate_cat_complex'), folder='NMR')
-    print(subcat_res.chemical_shifts)
+    # mol = plams.Molecule(j(d, 'substrate_cat_complex', 'geometry', 'output.xyz'))
+    # substrate_catalyst_spectrum = nmr(mol, dft_settings=settings.default('Cheap'), path=j(d, 'substrate_cat_complex'), folder='NMR')
+    # print(substrate_catalyst_spectrum.chemical_shifts)
+    
+    substrate_spectrum = NMRResults('/Users/yumanhordijk/PhD/ychem/calculations2/0b1794d72ee3b1eed65d7c6e50cf9deb7ff567a663d19e27675df55a084bf3a3/substrate/NMR/nmr/adf.rkf')
+    substrate_catalyst_spectrum = NMRResults('/Users/yumanhordijk/PhD/ychem/calculations2/0b1794d72ee3b1eed65d7c6e50cf9deb7ff567a663d19e27675df55a084bf3a3/substrate_cat_complex/NMR/nmr/adf.rkf')
+
+    substrate_spectrum.draw_spectrum(element='C', label='Substrate')
+    substrate_catalyst_spectrum.draw_spectrum(element='C', label='Substrate-Catalyst-Complex')
+    plt.legend()
+    plt.show()
