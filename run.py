@@ -1,9 +1,10 @@
 import scm.plams as plams
-from yutility import units, config, log
+from yutility import units, config, log, settings
 import os
 import sys
 import numpy as np
 import subprocess
+import shutil
 
 j = os.path.join
 
@@ -150,6 +151,47 @@ def get_job_status(path):
         return 'canceled', reason
 
 
+def nmr(mol, dft_settings, nmr_settings=None, folder=None, path=DEFAULT_RUN_PATH, do_init=True):
+     with log.NoPrint():
+        os.makedirs(path, exist_ok=True)
+        if do_init:
+            init(path, folder)
+
+        # first run a dft calculation
+        dft_settings.input.adf.save = 'TAPE10'
+        job = plams.AMSJob(molecule=mol, settings=dft_settings, name='pre_nmr')
+        results = job.run()
+        if not check_success(job) is True:
+            try:
+                job.pickle()
+            except BaseException:
+                pass
+
+        os.makedirs(j(workdir(), 'nmr'), exist_ok=True)
+        shutil.copy2(j(workdir(), 'pre_nmr', 'adf.rkf'), j(workdir(), 'nmr', 'TAPE21'))
+        shutil.copy2(j(workdir(), 'pre_nmr', 'TAPE10'), j(workdir(), 'nmr', 'TAPE10'))
+
+        runshp = j(workdir(), 'nmr', 'nmr.run')
+        with open(runshp, 'w+') as infile:
+            infile.write(f'cd {j(workdir(), "nmr")}\n')
+            infile.write('"$AMSBIN/nmr" << eor\n')
+            infile.write('NMR\n')
+            infile.write('    out\n')
+            infile.write('    Atoms ' + ' '.join([str(i+1) for i in range(len(mol.atoms))]) + '\n')
+            infile.write('    u1k best\n')
+            infile.write('    calc all\n')
+            infile.write('End\n')
+            infile.write('eor\n')
+            infile.write('mv TAPE21 adf.rkf\n')
+
+        with open(j(workdir(), 'nmr', 'nmr.out'), 'w+', newline='') as outfile:
+            subprocess.call(['bash', f'{runshp}'], stdout=outfile)
+
+        plams.finish()
+
+
+
+
 
 # class ADFFragmentJob(plams.MultiJob):
 #     _result_type = plams.ADFFragmentResults
@@ -182,3 +224,12 @@ def get_job_status(path):
 #         self.children = [self.f1, self.f2, self.full]
 
 # def fragment(mol1, mol2, sett)
+
+
+if __name__ == '__main__':
+    dft_settings = settings.default('SAOP/TZ2P/Good')
+    # settings.optimization(dft_settings)
+    mol = plams.Molecule('acroleineMEME.xyz')
+    nmr(mol, dft_settings)
+    mol = plams.Molecule('acroleineMEME_SnCl4.xyz')
+    nmr(mol, dft_settings)
