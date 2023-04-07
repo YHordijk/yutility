@@ -151,12 +151,16 @@ def get_job_status(path):
         return 'canceled', reason
 
 
-# class NMRResults(plams.Results):
-    # def __init__(self)
+class NMRResults:
+    def __init__(self, kffile):
+        self.kf = plams.KFReader(kffile)
 
+    def read(self, section, variable):
+        return self.kf.read(section, variable)
 
-class NMRJob(plams.Job):
-    ...
+    @property
+    def chemical_shifts(self):
+        return self.read('Properties', 'NMR Shieldings InputOrder')
 
 
 
@@ -183,7 +187,6 @@ def nmr(mol, dft_settings, nmr_settings=None, folder=None, path=DEFAULT_RUN_PATH
         shutil.copy2(j(workdir(), 'pre_nmr', 'TAPE10'), j(workdir(), 'nmr', 'TAPE10'))
 
 
-        job = NMRJob(molecule=mol)
         # generate a runscript
         runshp = j(workdir(), 'nmr', 'nmr.run')
         with open(runshp, 'w+') as infile:
@@ -204,7 +207,7 @@ def nmr(mol, dft_settings, nmr_settings=None, folder=None, path=DEFAULT_RUN_PATH
 
         plams.finish()
 
-        return plams.KFReader(j(workdir(), 'nmr', 'adf.rkf'))
+        return NMRResults(j(workdir(), 'nmr', 'adf.rkf'))
 
 
 # class ADFFragmentJob(plams.MultiJob):
@@ -241,9 +244,13 @@ def nmr(mol, dft_settings, nmr_settings=None, folder=None, path=DEFAULT_RUN_PATH
 
 
 if __name__ == '__main__':
+    d = '/Users/yumanhordijk/PhD/ychem/calculations2/0b1794d72ee3b1eed65d7c6e50cf9deb7ff567a663d19e27675df55a084bf3a3'
     dft_settings = settings.default('SAOP/TZ2P/Good')
     # settings.optimization(dft_settings)
-    mol = plams.Molecule('acroleineMEME.xyz')
-    nmr(mol, dft_settings)
-    mol = plams.Molecule('acroleineMEME_SnCl4.xyz')
-    nmr(mol, dft_settings)
+    mol = plams.Molecule(j(d, 'substrate', 'geometry', 'output.xyz'))
+    sub_res = nmr(mol, dft_settings, path=j(d, 'substrate'), folder='NMR')
+    print(sub_res.chemical_shifts)
+
+    mol = plams.Molecule(j(d, 'substrate_cat_complex', 'geometry', 'output.xyz'))
+    subcat_res = nmr(mol, dft_settings, path=j(d, 'substrate_cat_complex'), folder='NMR')
+    print(subcat_res.chemical_shifts)
