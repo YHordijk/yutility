@@ -241,7 +241,7 @@ class NMRResults:
 
 
 
-def nmr(mol, dft_settings=None, nmr_settings=None, folder=None, path=DEFAULT_RUN_PATH, do_init=True):
+def nmr(mol, dft_settings=None, folder=None, path=DEFAULT_RUN_PATH, do_init=True):
     with log.NoPrint():
         os.makedirs(path, exist_ok=True)
         if do_init:
