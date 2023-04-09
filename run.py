@@ -164,6 +164,10 @@ class NMRResults:
         return self.kf.read(section, variable)
 
     @property
+    def elements(self):
+        return self.read('Geometry', 'atomtype').split()
+
+    @property
     def chemical_shifts(self):
         peaks = {}
         for element in self.read('Geometry', 'atomtype').split():
@@ -171,14 +175,7 @@ class NMRResults:
         return peaks 
 
     def chemical_shift_by_element(self, element):
-        nnuc = self.read('Geometry', 'nnuc')
-        atom_order_index = self.read('Geometry', 'atom order index')[nnuc:]
-        element_order_index = self.read('Geometry', 'fragment and atomtype index')[nnuc:]
-        elements = self.read('Geometry', 'atomtype').split()
-        peaks = self.read('Properties', 'NMR Shieldings InputOrder')
-
-        elements_ordered = [elements[element_order_index[atom_order_index[i]-1]-1] for i in range(nnuc)]
-        return [peaks[i] for i in range(nnuc) if elements_ordered[i] == element]
+        return self.chemical_shift_by_element_and_atom(element).values()
 
     def chemical_shift_by_element_and_atom(self, element):
         nnuc = self.read('Geometry', 'nnuc')
@@ -330,10 +327,10 @@ if __name__ == '__main__':
     # substrate_catalyst_spectrum = nmr(mol, dft_settings=settings.default('Cheap'), path=j(d, 'substrate_cat_complex'), folder='NMR')
     # print(substrate_catalyst_spectrum.chemical_shifts)
     
-    substrate_spectrum = NMRResults('/Users/yumanhordijk/PhD/ychem/calculations2/0b1794d72ee3b1eed65d7c6e50cf9deb7ff567a663d19e27675df55a084bf3a3/substrate/NMR/nmr/adf.rkf')
-    substrate_catalyst_spectrum = NMRResults('/Users/yumanhordijk/PhD/ychem/calculations2/0b1794d72ee3b1eed65d7c6e50cf9deb7ff567a663d19e27675df55a084bf3a3/substrate_cat_complex/NMR/nmr/adf.rkf')
+    substrate_spectrum = NMRResults('D:/Users/Yuman/Desktop/PhD/ychem/calculations2/5d6124f37de94bbee00743492c818a2e10a89f9197c28b39a95f64bf5c901450/substrate/NMR/nmr/adf.rkf')
+    substrate_catalyst_spectrum = NMRResults('D:/Users/Yuman/Desktop/PhD/ychem/calculations2/5d6124f37de94bbee00743492c818a2e10a89f9197c28b39a95f64bf5c901450/substrate_cat_complex/NMR/nmr/adf.rkf')
 
-    substrate_spectrum.draw_spectrum(element='C', label='Substrate')
-    substrate_catalyst_spectrum.draw_spectrum(element='C', label='Substrate-Catalyst-Complex')
+    substrate_spectrum.draw_spectrum(element='H', label='Substrate')
+    substrate_catalyst_spectrum.draw_spectrum(element='H', label='Substrate-Catalyst-Complex')
     plt.legend()
     plt.show()
