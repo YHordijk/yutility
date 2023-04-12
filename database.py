@@ -26,8 +26,6 @@ class DBSelectResult:
     def __init__(self, data, columns):
         self.data = data
         self.columns = columns
-        if len(columns) == 1:
-            self.data = [datum[0] for datum in data]
         self.__iter_counter = 0
 
     def __getitem__(self, key):
