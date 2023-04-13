@@ -170,7 +170,7 @@ class NMRResults:
     @property
     def chemical_shifts(self):
         peaks = {}
-        for element in self.read('Geometry', 'atomtype').split():
+        for element in self.elements:
             peaks[element] = self.chemical_shift_by_element(element)
         return peaks 
 
@@ -181,10 +181,9 @@ class NMRResults:
         nnuc = self.read('Geometry', 'nnuc')
         atom_order_index = self.read('Geometry', 'atom order index')[nnuc:]
         element_order_index = self.read('Geometry', 'fragment and atomtype index')[nnuc:]
-        elements = self.read('Geometry', 'atomtype').split()
         peaks = self.read('Properties', 'NMR Shieldings InputOrder')
 
-        elements_ordered = [elements[element_order_index[atom_order_index[i]-1]-1] for i in range(nnuc)]
+        elements_ordered = [self.elements[element_order_index[atom_order_index[i]-1]-1] for i in range(nnuc)]
         return {i: peaks[i] for i in range(nnuc) if elements_ordered[i] == element}
 
     # method to evaluate the NMR spectrum at given chemical shift(s)
