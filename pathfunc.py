@@ -4,12 +4,6 @@ from yutility import log
 j = os.path.join
 
 
-def get_server_path(path, root='~'):
-    server = j('/scistor', 'tc', 'yhk800', 'PhD', 'ychem')
-    rel = os.path.relpath(path, base)
-    return j(server, rel).replace('\\', r'/')
-
-
 def check_paths(pathlist, make=True):
     if not all(os.path.exists(p) for p in pathlist if len(p.split('.')) == 1):
         log.log('Warning, not all paths exist:')
@@ -25,6 +19,7 @@ def check_paths(pathlist, make=True):
 
 
 def get_size(start_path):
+    # return size of path in Bytes
     if os.path.isfile(start_path):
         return os.path.getsize(start_path)
     
@@ -92,9 +87,3 @@ def split_all(path):
         parts.append(b)
         path = a
 
-
-if __name__ == '__main__':
-    p = '/Users/yumanhordijk/PhD/ychem/calculations'
-    print(split_all(p))
-
-    print(next_path_version(p))
