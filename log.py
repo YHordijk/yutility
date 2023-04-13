@@ -64,7 +64,7 @@ def time_stamp():
     return f'[{now.year}/{str(now.month).zfill(2)}/{str(now.day).zfill(2)} {str(now.hour).zfill(2)}:{str(now.minute).zfill(2)}:{str(now.second).zfill(2)}] '
 
 
-def log(message='', /, end='\n'):
+def log(message='', end='\n'):
     if type(message) is dict:
         message = json.dumps(message, indent=4, sort_keys=True)
     message = str(message)

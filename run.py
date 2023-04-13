@@ -1,5 +1,6 @@
 import scm.plams as plams
-from yutility import units, config, log, settings
+from yutility import units, config, log, settings, pathfunc
+from ychem.results import reaction2
 import os
 import sys
 import numpy as np
@@ -69,11 +70,12 @@ def pes_scan(mol, sett, name='pes_scan', folder=None, path=DEFAULT_RUN_PATH, do_
 
 def crest(mol, folder=None, path=DEFAULT_RUN_PATH, frozen_idxs=None, crest_path='crest', xtb_path='xtb', spinpol=0, charge=0, temp=298.15, mdlen='x1'):
     with log.NoPrint():
-        os.makedirs(j(path, folder + '_crest'), exist_ok=True)
-        mol_path = j(path, folder + '_crest', 'coords.xyz')
+        rundir = pathfunc.next_path_version(j(path, folder))
+        os.makedirs(rundir, exist_ok=True)
+        mol_path = j(rundir, 'coords.xyz')
         mol.write(mol_path)
 
-        with open(j(path, folder + '_crest', 'run.sh'), 'w+', newline='') as runsh:
+        with open(j(rundir, 'run.sh'), 'w+', newline='') as runsh:
             mol_path = str(mol_path).replace('\\', '/').replace('D:', '/mnt/d')
             runsh.write(f'cd {str(os.path.dirname(mol_path))}\n')
             if frozen_idxs is not None:
@@ -82,12 +84,12 @@ def crest(mol, folder=None, path=DEFAULT_RUN_PATH, frozen_idxs=None, crest_path=
             else:
                 constr = ''
             runsh.write(f'{crest_path} coords.xyz -xnam "{xtb_path}" --noreftopo -rthr 1 -c {charge} -u {spinpol} {constr} -tnmd {temp} -mdlen {mdlen}\n')
-        runshp = j(path, folder + '_crest', 'run.sh').replace('\\', '/').replace('D:', '/mnt/d')
-        with open(j(path, folder + '_crest', 'crest.log'), 'w+', newline='') as outfile:
+        runshp = j(rundir, 'run.sh').replace('\\', '/').replace('D:', '/mnt/d')
+        with open(j(rundir, 'crest.log'), 'w+', newline='') as outfile:
             subprocess.call(['bash', f'{runshp}'], stdout=outfile)
 
         # Read in the conformers that were generated
-        with open(j(path, folder + '_crest', 'crest_conformers.xyz')) as confs:
+        with open(j(path, folder, 'crest_conformers.xyz')) as confs:
             lines = [line.strip() for line in confs.readlines()]
 
         # separate conformers into individual molecules
@@ -97,9 +99,9 @@ def crest(mol, folder=None, path=DEFAULT_RUN_PATH, frozen_idxs=None, crest_path=
         for i in range(nmols):
             a, b = i*(natoms+2), (i+1)*(natoms+2), 
             mollines = lines[a:b]
-            with open(j(path, folder + '_crest', 'tmp.xyz'), 'w+') as tmp:
+            with open(j(rundir, 'tmp.xyz'), 'w+') as tmp:
                 [tmp.write(line + '\n') for line in mollines]
-            mol = plams.Molecule(j(path, folder + '_crest', 'tmp.xyz'))
+            mol = plams.Molecule(j(rundir, 'tmp.xyz'))
             mols.append(mol)
         return mols
 
@@ -316,6 +318,29 @@ def nmr(mol, dft_settings=None, folder=None, path=DEFAULT_RUN_PATH, do_init=True
 
 
 if __name__ == '__main__':
+    from ReactionRunner import generators
+
+    class SubstrateCatalyst(generators.generic):
+        reaction_name = 'SubstrateCatalyst'
+        expected_stationary_points = ['substrate', 'catalyst', 'substrate_cat_complex']
+
+        def _generate(self):
+            self.define_sp('substrate_cat_complex', ['substrate', 'catalyst'])
+
+
+            if self.check_hash and self._hash_collision(self.expected_stationary_points):
+                for sp in self.expected_stationary_points:
+                    self.load(sp)
+
+            else:
+                self.combine_from_sphere('substrate_cat_complex', 'substrate', 'catalyst', radius=5, frozen_bonds=True, ntries=20,
+                                         description='Creating Substrate-Catalyst-Complex')
+
+            self.save()
+            if self.delete_tmp:
+                self.clean_tmp()
+
+
     # d = '/Users/yumanhordijk/PhD/ychem/calculations2/0b1794d72ee3b1eed65d7c6e50cf9deb7ff567a663d19e27675df55a084bf3a3'
     # mol = plams.Molecule(j(d, 'substrate', 'geometry', 'output.xyz'))
     # substrate_spectrum = nmr(mol, dft_settings=settings.default('Cheap'), path=j(d, 'substrate'), folder='NMR')
@@ -326,9 +351,32 @@ if __name__ == '__main__':
     # substrate_catalyst_spectrum = nmr(mol, dft_settings=settings.default('Cheap'), path=j(d, 'substrate_cat_complex'), folder='NMR')
     # print(substrate_catalyst_spectrum.chemical_shifts)
     
-    substrate_spectrum = NMRResults('D:/Users/Yuman/Desktop/PhD/ychem/calculations2/5d6124f37de94bbee00743492c818a2e10a89f9197c28b39a95f64bf5c901450/substrate/NMR/nmr/adf.rkf')
-    substrate_catalyst_spectrum = NMRResults('D:/Users/Yuman/Desktop/PhD/ychem/calculations2/5d6124f37de94bbee00743492c818a2e10a89f9197c28b39a95f64bf5c901450/substrate_cat_complex/NMR/nmr/adf.rkf')
+    mol = plams.Molecule('acroleine.xyz')
+    substrate_spectrum = nmr(mol, dft_settings=settings.default('SAOP/TZ2P/Good'), path=j(d, 'substrate'), folder='NMR')
+    substrate_cat_spectra = {}
 
+    for cat in ['I2', 'SnCl4', 'ZnCl2', 'TiCl4', 'BF3', 'AlCl3']:
+        reactants = {
+            'substrate': 'acrolein_E',
+            'catalyst': 'catalyst',
+        }
+        substituents = {
+            'substrate': {
+                'R1': 'Me',
+                'R2': 'Me'
+            },
+            'catalyst': {
+                'Rcat': cat
+            }
+        }
+        rg = SubstrateCatalyst(reactants=reactants, substituents=substituents)
+        mols = rg.generate()
+        mol = mols['substrate_cat_complex']
+        substrate_cat_spectra[cat] = nmr(mol, dft_settings=settings.default('Cheap'), path=j(d, 'substrate'), folder='NMR')
+
+    rxn = reaction2.Reaction(main_dir='/Users/yumanhordijk/PhD/ychem/calculations2/0b1794d72ee3b1eed65d7c6e50cf9deb7ff567a663d19e27675df55a084bf3a3')
+    substrate_spectrum = NMRResults(j(rxn.main_dir, 'substrate', 'NMR', 'nmr', 'adf.rkf'))
+    substrate_catalyst_spectrum = NMRResults(j(rxn.main_dir, 'substrate_cat_complex', 'NMR', 'nmr', 'adf.rkf'))
     substrate_spectrum.draw_spectrum(element='H', label='Substrate')
     substrate_catalyst_spectrum.draw_spectrum(element='H', label='Substrate-Catalyst-Complex')
     plt.legend()
