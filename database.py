@@ -67,6 +67,9 @@ class DBSelectResult:
         assert isinstance(other, DBSelectResult), f'Added object must be of type DBSelectResult, not {type(other)}'
         self.data.extend(other.data)
         return self
+
+    def __len__(self):
+        return len(self.data)
         
 
 class DataBase:
