@@ -31,6 +31,8 @@ class DBSelectResult:
     def __getitem__(self, key):
         if isinstance(key, int):
             return self.data[key]
+        if isinstance(key, (list, tuple, np.ndarray)):
+            return np.array(self.data)[key]
         
         col_idx = self.columns.index(key)
         return np.array([datum[col_idx] for datum in self.data])
@@ -52,8 +54,28 @@ class DBSelectResult:
     def groupby(self, mask_key: str):
         mask_data = self[mask_key]
         unqs = set(mask_data)
+        dbs = {}
         for unq in unqs:
-            yield DBSelectResult([x for i, x in enumerate(self) if mask_data[i] == unq], self.columns)
+            dbs[unq] = DBSelectResult([x for i, x in enumerate(self) if mask_data[i] == unq], self.columns)
+        return dbs
+
+    def where(self, mask):
+        return DBSelectResult([x for i, x in enumerate(self) if mask[i]], self.columns)
+
+    def sortby(self, key, sortfunc=None):
+        sortval = []
+        for x in self[key]:
+            sortval.append(sortfunc(x))
+        idx = sorted(range(len(self)), key=lambda i: sortval[i])
+        return DBSelectResult(self[idx], self.columns)
+
+    def remove_empty(self, keys='*'):
+        if keys == '*':
+            keys = self.columns
+        keys = ensure_list(keys)
+
+        key_idxs = [self.columns.index(key) for key in keys]
+        return DBSelectResult([x for i, x in enumerate(self) if all(x[kidx] is not None for kidx in key_idxs)], self.columns)
 
     def __iter__(self):
         return iter(self.data)
@@ -70,7 +92,7 @@ class DBSelectResult:
 
     def __len__(self):
         return len(self.data)
-        
+
 
 class DataBase:
     def __init__(self, db_path):
