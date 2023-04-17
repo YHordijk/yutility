@@ -1,4 +1,4 @@
-from yutility import log
+from yutility import log, pathfunc
 
 ensure_list = lambda x: [x] if not isinstance(x, (list, tuple, set)) else x
 
@@ -38,17 +38,22 @@ def print_kf(path, print_variables=False):
     lines = []
     unit = units.Binary('B')
 
-    header = ['Section', 'Size', 'Unit']
+    header = ['Section', 'Size', 'Unit', 'Usage']
     if print_variables:
-        header = ['Section/Variable', 'Size', 'Unit']
+        header = ['Section/Variable', 'Size', 'Unit', 'Usage']
 
+    total_size = pathfunc.get_size(path)
+    total_size_sum = 0
     for section in kf.sections():
-        total, un = unit.convert(sum(sys.getsizeof(x) for x in kf.read_section(section).values()), 'B', use_si=True)
-        lines.append((section, round(total, 1), un))
+        size = sum(sys.getsizeof(x) for x in kf.read_section(section).values())
+        total_size_sum += size
+        total, un = unit.convert(size, 'B', use_si=True)
+        lines.append((section, round(total, 1), un, f'{size/total_size*100:.2f}%'))
         if print_variables:
             for var, val in kf.read_section(section).items():
-                size, un = unit.convert(sys.getsizeof(val), 'B', use_si=True)
-                lines.append(('    ' + var, round(size, 1), un))
+                varsize = sys.getsizeof(val)
+                size_, un = unit.convert(varsize, 'B', use_si=True)
+                lines.append(('    ' + var, round(size_, 1), un, f'{varsize/size*100:.2f}%'))
     log.print_list(lines, header=header)
 
 
