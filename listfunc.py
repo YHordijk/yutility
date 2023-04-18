@@ -1,6 +1,20 @@
 ensure_list = lambda x: [x] if not isinstance(x, (list, tuple, set)) else x
 
 
+def remove(lst, x):
+    x = ensure_list(x)
+    for x_ in x:
+        try:
+            lst.remove(x_)
+        except:
+            pass
+
+
+def move(lst, x, newidx):
+    remove(lst, x)
+    lst.insert(newidx, x)
+
+
 def get_first_truthy(lst):
     # returns the first element from left that evaluates to True
     # it therefore ignores None, False, '', [], {}, etc.
