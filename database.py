@@ -93,6 +93,12 @@ class DBSelectResult:
     def __len__(self):
         return len(self.data)
 
+    def remove_column(self, keys):
+        keys = ensure_list(keys)
+        key_idxs = [self.columns.index(key) for key in keys]
+        cols = [col for col in self.columns if col not in keys]
+        return DBSelectResult([x for i, x in enumerate(self) if all(x[kidx] is not None for kidx in key_idxs)], self.columns)
+
 
 class DataBase:
     def __init__(self, db_path):
