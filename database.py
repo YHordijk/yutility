@@ -2,6 +2,7 @@ import sqlite3 as sql
 from yutility import log, ensure_list, dictfunc, plot
 import os
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 python_to_sql_types = {
@@ -106,6 +107,32 @@ class DBSelectResult:
         else:
             groups = None
         return plot.pair_plot([self[key] for key in keys], keys, groups=groups, groupsname=groupkey, **kwargs)
+
+    def plot(self, xkey, ykey, groupkey=None, figsize=None, **kwargs):
+        plt.figure(figsize=figsize)
+        if groupkey:
+            groups = self[groupkey]
+        else:
+            groups = None
+        return plot.scatter(self[xkey], self[ykey], xlabel=xkey, ylabel=ykey, groups=groups, groupsname=groupkey, **kwargs)
+
+    def heatmap(self, xkey, ykey, resolution=(100, 100), s2=.002, figsize=None, **kwargs):
+        plt.figure(figsize=figsize)
+
+        M = np.zeros(resolution)
+
+        x, y = self[xkey], self[ykey]
+        dx = x.max() - x.min()
+        xlim = x.min() - dx*.05, x.max() + dx*.05
+        dy = y.max() - y.min()
+        ylim = y.min() - dy*.05, y.max() + dy*.05
+        X, Y = np.meshgrid(np.linspace(*xlim, resolution[0]), np.linspace(*ylim, resolution[1]))
+
+        kernel = lambda px, py: np.exp(-((X-px)**2/(s2*dx**2) + (Y-py)**2/(s2*dy**2)))
+        for px, py in zip(x, y):
+            M += kernel(px, py)
+
+        return plot.heatmap(M, extent=(x.min(), x.max(), y.min(), y.max()), xlabel=xkey, ylabel=ykey, **kwargs)
 
     def column_type(self, key):
         return self.types[self.columns.index(key)]
