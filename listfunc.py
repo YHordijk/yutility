@@ -26,6 +26,13 @@ def indices(lst, val):
     return idxs
 
 
+def replace(lst, old, new):
+    idx = lst.index(old)
+    lst[idx] = new
+    return lst
+
+
+
 if __name__ == '__main__':
     print(split([0, 1, 2, 3, 4, 5, 6], 3))
 
