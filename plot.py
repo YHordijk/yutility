@@ -1,13 +1,136 @@
 import matplotlib.pyplot as plt 
 import numpy as np
+import atexit
 
 
 class ShowCaller:
-    def show(self):
-        plt.show()
+    def show(self, block=False):
+        atexit.register(plt.show, block=True)
+        plt.show(block=block)
+        return self
+
+    def savefig(self, *args, **kwargs):
+        plt.savefig(*args, **kwargs)
+        return self
+
+    def close(self):
+        plt.close()
 
 
-def pair_plot(columns, names, units=None, groups=None, s=3, alpha=.5, groupsname=None):
+def density(points, lim, resolution=1000, s2=.002):
+    s2 = s2 * (lim[1] - lim[0])**2
+    x = np.linspace(*lim, resolution)
+    dens = np.zeros(resolution)
+    for point in points:
+        dens += np.exp(-(x - point)**2/s2)
+    return x, dens/dens.max()
+
+
+def scatter(x, y, xlabel=None, ylabel=None, plot_marginals=True, s=3, alpha=.5, groups=None, groupsname=None, legendloc='outside right upper'):
+    # Create Fig and gridspec
+    if plot_marginals:
+        grid = plt.GridSpec(4, 4, hspace=0, wspace=0)
+    else:
+        grid = plt.GridSpec(1, 1)
+
+    group_labels = [None]
+    group_indices = [np.arange(len(x))]
+    if groups is not None:
+        group_labels = np.unique(groups)
+        group_indices = [np.where(groups == group_label) for group_label in group_labels]
+
+    # Define the axes
+    if plot_marginals:
+        ax_main = plt.gcf().add_subplot(grid[1:, :-1])
+        ax_right = plt.gcf().add_subplot(grid[1:, -1], xticks=[], yticks=[], xticklabels=[], yticklabels=[])
+        ax_top = plt.gcf().add_subplot(grid[0, :-1], xticks=[], yticks=[], xticklabels=[], yticklabels=[])
+    else:
+        ax_main = plt.gcf().add_subplot(grid[0, 0])
+
+    for group_label, group_index in zip(group_labels, group_indices):
+        ax_main.scatter(x[group_index], y[group_index], s=s, alpha=alpha, label=group_label)
+
+    if plot_marginals:
+        for group_label, group_index in zip(group_labels, group_indices):
+            ylim = ax_main.get_ylim()
+            ymarg = (max(ylim) - min(ylim)) * ax_main.margins()[1]
+            ylim = min(ylim) - ymarg, max(ylim) + ymarg
+
+            xlim = ax_main.get_xlim()
+            xmarg = (max(xlim) - min(xlim)) * ax_main.margins()[0]
+            xlim = min(xlim) - xmarg, max(xlim) + xmarg
+
+            dens = density(y[group_index], ylim)
+            ax_right.plot(*dens[::-1], linewidth=1)
+            ax_right.fill_betweenx(dens[0], dens[1], 0, alpha=.3)
+            ax_right.margins(0)
+            ax_right.axis('off')
+            lim = ax_right.get_xlim()
+            lim = [lim[0], lim[1] * 1.05]
+            ax_right.set_xlim(lim)
+
+            dens = density(x[group_index], xlim)
+            ax_top.plot(*dens, linewidth=1)
+            ax_top.fill_between(dens[0], 0, dens[1], alpha=.3)
+            ax_top.margins(0)
+            ax_top.axis('off')
+            lim = ax_top.get_ylim()
+            lim = [lim[0], lim[1] * 1.05]
+            ax_top.set_ylim(lim)
+
+    ax_main.set_xlabel(xlabel)
+    ax_main.set_ylabel(ylabel)
+
+    plt.gcf().legend(loc=legendloc, title=groupsname)
+
+    return ShowCaller()
+
+
+def heatmap(M, extent=None, xlabel=None, ylabel=None, plot_marginals=True, cmap='Blues'):
+    # Create Fig and gridspec
+    if plot_marginals:
+        grid = plt.GridSpec(4, 4, hspace=0, wspace=0)
+    else:
+        grid = plt.GridSpec(1, 1)
+
+    # Define the axes
+    if plot_marginals:
+        ax_main = plt.gcf().add_subplot(grid[1:, :-1])
+        ax_right = plt.gcf().add_subplot(grid[1:, -1], xticks=[], yticks=[], xticklabels=[], yticklabels=[])
+        ax_top = plt.gcf().add_subplot(grid[0, :-1], xticks=[], yticks=[], xticklabels=[], yticklabels=[])
+    else:
+        ax_main = plt.gcf().add_subplot(grid[0, 0])
+
+    ax_main.imshow(M, origin='lower', aspect='auto', cmap=cmap, extent=extent)
+
+    if plot_marginals:
+        ax_main.margins(0)
+
+        margin_right = M.sum(axis=1)
+        margin_right = (margin_right - margin_right.min())/(margin_right.max() - margin_right.min())
+        ax_right.plot(margin_right, range(len(margin_right)), linewidth=1)
+        ax_right.fill_betweenx(range(len(margin_right)), margin_right, 0, alpha=.3)
+        ax_right.margins(0)
+        ax_right.axis('off')
+        lim = ax_right.get_xlim()
+        ax_right.set_xlim([lim[0], 1.05])
+
+        margin_top = M.sum(axis=0)
+        margin_top = (margin_top - margin_top.min())/(margin_top.max() - margin_top.min())
+        ax_top.plot(range(len(margin_top)), margin_top, linewidth=1)
+        ax_top.fill_between(range(len(margin_top)), margin_top, 0, alpha=.3)
+        ax_top.margins(0)
+        ax_top.axis('off')
+        lim = ax_top.get_xlim()
+        ax_top.set_ylim([lim[0], 1.05])
+
+    ax_main.set_xlabel(xlabel)
+    ax_main.set_ylabel(ylabel)
+
+    return ShowCaller()
+
+
+def pair_plot(columns, names, units=None, groups=None, s=3, alpha=.5, groupsname=None, figsize=None):
     # columns are 1D iterables representing the data
     # each column should have a name and optional unit
     ncol = len(columns)
@@ -19,7 +142,7 @@ def pair_plot(columns, names, units=None, groups=None, s=3, alpha=.5, groupsname
         group_indices = [np.where(groups == group_label) for group_label in group_labels]
 
     legend_handles = []
-    fig, axs = plt.subplots(ncol, ncol, layout='constrained')
+    fig, axs = plt.subplots(ncol, ncol, layout='constrained', figsize=figsize)
     for y, ycol in enumerate(columns):
         for x, xcol in enumerate(columns):
             for group_label, group_index in zip(group_labels, group_indices):
