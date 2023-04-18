@@ -1,5 +1,5 @@
 import sqlite3 as sql
-from yutility import log, ensure_list, dictfunc
+from yutility import log, ensure_list, dictfunc, plot
 import os
 import numpy as np
 
@@ -23,10 +23,11 @@ sql_to_python_types = {
 
 
 class DBSelectResult:
-    def __init__(self, data, columns):
+    def __init__(self, data, columns, types):
         self.data = data
         self.columns = columns
-        self.__iter_counter = 0
+        self.types = types
+        # self.__iter_counter = 0
 
     def __getitem__(self, key):
         if isinstance(key, int):
@@ -98,6 +99,23 @@ class DBSelectResult:
         key_idxs = [self.columns.index(key) for key in keys]
         cols = [col for col in self.columns if col not in keys]
         return DBSelectResult([x for i, x in enumerate(self) if all(x[kidx] is not None for kidx in key_idxs)], self.columns)
+
+    def pair_plot(self, keys, groupkey=None, **kwargs):
+        if groupkey:
+            groups = self[groupkey]
+        else:
+            groups = None
+        return plot.pair_plot([self[key] for key in keys], keys, groups=groups, groupsname=groupkey, **kwargs)
+
+    def column_type(self, key):
+        return self.types[self.columns.index(key)]
+
+    def column_of_type(self, typs):
+        return [col for col in self.columns if self.column_type(col) in typs]
+
+    @property
+    def numeric_columns(self):
+        return self.column_of_type((int, float))
 
 
 class DataBase:
@@ -243,7 +261,7 @@ class DataBase:
         command = f'SELECT {cols}\n\tFROM {table_name}\n\t{where}'
         self.execute(command)
         result = self.fetchall()
-        return DBSelectResult(result, columns)
+        return DBSelectResult(result, columns, self.get_column_types(table_name))
 
     def delete_duplicates(self, table_name, columns=None):
         cols = '*'
