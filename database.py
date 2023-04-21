@@ -140,6 +140,7 @@ class DBSelectResult:
         return self.types[self.columns.index(key)]
 
     def column_of_type(self, typs):
+        typs = ensure_list(typs)
         return [col for col in self.columns if self.column_type(col) in typs]
 
     @property
