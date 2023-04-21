@@ -116,23 +116,35 @@ class DBSelectResult:
             groups = None
         return plot.scatter(self[xkey], self[ykey], xlabel=xkey, ylabel=ykey, groups=groups, groupsname=groupkey, **kwargs)
 
-    def heatmap(self, xkey, ykey, resolution=(100, 100), s2=.002, figsize=None, **kwargs):
-        plt.figure(figsize=figsize)
-
-        M = np.zeros(resolution)
-
+    def heatmap(self, xkey, ykey, groupkey=None, resolution=(100, 100), s2=.002, figsize=None, **kwargs):
         x, y = self[xkey], self[ykey]
-        dx = x.max() - x.min()
-        xlim = x.min() - dx*.05, x.max() + dx*.05
-        dy = y.max() - y.min()
-        ylim = y.min() - dy*.05, y.max() + dy*.05
-        X, Y = np.meshgrid(np.linspace(*xlim, resolution[0]), np.linspace(*ylim, resolution[1]))
 
-        kernel = lambda px, py: np.exp(-((X-px)**2/(s2*dx**2) + (Y-py)**2/(s2*dy**2)))
-        for px, py in zip(x, y):
-            M += kernel(px, py)
+        if groupkey:
+            groups = self[groupkey]
+            group_labels = np.unique(groups)
+            Ms = [np.zeros(resolution) for _ in group_labels]
+            group_indices = [np.where(groups == group_label) for group_label in group_labels]
+        else:
+            groups = None
+            Ms = [np.zeros(resolution)]
+            group_indices = [np.arange(len(x))]
 
-        return plot.heatmap(M, extent=(x.min(), x.max(), y.min(), y.max()), xlabel=xkey, ylabel=ykey, **kwargs)
+        Ms_ = []
+        for M, indices in zip(Ms, group_indices):
+            dx = x.max() - x.min()
+            xlim = x.min() - dx*.05, x.max() + dx*.05
+            dy = y.max() - y.min()
+            ylim = y.min() - dy*.05, y.max() + dy*.05
+            X, Y = np.meshgrid(np.linspace(*xlim, resolution[0]), np.linspace(*ylim, resolution[1]))
+
+            kernel = lambda px, py: np.exp(-((X-px)**2/(s2*dx**2) + (Y-py)**2/(s2*dy**2)))
+            for px, py in zip(x[indices], y[indices]):
+                M += kernel(px, py)
+            M = (M - M.min()) / (M.max() - M.min())
+            Ms_.append(M)
+
+        plt.figure(figsize=figsize)
+        return plot.heatmap(Ms_, extent=(x.min(), x.max(), y.min(), y.max()), xlabel=xkey, ylabel=ykey, **kwargs)
 
     def column_type(self, key):
         return self.types[self.columns.index(key)]
