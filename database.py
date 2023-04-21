@@ -58,18 +58,18 @@ class DBSelectResult:
         unqs = set(mask_data)
         dbs = {}
         for unq in unqs:
-            dbs[unq] = DBSelectResult([x for i, x in enumerate(self) if mask_data[i] == unq], self.columns)
+            dbs[unq] = DBSelectResult([x for i, x in enumerate(self) if mask_data[i] == unq], self.columns, self.types)
         return dbs
 
     def where(self, mask):
-        return DBSelectResult([x for i, x in enumerate(self) if mask[i]], self.columns)
+        return DBSelectResult([x for i, x in enumerate(self) if mask[i]], self.columns, self.types)
 
     def sortby(self, key, sortfunc=None):
         sortval = []
         for x in self[key]:
             sortval.append(sortfunc(x))
         idx = sorted(range(len(self)), key=lambda i: sortval[i])
-        return DBSelectResult(self[idx], self.columns)
+        return DBSelectResult(self[idx], self.columns, self.types)
 
     def remove_empty(self, keys='*'):
         if keys == '*':
@@ -77,7 +77,7 @@ class DBSelectResult:
         keys = ensure_list(keys)
 
         key_idxs = [self.columns.index(key) for key in keys]
-        return DBSelectResult([x for i, x in enumerate(self) if all(x[kidx] is not None for kidx in key_idxs)], self.columns)
+        return DBSelectResult([x for i, x in enumerate(self) if all(x[kidx] is not None for kidx in key_idxs)], self.columns, self.types)
 
     def __iter__(self):
         return iter(self.data)
@@ -99,9 +99,11 @@ class DBSelectResult:
         keys = ensure_list(keys)
         key_idxs = [self.columns.index(key) for key in keys]
         cols = [col for col in self.columns if col not in keys]
-        return DBSelectResult([x for i, x in enumerate(self) if all(x[kidx] is not None for kidx in key_idxs)], self.columns)
+        return DBSelectResult([x for i, x in enumerate(self) if all(x[kidx] is not None for kidx in key_idxs)], self.columns, self.types)
 
-    def pair_plot(self, keys, groupkey=None, **kwargs):
+    def pair_plot(self, keys=None, groupkey=None, **kwargs):
+        if keys is None:
+            keys = self.numeric_columns
         if groupkey:
             groups = self[groupkey]
         else:
@@ -150,6 +152,7 @@ class DBSelectResult:
         return self.types[self.columns.index(key)]
 
     def column_of_type(self, typs):
+        typs = ensure_list(typs)
         return [col for col in self.columns if self.column_type(col) in typs]
 
     @property
@@ -295,12 +298,15 @@ class DataBase:
             cols = ', '.join(columns)
         if cols == '*':
             columns = self.get_column_names(table_name)
+
+        # types = [self.get_column_types(table_name)[i] for i, col in enumerate(self.get_column_names(table_name)) if col in columns]
+        types = [self.get_column_types(table_name)[self.get_column_names(table_name).index(col)] for col in columns]
         if where is not None:
             where = 'WHERE ' + where
         command = f'SELECT {cols}\n\tFROM {table_name}\n\t{where}'
         self.execute(command)
         result = self.fetchall()
-        return DBSelectResult(result, columns, self.get_column_types(table_name))
+        return DBSelectResult(result, columns, types)
 
     def delete_duplicates(self, table_name, columns=None):
         cols = '*'
