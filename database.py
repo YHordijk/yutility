@@ -58,18 +58,18 @@ class DBSelectResult:
         unqs = set(mask_data)
         dbs = {}
         for unq in unqs:
-            dbs[unq] = DBSelectResult([x for i, x in enumerate(self) if mask_data[i] == unq], self.columns)
+            dbs[unq] = DBSelectResult([x for i, x in enumerate(self) if mask_data[i] == unq], self.columns, self.types)
         return dbs
 
     def where(self, mask):
-        return DBSelectResult([x for i, x in enumerate(self) if mask[i]], self.columns)
+        return DBSelectResult([x for i, x in enumerate(self) if mask[i]], self.columns, self.types)
 
     def sortby(self, key, sortfunc=None):
         sortval = []
         for x in self[key]:
             sortval.append(sortfunc(x))
         idx = sorted(range(len(self)), key=lambda i: sortval[i])
-        return DBSelectResult(self[idx], self.columns)
+        return DBSelectResult(self[idx], self.columns, self.types)
 
     def remove_empty(self, keys='*'):
         if keys == '*':
@@ -77,7 +77,7 @@ class DBSelectResult:
         keys = ensure_list(keys)
 
         key_idxs = [self.columns.index(key) for key in keys]
-        return DBSelectResult([x for i, x in enumerate(self) if all(x[kidx] is not None for kidx in key_idxs)], self.columns)
+        return DBSelectResult([x for i, x in enumerate(self) if all(x[kidx] is not None for kidx in key_idxs)], self.columns, self.types)
 
     def __iter__(self):
         return iter(self.data)
@@ -99,7 +99,7 @@ class DBSelectResult:
         keys = ensure_list(keys)
         key_idxs = [self.columns.index(key) for key in keys]
         cols = [col for col in self.columns if col not in keys]
-        return DBSelectResult([x for i, x in enumerate(self) if all(x[kidx] is not None for kidx in key_idxs)], self.columns)
+        return DBSelectResult([x for i, x in enumerate(self) if all(x[kidx] is not None for kidx in key_idxs)], self.columns, self.types)
 
     def pair_plot(self, keys, groupkey=None, **kwargs):
         if groupkey:
