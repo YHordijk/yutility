@@ -1,4 +1,6 @@
 import matplotlib.pyplot as plt 
+import matplotlib
+from yutility import ensure_list
 import numpy as np
 import atexit
 
@@ -86,7 +88,8 @@ def scatter(x, y, xlabel=None, ylabel=None, plot_marginals=True, s=3, alpha=.5, 
     return ShowCaller()
 
 
-def heatmap(M, extent=None, xlabel=None, ylabel=None, plot_marginals=True, cmap='Blues'):
+def heatmap(M, extent=None, xlabel=None, ylabel=None, plot_marginals=True, cmap='Blues', groupcmap='tab10'):
+    Ms = ensure_list(M)
     # Create Fig and gridspec
     if plot_marginals:
         grid = plt.GridSpec(4, 4, hspace=0, wspace=0)
@@ -101,28 +104,30 @@ def heatmap(M, extent=None, xlabel=None, ylabel=None, plot_marginals=True, cmap=
     else:
         ax_main = plt.gcf().add_subplot(grid[0, 0])
 
-    ax_main.imshow(M, origin='lower', aspect='auto', cmap=cmap, extent=extent)
+    for i, M in enumerate(Ms):
+        if plot_marginals:
+            ax_main.margins(0)
 
-    if plot_marginals:
-        ax_main.margins(0)
+            margin_right = M.sum(axis=1)
+            margin_right = (margin_right - margin_right.min())/(margin_right.max() - margin_right.min())
+            ax_right.plot(margin_right, range(len(margin_right)), linewidth=1)
+            ax_right.fill_betweenx(range(len(margin_right)), margin_right, 0, alpha=.3)
+            ax_right.margins(0)
+            ax_right.axis('off')
+            lim = ax_right.get_xlim()
+            ax_right.set_xlim([lim[0], 1.05])
 
-        margin_right = M.sum(axis=1)
-        margin_right = (margin_right - margin_right.min())/(margin_right.max() - margin_right.min())
-        ax_right.plot(margin_right, range(len(margin_right)), linewidth=1)
-        ax_right.fill_betweenx(range(len(margin_right)), margin_right, 0, alpha=.3)
-        ax_right.margins(0)
-        ax_right.axis('off')
-        lim = ax_right.get_xlim()
-        ax_right.set_xlim([lim[0], 1.05])
+            margin_top = M.sum(axis=0)
+            margin_top = (margin_top - margin_top.min())/(margin_top.max() - margin_top.min())
+            ax_top.plot(range(len(margin_top)), margin_top, linewidth=1)
+            ax_top.fill_between(range(len(margin_top)), margin_top, 0, alpha=.3)
+            ax_top.margins(0)
+            ax_top.axis('off')
+            lim = ax_top.get_xlim()
+            ax_top.set_ylim([lim[0], 1.05])
 
-        margin_top = M.sum(axis=0)
-        margin_top = (margin_top - margin_top.min())/(margin_top.max() - margin_top.min())
-        ax_top.plot(range(len(margin_top)), margin_top, linewidth=1)
-        ax_top.fill_between(range(len(margin_top)), margin_top, 0, alpha=.3)
-        ax_top.margins(0)
-        ax_top.axis('off')
-        lim = ax_top.get_xlim()
-        ax_top.set_ylim([lim[0], 1.05])
+        imcmap = matplotlib.colors.LinearSegmentedColormap.from_list('', [(1, 1, 1, 1), plt.get_cmap(groupcmap)(i)])
+        ax_main.imshow(M, origin='lower', aspect='auto', cmap=imcmap, extent=extent, alpha=M)
 
     ax_main.set_xlabel(xlabel)
     ax_main.set_ylabel(ylabel)
@@ -142,17 +147,18 @@ def pair_plot(columns, names, units=None, groups=None, s=3, alpha=.5, groupsname
         group_indices = [np.where(groups == group_label) for group_label in group_labels]
 
     legend_handles = []
-    fig, axs = plt.subplots(ncol, ncol, layout='constrained', figsize=figsize)
+    fig, axs = plt.subplots(ncol, ncol, figsize=figsize)
+    plt.subplots_adjust(hspace=0.01, wspace=0.01)
     for y, ycol in enumerate(columns):
         for x, xcol in enumerate(columns):
             for group_label, group_index in zip(group_labels, group_indices):
-                plt.subplot(ncol, ncol, ncol*y + x+1)
-                if y == x:
-                    plt.hist(xcol[group_index])
-                else:
-                    scatter = plt.scatter(xcol[group_index], ycol[group_index], alpha=alpha, s=s)
-                    if y == 0 and x == ncol-1:
-                        legend_handles.append(scatter)
+                if x == y:
+                    continue
+                ax = plt.subplot(ncol, ncol, ncol*y + x + 1)
+                ax.margins(0.1)
+                scatter = ax.scatter(xcol[group_index], ycol[group_index], alpha=alpha, s=s)
+                if y == 0 and x == ncol-1:
+                    legend_handles.append(scatter)
 
                 if y == ncol-1 and x == 0:
                     plt.xlabel(names[x] + (f' ({units[x]})' if units else ''))
@@ -171,6 +177,23 @@ def pair_plot(columns, names, units=None, groups=None, s=3, alpha=.5, groupsname
                 else:
                     plt.xticks([])
                     plt.yticks([])
+
+    for x, xcol in enumerate(columns):
+        for group_label, group_index in zip(group_labels, group_indices):
+            ax = plt.subplot(ncol, ncol, ncol*x + x + 1)
+            xlim = xcol.max(), xcol.min()
+            dens = density(xcol[group_index], xlim)
+            ax.plot(*dens, linewidth=1)
+            ax.fill_between(dens[0], 0, dens[1], alpha=.3)
+            if x == ncol - 1:
+                plt.yticks([])
+                plt.xlabel(names[x] + (f' ({units[x]})' if units else ''))
+            else:
+                plt.xticks([])
+                plt.yticks([])
+            lim = ax.get_xlim()
+            ax.set_ylim([0, 1.05])
+            ax.margins(0)
 
     fig.legend(legend_handles, group_labels, loc='outside left upper', title=groupsname)
     return ShowCaller()
