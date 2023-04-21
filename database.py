@@ -286,12 +286,15 @@ class DataBase:
             cols = ', '.join(columns)
         if cols == '*':
             columns = self.get_column_names(table_name)
+
+        # types = [self.get_column_types(table_name)[i] for i, col in enumerate(self.get_column_names(table_name)) if col in columns]
+        types = [self.get_column_types(table_name)[self.get_column_names(table_name).index(col)] for col in columns]
         if where is not None:
             where = 'WHERE ' + where
         command = f'SELECT {cols}\n\tFROM {table_name}\n\t{where}'
         self.execute(command)
         result = self.fetchall()
-        return DBSelectResult(result, columns, self.get_column_types(table_name))
+        return DBSelectResult(result, columns, types)
 
     def delete_duplicates(self, table_name, columns=None):
         cols = '*'
