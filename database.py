@@ -101,7 +101,9 @@ class DBSelectResult:
         cols = [col for col in self.columns if col not in keys]
         return DBSelectResult([x for i, x in enumerate(self) if all(x[kidx] is not None for kidx in key_idxs)], self.columns, self.types)
 
-    def pair_plot(self, keys, groupkey=None, **kwargs):
+    def pair_plot(self, keys=None, groupkey=None, **kwargs):
+        if keys is None:
+            keys = self.numeric_columns
         if groupkey:
             groups = self[groupkey]
         else:
