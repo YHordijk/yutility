@@ -238,7 +238,6 @@ class NMRResults:
         plt.ylabel('Intensity')
 
 
-
 def nmr(mol, dft_settings=None, folder=None, path=DEFAULT_RUN_PATH, do_init=True):
     with log.NoPrint():
         os.makedirs(path, exist_ok=True)
@@ -282,6 +281,29 @@ def nmr(mol, dft_settings=None, folder=None, path=DEFAULT_RUN_PATH, do_init=True
         plams.finish()
 
         return NMRResults(j(workdir(), 'nmr', 'adf.rkf'))
+
+
+def orbital_cub(rkf_path, name, outputfile=None, overwrite=False):
+    if outputfile is None:
+        outputfile = j(os.path.split(rkf_path)[0], f'{name}.cub')
+
+    if os.path.exists(outputfile) and not overwrite:
+        return outputfile
+
+    with open(j(os.path.split(rkf_path)[0], 'densf.run'), 'w+') as inp:
+        inp.write(f'ADFFile {rkf_path}\n')
+        inp.write('Orbitals SCF\n')
+        inp.write(f'    All {name}\n')
+        inp.write('END\n')
+        inp.write(f'CUBOUTPUT {outputfile}')
+
+    with open(j(os.path.split(rkf_path)[0], 'densf.out'), 'w+', newline='') as outfile:
+        subprocess.call(['densf', f'{inp}'], stdout=outfile)
+
+    return outputfile
+
+
+
 
 
 # class ADFFragmentJob(plams.MultiJob):
