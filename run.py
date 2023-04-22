@@ -1,5 +1,5 @@
 import scm.plams as plams
-from yutility import units, config, log, settings, pathfunc
+from yutility import units, config, log, settings, pathfunc, volume
 from ychem.results import reaction2
 import os
 import sys
@@ -283,24 +283,35 @@ def nmr(mol, dft_settings=None, folder=None, path=DEFAULT_RUN_PATH, do_init=True
         return NMRResults(j(workdir(), 'nmr', 'adf.rkf'))
 
 
-def orbital_cub(rkf_path, name, outputfile=None, overwrite=False):
-    if outputfile is None:
-        outputfile = j(os.path.split(rkf_path)[0], f'{name}.cub')
+def orbital_cub(rkf_path, name, orbtype='SCF', symlabel='All', overwrite=False):
+    def get_cub_file():
+        for file in os.listdir(workdir):
+            if file.startswith(cubprefix) and file.endswith('.cub'):
+                return j(workdir, file)
 
-    if os.path.exists(outputfile) and not overwrite:
-        return outputfile
+    workdir = os.path.split(rkf_path)[0]
+    cubprefix = str(name)
 
-    with open(j(os.path.split(rkf_path)[0], 'densf.run'), 'w+') as inp:
-        inp.write(f'ADFFile {rkf_path}\n')
-        inp.write('Orbitals SCF\n')
-        inp.write(f'    All {name}\n')
-        inp.write('END\n')
-        inp.write(f'CUBOUTPUT {outputfile}')
+    # first check if the job is already done
+    if not overwrite:
+        if get_cub_file():
+            return volume.CubeFile(get_cub_file())
+
+
+    with open(j(os.path.split(rkf_path)[0], 'densf.in'), 'w+') as infile:
+        infile.write(f'cd {os.path.split(rkf_path)[0]}\n')
+        infile.write('"$AMSBIN/densf" << eor\n')
+        infile.write(f'ADFFile {os.path.split(rkf_path)[1]}\n')
+        infile.write(f'Orbitals {orbtype}\n')
+        infile.write(f'    {symlabel} {name}\n')
+        infile.write('END\n')
+        infile.write(f'CUBOUTPUT {cubprefix}\n')
+        infile.write('eor\n')
 
     with open(j(os.path.split(rkf_path)[0], 'densf.out'), 'w+', newline='') as outfile:
-        subprocess.call(['densf', f'{inp}'], stdout=outfile)
+        subprocess.call(['bash', f'{j(os.path.split(rkf_path)[0], "densf.in")}'], stdout=outfile)
 
-    return outputfile
+    return volume.CubeFile(get_cub_file())
 
 
 
