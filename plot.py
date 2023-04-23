@@ -11,6 +11,10 @@ class ShowCaller:
         plt.show(block=block)
         return self
 
+    def hold(self):
+        plt.show()
+        return self
+
     def savefig(self, *args, **kwargs):
         plt.savefig(*args, **kwargs)
         return self
