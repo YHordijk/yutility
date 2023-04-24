@@ -66,6 +66,8 @@ class DBSelectResult:
 
     def sortby(self, key, sortfunc=None):
         sortval = []
+        if sortfunc is None:
+            sortfunc = lambda x: x
         for x in self[key]:
             sortval.append(sortfunc(x))
         idx = sorted(range(len(self)), key=lambda i: sortval[i])
