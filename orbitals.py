@@ -21,6 +21,10 @@ class Orbitals:
     def is_unrestricted(self):
         return self.sfos.sfos[0].spin != 'AB'
 
+    @property
+    def spins(self):
+        return ['A', 'B'] if self.is_unrestricted else ['AB']
+
 
 class FMOs:
     def __init__(self, kfpath):
@@ -221,7 +225,7 @@ class SFOs:
 
         return frag, fragidx, orbname, spin
 
-    def get_sfo(self, frag, fragidx, orbname, spin):
+    def get_sfo(self, frag=None, fragidx=None, orbname=None, spin=None, index=None):
         ret = []
         for sfo in self.sfos:
             if sfo.fragment != frag:
@@ -231,76 +235,39 @@ class SFOs:
             if spin is not None and sfo.spin != spin:
                 continue
 
+            if index is not None and sfo.index == index:
+                ret.append(sfo)
+                continue
+
             if orbname == sfo.name:
                 ret.append(sfo)
+                continue
 
             if orbname == sfo._relname:
                 ret.append(sfo)
-
+                continue
         return ret
 
     def __getitem__(self, key):
-        '''
-        
-        '''
         if isinstance(key, str):
             args = self.__decode_key(key)
             return self.get_sfo(*args)
         elif isinstance(key, slice):
             startargs = self.__decode_key(key.start)
             stopargs = self.__decode_key(key.stop)
-            
 
+            start_sfo = ensure_list(self.get_sfo(*startargs))
+            stop_sfo = ensure_list(self.get_sfo(*stopargs))
 
+            start_idx = min([sfo.index for sfo in start_sfo])
+            stop_idx = max([sfo.index for sfo in stop_sfo]) + 1
 
-        # if isinstance(key, slice):
-        #     start = key.start or 0
-        #     stop = key.stop or -1
-        #     step = key.step or 1
+            frag, fragidx, _, spin = startargs
 
-        #     start_sfo = self[start]
-        #     stop_sfo = self[stop]
-
-        #     fragidx = None
-        #     for fragment in self.fragments:
-        #         if start.startswith(fragment):
-        #             fragidx = start_sfo.fragmentindex
-        #             assert stop.startswith(fragment), 'Slice start and stop keys must have same fragment'
-        #             break
-        #     spin = start_sfo.spin
-        #     assert stop_sfo.spin == spin
-
-
-
-        #     startidx = min([fmo.index for fmo in ensure_list(start_sfo)])
-        #     stopidx = max([fmo.index for fmo in ensure_list(stop_sfo)])
-        #     ret = []
-        #     for idx in range(startidx, stopidx+1):
-        #         ret.extend(self.get_orbital(idx, fragidx, spin))
-
-        #     return ret
-
-        # if isinstance(key, int):
-        #     ret = []
-        #     for sfo in self.sfos:
-        #         if sfo.index == key:
-        #             ret.append(sfo)
-
-        # elif isinstance(key, str):
-        #     # check if key corresponds to name of sfo or AMSlevels name
-        #     ret = []
-        #     for sfo in self.sfos:
-        #         if repr(sfo) == key:
-        #             ret.append(sfo)
-        #         if sfo.AMSlevels_name == key:
-        #             ret.append(sfo)
-        #         if sfo.relname == key:
-        #             ret.append(sfo)
-        #         if sfo.AMSlevels_relname == key:
-        #             ret.append(sfo)
-        # if len(ret) == 1:
-        #     return ret[0]
-        # return ret
+            ret = []
+            for idx in range(start_idx, stop_idx):
+                ret.extend(self.get_sfo(frag, fragidx, spin=spin, index=idx))
+            return ret
 
     @property
     def fragments(self):
