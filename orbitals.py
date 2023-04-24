@@ -17,6 +17,10 @@ class Orbitals:
     def rename_fragments(self, old, new):
         self.sfos.rename_fragments(old, new)
 
+    @property
+    def is_unrestricted(self):
+        return self.sfos.sfos[0].spin != 'AB'
+
 
 class FMOs:
     def __init__(self, kfpath):
@@ -184,7 +188,7 @@ class SFOs:
     def __iter__(self):
         return iter(self.sfos)
 
-    def get_orbital(self, index, fragidx=None):
+    def get_orbital(self, index, fragidx=None, spin=None):
         ret = []
         for sfo in self.sfos:
             # print(index, fragidx, sfo.index, sfo.fragmentindex)
@@ -192,55 +196,111 @@ class SFOs:
                 continue
             if fragidx is not None and sfo.fragmentindex != fragidx:
                 continue
+            if spin is not None and sfo.spin != spin:
+                continue
             ret.append(sfo)
             # print(index, fragidx, sfo.index, sfo.fragmentindex)
         return ret
 
-    def __getitem__(self, key):
-        if isinstance(key, slice):
-            start = key.start or 0
-            stop = key.stop or -1
-            step = key.step or 1
-
-            start_sfo = self[start]
-            stop_sfo = self[stop]
-
+    def __decode_key(self, key):
+        frag, orbname = key.split('(')
+        frag_splits = frag.split(':')
+        if len(frag_splits) > 1:
+            frag, fragidx = frag_splits
+            fragidx = int(fragidx)
+        else:
             fragidx = None
-            for fragment in self.fragments:
-                if start.startswith(fragment):
-                    fragidx = start_sfo.fragmentindex
-                    assert stop.startswith(fragment), 'Slice start and stop keys must have same fragment'
-                    break
 
-            startidx = min([fmo.index for fmo in ensure_list(start_sfo)])
-            stopidx = max([fmo.index for fmo in ensure_list(stop_sfo)])
-            ret = []
-            for idx in range(startidx, stopidx+1):
-                ret.extend(self.get_orbital(idx, fragidx))
+        orbname = orbname.strip(')')
+        orbname_splits = orbname.split('_')
 
-            return ret
+        if len(orbname_splits) > 1:
+            orbname, spin = orbname_splits
+        else:
+            spin = None
 
-        if isinstance(key, int):
-            ret = []
-            for sfo in self.sfos:
-                if sfo.index == key:
-                    ret.append(sfo)
+        return frag, fragidx, orbname, spin
 
-        elif isinstance(key, str):
-            # check if key corresponds to name of sfo or AMSlevels name
-            ret = []
-            for sfo in self.sfos:
-                if repr(sfo) == key:
-                    ret.append(sfo)
-                if sfo.AMSlevels_name == key:
-                    ret.append(sfo)
-                if sfo.relname == key:
-                    ret.append(sfo)
-                if sfo.AMSlevels_relname == key:
-                    ret.append(sfo)
-        if len(ret) == 1:
-            return ret[0]
+    def get_sfo(self, frag, fragidx, orbname, spin):
+        ret = []
+        for sfo in self.sfos:
+            if sfo.fragment != frag:
+                continue
+            if fragidx is not None and sfo.fragmentindex != fragidx:
+                continue
+            if spin is not None and sfo.spin != spin:
+                continue
+
+            if orbname == sfo.name:
+                ret.append(sfo)
+
+            if orbname == sfo._relname:
+                ret.append(sfo)
+
         return ret
+
+    def __getitem__(self, key):
+        '''
+        
+        '''
+        if isinstance(key, str):
+            args = self.__decode_key(key)
+            return self.get_sfo(*args)
+        elif isinstance(key, slice):
+            startargs = self.__decode_key(key.start)
+            stopargs = self.__decode_key(key.stop)
+            
+
+
+
+        # if isinstance(key, slice):
+        #     start = key.start or 0
+        #     stop = key.stop or -1
+        #     step = key.step or 1
+
+        #     start_sfo = self[start]
+        #     stop_sfo = self[stop]
+
+        #     fragidx = None
+        #     for fragment in self.fragments:
+        #         if start.startswith(fragment):
+        #             fragidx = start_sfo.fragmentindex
+        #             assert stop.startswith(fragment), 'Slice start and stop keys must have same fragment'
+        #             break
+        #     spin = start_sfo.spin
+        #     assert stop_sfo.spin == spin
+
+
+
+        #     startidx = min([fmo.index for fmo in ensure_list(start_sfo)])
+        #     stopidx = max([fmo.index for fmo in ensure_list(stop_sfo)])
+        #     ret = []
+        #     for idx in range(startidx, stopidx+1):
+        #         ret.extend(self.get_orbital(idx, fragidx, spin))
+
+        #     return ret
+
+        # if isinstance(key, int):
+        #     ret = []
+        #     for sfo in self.sfos:
+        #         if sfo.index == key:
+        #             ret.append(sfo)
+
+        # elif isinstance(key, str):
+        #     # check if key corresponds to name of sfo or AMSlevels name
+        #     ret = []
+        #     for sfo in self.sfos:
+        #         if repr(sfo) == key:
+        #             ret.append(sfo)
+        #         if sfo.AMSlevels_name == key:
+        #             ret.append(sfo)
+        #         if sfo.relname == key:
+        #             ret.append(sfo)
+        #         if sfo.AMSlevels_relname == key:
+        #             ret.append(sfo)
+        # if len(ret) == 1:
+        #     return ret[0]
+        # return ret
 
     @property
     def fragments(self):
@@ -268,6 +328,7 @@ class SFO:
                  energy=None, 
                  occupation=None, 
                  overlaps=None,
+                 spin=None,
                  symmetry=None):
         self.index = index
         self.fragorbindex = fragorbindex
@@ -281,9 +342,12 @@ class SFO:
         self.energy = energy
         self.occupation = occupation
         self.overlaps = overlaps
+        self.spin = spin
         self.symmetry = symmetry
 
     def __repr__(self):
+        if self.spin != 'AB':
+            return f'{self.fragment}({self.name}_{self.spin})'
         return f'{self.fragment}({self.name})'
 
     def __getitem__(self, key):
@@ -292,7 +356,9 @@ class SFO:
 
     @property
     def AMSlevels_name(self):
-        return self.name
+        if self.spin != 'AB':
+            return f'{self.name}_{self.spin}'
+        return f'{self.name}'
 
     @property
     def AMSlevels_relname(self):
@@ -300,6 +366,8 @@ class SFO:
 
     @property
     def relname(self):
+        if self.spin != 'AB':
+            return f'{self.fragment}({self._relname}_{self.spin})'
         return f'{self.fragment}({self._relname})'
 
     def coeff(self, fmo):
@@ -309,6 +377,8 @@ class SFO:
     def overlap(self, sfo):
         assert self.rkf_path == sfo.rkf_path
         if self.symmetry != sfo.symmetry:
+            return 0
+        if self.spin != sfo.spin:
             return 0
         return self.overlaps[sfo.index-1]
 
@@ -339,7 +409,7 @@ def _get_all_SFOs(kfpath):
     indices     = reader.read('SFOs', 'fragorb')
     
     if ('Symmetry', 'symlab') in reader:
-        symmlabels = reader.read('Symmetry', 'symlab').strip()
+        symmlabels = reader.read('Symmetry', 'symlab').strip().split()
         symmnorb = ensure_list(reader.read('Symmetry', 'norb'))
     else:
         symmlabels = symmetry.labels[reader.read('Geometry', 'grouplabel').strip()]
@@ -368,39 +438,49 @@ def _get_all_SFOs(kfpath):
                                    | 5 |
                                    |...|
         '''
-        overlaps = reader.read(symlabel, 'S-CoreSFO')
-        # read each row
-        ov = []
-        for i in range(nmo):
-            # start index will be the number of elements before this row
-            minidx1 = i * (i+1) // 2
-            # stop index will be the number of elements of the next row
-            maxidx1 = (i+1) * (i+2) // 2
-            ov.append(overlaps[minidx1:maxidx1])
-        # then we go through rows again and add the remaining terms
-        ov2 = []
-        for i, row in enumerate(ov):
-            ov2.append(row + [row2[i] for row2 in ov[i+1:]])
-        S[symlabel] = np.array(ov2)
+        S[symlabel] = {}
+        for spin in ['A', 'B'] if is_unrestricted else ['A']:
+            if spin == 'A':
+                overlaps = reader.read(symlabel, 'S-CoreSFO')
+            else:
+                overlaps = reader.read(symlabel, 'S-CoreSFO_B')
+            # read each row
+            ov = []
+            for i in range(nmo):
+                # start index will be the number of elements before this row
+                minidx1 = i * (i+1) // 2
+                # stop index will be the number of elements of the next row
+                maxidx1 = (i+1) * (i+2) // 2
+                ov.append(overlaps[minidx1:maxidx1])
+            # then we go through rows again and add the remaining terms
+            ov2 = []
+            for i, row in enumerate(ov):
+                ov2.append(row + [row2[i] for row2 in ov[i+1:]])
+            S[symlabel][spin if is_unrestricted else "AB"] = np.array(ov2)
+
+        # plt.imshow(np.abs(S[symlabel]))
+        # plt.show()
         # plt.imshow(S[symlabel])
         # plt.show()
 
     sfos = []
     for i in range(nsfos):
-        symm = sfo_symmlabel[i]
-        sfo = SFO(i+1, 
-                  indices[i], 
-                  sfonames[i],
-                  coeffs={spin: coeff[:, i] for spin, coeff in coeffs[symm].items()},
-                  fragment=fragnames[i],
-                  fragmentindex=fragidx[i],
-                  rkf=reader,
-                  rkf_path=kfpath,
-                  energy=energies[i],
-                  occupation=occupations[i], 
-                  symmetry=symm,
-                  overlaps=S[symm][:, i])
-        sfos.append(sfo)
+        for spin in ['A', 'B'] if is_unrestricted else ['AB']:
+            symm = sfo_symmlabel[i]
+            sfo = SFO(i+1, 
+                      indices[i], 
+                      sfonames[i],
+                      coeffs=coeffs[symm][spin][:, i],
+                      fragment=fragnames[i],
+                      fragmentindex=fragidx[i],
+                      rkf=reader,
+                      rkf_path=kfpath,
+                      energy=energies[i],
+                      occupation=occupations[i], 
+                      symmetry=symm,
+                      spin=spin,
+                      overlaps=S[symm][spin][:, i])
+            sfos.append(sfo)
 
     hofo_indices = {idx: [sfo.index for sfo in sfos if sfo.fragmentindex == idx and sfo.occupation > 0][-1] for idx in set(fragidx)}
     for sfo in sfos:
@@ -418,13 +498,11 @@ def _get_all_SFOs(kfpath):
 
 
 
-
-
 def S(sfos1, sfos2):
     Sm = np.zeros((len(sfos1), len(sfos2)))
     for i, sfo1 in enumerate(sfos1):
         for k, sfo2 in enumerate(sfos2):
-            Sm[i, k] = sfo1 @ sfo2
+            Sm[i, k] = abs(sfo1 @ sfo2)
     return Sm
 
 
@@ -478,7 +556,7 @@ def orbint_interactions(sfos1, sfos2):
     return ret
 
 
-def plot_sfos_prop(sfos1, sfos2, prop=S, cmap=None):
+def plot_sfos_prop(sfos1, sfos2, prop=S, cmap=None, use_relname=False):
     assert prop in [orbint, pauli, S, dE]
 
     if cmap is None:
@@ -489,8 +567,8 @@ def plot_sfos_prop(sfos1, sfos2, prop=S, cmap=None):
 
     M = prop(sfos1, sfos2)
 
-    plotname = sfos1[0].rkf_path
-    plt.figure(figsize=(7, 7), num=f'{prop.__name__} {plotname}')
+    plotname = sfos1[0].spin + ' ' + sfos1[0].rkf_path
+    plt.figure(figsize=(10, 8), num=f'{prop.__name__} {plotname}')
     occ_virt_border1 = [i for i in range(1, len(sfos1)) if sfos1[i-1].occupation != sfos1[i].occupation]
     occ_virt_border1 = 0 if len(occ_virt_border1) == 0 else occ_virt_border1[0]
     occ_virt_border2 = [i for i in range(1, len(sfos2)) if sfos2[i-1].occupation != sfos2[i].occupation]
@@ -509,7 +587,7 @@ def plot_sfos_prop(sfos1, sfos2, prop=S, cmap=None):
             if np.isnan(val):
                 continue
             color = 'w' if val > np.nanmax(M) / 2 else 'k'
-            plt.gca().text(k, i, f'{val:.1f}', ha="center", va="center", color=color, fontsize=8)
+            plt.gca().text(k, i, f'{val:.2f}', ha="center", va="center", color=color, fontsize=8)
 
     psi1 = r'\Psi_{' + sfos2[0].fragment + r'}'
     psi2 = r'\Psi_{' + sfos1[0].fragment + r'}'
@@ -517,8 +595,12 @@ def plot_sfos_prop(sfos1, sfos2, prop=S, cmap=None):
     plt.ylabel('$'+psi2+'$')
     yticks = range(len(sfos1))
     xticks = range(len(sfos2))
-    plt.xticks(xticks, [orb.name for orb in sfos2], rotation=90)
-    plt.yticks(yticks, [orb.name for orb in sfos1], rotation=0)
+    if use_relname:
+        plt.xticks(xticks, [orb.AMSlevels_relname for orb in sfos2], rotation=90)
+        plt.yticks(yticks, [orb.AMSlevels_relname for orb in sfos1], rotation=0)
+    else:
+        plt.xticks(xticks, [orb.AMSlevels_name for orb in sfos2], rotation=90)
+        plt.yticks(yticks, [orb.AMSlevels_name for orb in sfos1], rotation=0)
     plt.title(r'$' + prop.__name__ + r'(' + psi1 + r', ' + psi2 + r')$')
     plt.tight_layout()
 
