@@ -154,7 +154,7 @@ def _get_all_FMOs(kfpath):
         return fmos
 
     if ('Symmetry', 'symlab') in reader:
-        symmlabels = reader.read('Symmetry', 'symlab').strip()
+        symmlabels = reader.read('Symmetry', 'symlab').strip().split()
     else:
         symmlabels = symmetry.labels[reader.read('Geometry', 'grouplabel').strip()]
 
@@ -176,7 +176,8 @@ def _get_all_FMOs(kfpath):
             fmos.extend(get_FMOs_of_spin_and_symmetry(symlabel, 'B'))
         else:
             occs = np.array(reader.read(symlabel, 'froc_A'))
-            homo_idx = [i for i, occ in enumerate(occs) if occ > 0][-1]
+            occupied = [i for i, occ in enumerate(occs) if occ > 0]
+            homo_idx = 0 if len(occupied) == 0 else occupied[-1]
             fmos_ = get_FMOs_of_spin_and_symmetry(symlabel, 'A')
             for fmo in fmos_:
                 fmo.spin = 'AB'
@@ -207,7 +208,15 @@ class SFOs:
         return ret
 
     def __decode_key(self, key):
+        '''
+        Keys are given in the following format:
+
+            {frag}[:{fragidx}]({orbname}{symmlabel}_{spin})
+
+        Where :fragidx is optional
+        '''
         frag, orbname = key.split('(')
+
         frag_splits = frag.split(':')
         if len(frag_splits) > 1:
             frag, fragidx = frag_splits
@@ -223,9 +232,19 @@ class SFOs:
         else:
             spin = None
 
-        return frag, fragidx, orbname, spin
+        symmlabel = None
+        on = orbname.replace('HOMO', '').replace('LUMO', '').replace('+', '').replace('-', '')
+        for i, char in enumerate(on):
+            if not char.isnumeric():
+                symmlabel = on[i:]
+                break
 
-    def get_sfo(self, frag=None, fragidx=None, orbname=None, spin=None, index=None):
+        assert frag in self.fragments, f'Fragment {frag} is not present, must be one of [{" ".join(self.fragments)}]'
+        assert spin in self.spins, f'Spin state {spin} is not present for {"un"*self.is_unrestricted}restricted orbitals'
+        assert symmlabel in self.symmetry_labels + [None], f'Symmetry species {symmlabel} is not present, must be one of [{" ".join(self.symmetry_labels)}]'
+        return frag, fragidx, orbname, symmlabel, spin
+
+    def get_sfo(self, frag=None, fragidx=None, orbname=None, symmlabel=None, spin=None, index=None):
         ret = []
         for sfo in self.sfos:
             if sfo.fragment != frag:
@@ -233,6 +252,9 @@ class SFOs:
             if fragidx is not None and sfo.fragmentindex != fragidx:
                 continue
             if spin is not None and sfo.spin != spin:
+                continue
+
+            if symmlabel is not None and sfo.symmetry != symmlabel:
                 continue
 
             if index is not None and sfo.index == index:
@@ -262,16 +284,24 @@ class SFOs:
             start_idx = min([sfo.index for sfo in start_sfo])
             stop_idx = max([sfo.index for sfo in stop_sfo]) + 1
 
-            frag, fragidx, _, spin = startargs
+            frag, fragidx, _, symmlabel, spin = startargs
 
             ret = []
             for idx in range(start_idx, stop_idx):
-                ret.extend(self.get_sfo(frag, fragidx, spin=spin, index=idx))
+                ret.extend(self.get_sfo(frag, fragidx, symmlabel=symmlabel, spin=spin, index=idx))
             return ret
 
     @property
     def fragments(self):
         return set([sfo.fragment for sfo in self.sfos])
+
+    @property
+    def spins(self):
+        return set([sfo.spin for sfo in self.sfos])
+
+    @property
+    def symmetry_labels(self):
+        return list(set([sfo.symmetry for sfo in self.sfos]))
 
     def rename_fragments(self, old, new):
         for sfo in self:
@@ -332,6 +362,12 @@ class SFO:
         return self._relname
 
     @property
+    def index_name(self):
+        if self.spin != 'AB':
+            return f'{self.index}{self.symmetry}_{self.spin}'
+        return f'{self.index}{self.symmetry}'
+
+    @property
     def relname(self):
         if self.spin != 'AB':
             return f'{self.fragment}({self._relname}_{self.spin})'
@@ -374,25 +410,25 @@ def _get_all_SFOs(kfpath):
     subspecies  = reader.read('SFOs', 'subspecies').split()
     sfonames    = [f'{ifo_}{subsp}' for ifo_, subsp in zip(ifo, subspecies)]
     indices     = reader.read('SFOs', 'fragorb')
-    
+
     if ('Symmetry', 'symlab') in reader:
         symmlabels = reader.read('Symmetry', 'symlab').strip().split()
         symmnorb = ensure_list(reader.read('Symmetry', 'norb'))
     else:
         symmlabels = symmetry.labels[reader.read('Geometry', 'grouplabel').strip()]
-        symmnorb = [reader.read(symlabel, 'nmo') for symlabel in symmlabels]
+        symmnorb = [reader.read(symmlabel, 'nmo') for symmlabel in symmlabels]
 
-    sfo_symmlabel = [symlabel for i, symlabel in enumerate(symmlabels) for _ in range(symmnorb[i])]
+    sfo_symmlabel = [symmlabel for i, symmlabel in enumerate(symmlabels) for _ in range(symmnorb[i])]
     coeffs = {}
     S = {}
-    for symlabel in symmlabels:
-        is_unrestricted = (symlabel, 'eps_B') in reader
-        coeffs[symlabel] = {}
+    for symmlabel in symmlabels:
+        is_unrestricted = (symmlabel, 'eps_B') in reader
+        coeffs[symmlabel] = {}
         for spin in ['A', 'B'] if is_unrestricted else ['A']:
-            nmo = len(reader.read(symlabel, f'eps_{spin}'))
-            coeffs_ = reader.read(symlabel, f'Eig-CoreSFO_{spin}')
+            nmo = len(reader.read(symmlabel, f'eps_{spin}'))
+            coeffs_ = reader.read(symmlabel, f'Eig-CoreSFO_{spin}')
             # make coeffs square
-            coeffs[symlabel][spin if is_unrestricted else "AB"] = np.array(coeffs_).reshape(nmo, nmo)
+            coeffs[symmlabel][spin if is_unrestricted else "AB"] = np.array(coeffs_).reshape(nmo, nmo)
 
         '''
         read overlap, overlap is saved as follows:
@@ -405,12 +441,12 @@ def _get_all_SFOs(kfpath):
                                    | 5 |
                                    |...|
         '''
-        S[symlabel] = {}
+        S[symmlabel] = {}
         for spin in ['A', 'B'] if is_unrestricted else ['A']:
             if spin == 'A':
-                overlaps = reader.read(symlabel, 'S-CoreSFO')
+                overlaps = reader.read(symmlabel, 'S-CoreSFO')
             else:
-                overlaps = reader.read(symlabel, 'S-CoreSFO_B')
+                overlaps = reader.read(symmlabel, 'S-CoreSFO_B')
             # read each row
             ov = []
             for i in range(nmo):
@@ -423,17 +459,13 @@ def _get_all_SFOs(kfpath):
             ov2 = []
             for i, row in enumerate(ov):
                 ov2.append(row + [row2[i] for row2 in ov[i+1:]])
-            S[symlabel][spin if is_unrestricted else "AB"] = np.array(ov2)
-
-        # plt.imshow(np.abs(S[symlabel]))
-        # plt.show()
-        # plt.imshow(S[symlabel])
-        # plt.show()
+            S[symmlabel][spin if is_unrestricted else "AB"] = np.array(ov2)
 
     sfos = []
     for i in range(nsfos):
         for spin in ['A', 'B'] if is_unrestricted else ['AB']:
             symm = sfo_symmlabel[i]
+            symmidx = indices[i]
             sfo = SFO(i+1, 
                       indices[i], 
                       sfonames[i],
@@ -523,7 +555,7 @@ def orbint_interactions(sfos1, sfos2):
     return ret
 
 
-def plot_sfos_prop(sfos1, sfos2, prop=S, cmap=None, use_relname=False):
+def plot_sfos_prop(sfos1, sfos2, prop=S, cmap=None, use_relname=False, use_indexname=False):
     assert prop in [orbint, pauli, S, dE]
 
     if cmap is None:
@@ -565,6 +597,9 @@ def plot_sfos_prop(sfos1, sfos2, prop=S, cmap=None, use_relname=False):
     if use_relname:
         plt.xticks(xticks, [orb.AMSlevels_relname for orb in sfos2], rotation=90)
         plt.yticks(yticks, [orb.AMSlevels_relname for orb in sfos1], rotation=0)
+    if use_indexname:
+        plt.xticks(xticks, [orb.index_name for orb in sfos2], rotation=90)
+        plt.yticks(yticks, [orb.index_name for orb in sfos1], rotation=0)
     else:
         plt.xticks(xticks, [orb.AMSlevels_name for orb in sfos2], rotation=90)
         plt.yticks(yticks, [orb.AMSlevels_name for orb in sfos1], rotation=0)
