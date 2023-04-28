@@ -8,9 +8,6 @@ from yutility.ytypes import Either
 j = os.path.join
 
 
-
-
-
 class Orbitals:
     def __init__(self, kfpath):
         self.kfpath = kfpath
@@ -243,8 +240,8 @@ class SFOs:
                 break
 
         assert frag in self.fragments, f'Fragment {frag} is not present, must be one of [{" ".join(self.fragments)}]'
-        assert spin in self.spins, f'Spin state {spin} is not present for {"un"*self.is_unrestricted}restricted orbitals'
-        assert symmlabel in self.symmetry_labels + [None], f'Symmetry species {symmlabel} is not present, must be one of [{" ".join(self.symmetry_labels)}]'
+        assert spin is None or spin in self.spins, f'Spin state {spin} is not present for {"un"*self.is_unrestricted}restricted orbitals'
+        assert symmlabel is None or symmlabel in self.symmetry_labels, f'Symmetry species {symmlabel} is not present, must be one of [{" ".join(self.symmetry_labels)}]'
         return frag, fragidx, orbname, symmlabel, spin
 
     def get_sfo(self, frag=None, fragidx=None, orbname=None, symmlabel=None, spin=None, index=None):
@@ -301,6 +298,10 @@ class SFOs:
     @property
     def spins(self):
         return set([sfo.spin for sfo in self.sfos])
+
+    @property
+    def is_unrestricted(self):
+        return 'AB' not in self.spins
 
     @property
     def symmetry_labels(self):
@@ -413,7 +414,7 @@ def _get_all_SFOs(kfpath):
     subspecies  = reader.read('SFOs', 'subspecies').split()
     sfonames    = [f'{ifo_}{subsp}' for ifo_, subsp in zip(ifo, subspecies)]
     indices     = reader.read('SFOs', 'fragorb')
-
+    
     if ('Symmetry', 'symlab') in reader:
         symmlabels = reader.read('Symmetry', 'symlab').strip().split()
         symmnorb = ensure_list(reader.read('Symmetry', 'norb'))
@@ -512,7 +513,7 @@ def dE(sfos1, sfos2):
     dEm = np.zeros((len(sfos1), len(sfos2)))
     for i, sfo1 in enumerate(sfos1):
         for k, sfo2 in enumerate(sfos2):
-            dEm[i, k] = abs(sfo1.energy - sfo2.energy)
+            dEm[i, k] = abs(sfo1.energy - sfo2.energy) * 27.2114079527
     return dEm
 
 
@@ -532,7 +533,7 @@ def occ_or(sfos1, sfos2):
 
 
 def orbint(sfos1, sfos2):
-    orbintm = S(sfos1, sfos2)**2 / (abs(dE(sfos1, sfos2)) * 27.2114079527)
+    orbintm = S(sfos1, sfos2)**2 / abs(dE(sfos1, sfos2))
     mask = occ_or(sfos1, sfos2) ^ occ_and(sfos1, sfos2)
     orbintm[mask == 0] = None
     return orbintm
