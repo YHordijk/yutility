@@ -68,7 +68,7 @@ def pes_scan(mol, sett, name='pes_scan', folder=None, path=DEFAULT_RUN_PATH, do_
         return {'transitionstate': ts, 'product': product}
 
 
-def crest(mol, folder=None, path=DEFAULT_RUN_PATH, frozen_idxs=None, crest_path='crest', xtb_path='xtb', spinpol=0, charge=0, temp=298.15, mdlen='x1'):
+def crest(mol, folder=None, path=DEFAULT_RUN_PATH, frozen_idxs=None, crest_path='crest', xtb_path='xtb', spinpol=0, charge=0, temp=400, mdlen='x1'):
     with log.NoPrint():
         rundir = pathfunc.next_path_version(j(path, folder))
         os.makedirs(rundir, exist_ok=True)
