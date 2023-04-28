@@ -329,6 +329,10 @@ class DataBase:
 
 
 def merge_databases(databases, new_name):
+    databases = ensure_list(databases)
+    if isinstance(databases[0], str):
+        databases = [DataBase(db_path) for db_path in databases]
+
     with DataBase(new_name) as db:
         for db_old in databases:
             for table in db_old.get_table_names():
