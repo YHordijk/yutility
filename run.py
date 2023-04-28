@@ -89,7 +89,7 @@ def crest(mol, folder=None, path=DEFAULT_RUN_PATH, frozen_idxs=None, crest_path=
             subprocess.call(['bash', f'{runshp}'], stdout=outfile)
 
         # Read in the conformers that were generated
-        with open(j(path, folder, 'crest_conformers.xyz')) as confs:
+        with open(j(rundir, 'crest_conformers.xyz')) as confs:
             lines = [line.strip() for line in confs.readlines()]
 
         # separate conformers into individual molecules
