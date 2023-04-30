@@ -100,7 +100,6 @@ class DBSelectResult:
     def remove_column(self, keys):
         keys = ensure_list(keys)
         key_idxs = [self.columns.index(key) for key in keys]
-        cols = [col for col in self.columns if col not in keys]
         return DBSelectResult([x for i, x in enumerate(self) if all(x[kidx] is not None for kidx in key_idxs)], self.columns, self.types)
 
     def pair_plot(self, keys=None, groupkey=None, **kwargs):
@@ -120,7 +119,7 @@ class DBSelectResult:
             groups = None
         return plot.scatter(self[xkey], self[ykey], xlabel=xkey, ylabel=ykey, groups=groups, groupsname=groupkey, **kwargs)
 
-    def heatmap(self, xkey, ykey, groupkey=None, resolution=(100, 100), s2=.002, figsize=None, **kwargs):
+    def heatmap(self, xkey, ykey, groupkey=None, resolution=(200, 200), s2=.002, figsize=None, **kwargs):
         x, y = self[xkey], self[ykey]
 
         if groupkey:
