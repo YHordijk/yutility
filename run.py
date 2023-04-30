@@ -297,7 +297,6 @@ def orbital_cub(rkf_path, name, orbtype='SCF', symlabel='All', overwrite=False):
         if get_cub_file():
             return volume.CubeFile(get_cub_file())
 
-
     with open(j(os.path.split(rkf_path)[0], 'densf.in'), 'w+') as infile:
         infile.write(f'cd {os.path.split(rkf_path)[0]}\n')
         infile.write('"$AMSBIN/densf" << eor\n')
@@ -312,8 +311,6 @@ def orbital_cub(rkf_path, name, orbtype='SCF', symlabel='All', overwrite=False):
         subprocess.call(['bash', f'{j(os.path.split(rkf_path)[0], "densf.in")}'], stdout=outfile)
 
     return volume.CubeFile(get_cub_file())
-
-
 
 
 
