@@ -1,8 +1,7 @@
 import scm.plams as plams
-from yutility import units, config, log, settings, pathfunc, volume
+from yutility import units, log, settings, pathfunc
 from ychem.results import reaction2
 import os
-import sys
 import numpy as np
 import subprocess
 import shutil
@@ -284,6 +283,8 @@ def nmr(mol, dft_settings=None, folder=None, path=DEFAULT_RUN_PATH, do_init=True
 
 
 def orbital_cub(rkf_path, name, orbtype='SCF', symlabel='All', overwrite=False):
+    from yutility import volume
+    
     def get_cub_file():
         for file in os.listdir(workdir):
             if file.startswith(cubprefix) and file.endswith('.cub'):
