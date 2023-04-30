@@ -48,8 +48,8 @@ def scatter(x, y, xlabel=None, ylabel=None, plot_marginals=True, s=3, alpha=.5, 
     # Define the axes
     if plot_marginals:
         ax_main = plt.gcf().add_subplot(grid[1:, :-1])
-        ax_right = plt.gcf().add_subplot(grid[1:, -1], xticks=[], yticks=[], xticklabels=[], yticklabels=[])
-        ax_top = plt.gcf().add_subplot(grid[0, :-1], xticks=[], yticks=[], xticklabels=[], yticklabels=[])
+        ax_right = plt.gcf().add_subplot(grid[1:, -1], sharey=ax_main, xticks=[], xticklabels=[])
+        ax_top = plt.gcf().add_subplot(grid[0, :-1], sharex=ax_main, yticks=[], yticklabels=[])
     else:
         ax_main = plt.gcf().add_subplot(grid[0, 0])
 
@@ -59,13 +59,7 @@ def scatter(x, y, xlabel=None, ylabel=None, plot_marginals=True, s=3, alpha=.5, 
     if plot_marginals:
         for group_label, group_index in zip(group_labels, group_indices):
             ylim = ax_main.get_ylim()
-            ymarg = (max(ylim) - min(ylim)) * ax_main.margins()[1]
-            ylim = min(ylim) - ymarg, max(ylim) + ymarg
-
             xlim = ax_main.get_xlim()
-            xmarg = (max(xlim) - min(xlim)) * ax_main.margins()[0]
-            xlim = min(xlim) - xmarg, max(xlim) + xmarg
-
             dens = density(y[group_index], ylim)
             ax_right.plot(*dens[::-1], linewidth=1)
             ax_right.fill_betweenx(dens[0], dens[1], 0, alpha=.3)
