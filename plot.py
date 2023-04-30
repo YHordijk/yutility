@@ -42,7 +42,7 @@ def scatter(x, y, xlabel=None, ylabel=None, plot_marginals=True, s=3, alpha=.5, 
     group_labels = [None]
     group_indices = [np.arange(len(x))]
     if groups is not None:
-        group_labels = np.unique(groups)
+        group_labels = np.unique(np.array(groups))
         group_indices = [np.where(groups == group_label) for group_label in group_labels]
 
     # Define the axes
@@ -81,7 +81,8 @@ def scatter(x, y, xlabel=None, ylabel=None, plot_marginals=True, s=3, alpha=.5, 
     ax_main.set_xlabel(xlabel)
     ax_main.set_ylabel(ylabel)
 
-    plt.gcf().legend(loc=legendloc, title=groupsname)
+    if groups is not None:
+        plt.gcf().legend(loc=legendloc, title=groupsname)
 
     return ShowCaller()
 
