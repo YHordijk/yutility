@@ -404,7 +404,7 @@ class SFO:
 
     def coeff(self, fmo):
         assert self.rkf_path == fmo.rkf_path
-        return self.coeffs[fmo.spin][fmo.index-1]
+        return self.coeffs[fmo.index-1]
 
     def overlap(self, sfo):
         assert self.rkf_path == sfo.rkf_path
