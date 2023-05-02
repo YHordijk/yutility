@@ -44,20 +44,26 @@ class FMOs:
             step = key.step or 1
 
             startidx = min([fmo.index for fmo in ensure_list(self[start])])
-            stopidx = max([fmo.index for fmo in ensure_list(self[stop])])
+            stopidx = max([fmo.index for fmo in ensure_list(self[stop])]) + 1
 
             ret = []
             for i in range(startidx, stopidx, step):
-                ret.extend(self[i])
+                ret.extend(ensure_list(self[i]))
 
+            if len(ret) == 1:
+                return ret[0]
             return ret
+
 
         if isinstance(key, int):
             ret = []
             for fmo in self.fmos:
                 if fmo.index == key:
                     ret.append(fmo)
+            if len(ret) == 1:
+                return ret[0]
             return ret
+
 
         if isinstance(key, str):
             # check if key corresponds to name of fmo or AMSlevels name
