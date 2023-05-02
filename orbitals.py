@@ -9,9 +9,10 @@ j = os.path.join
 
 
 class Orbitals:
-    def __init__(self, kfpath):
+    def __init__(self, kfpath, moleculename=None):
         self.kfpath = kfpath
-        self.fmos = FMOs(kfpath)
+        self.moleculename = moleculename
+        self.fmos = FMOs(kfpath, moleculename=moleculename)
         self.sfos = SFOs(kfpath)
 
     def rename_fragments(self, old, new):
@@ -27,8 +28,11 @@ class Orbitals:
 
 
 class FMOs:
-    def __init__(self, kfpath):
+    def __init__(self, kfpath, moleculename=None):
         self.fmos = _get_all_FMOs(kfpath)
+        self.moleculename = moleculename
+        for fmo in self.fmos:
+            fmo.fragment = moleculename
 
     def __iter__(self):
         return iter(self.fmos)
