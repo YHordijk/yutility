@@ -234,14 +234,19 @@ class SFOs:
 
         Where :fragidx is optional
         '''
-        frag, orbname = key.split('(')
-
-        frag_splits = frag.split(':')
-        if len(frag_splits) > 1:
-            frag, fragidx = frag_splits
-            fragidx = int(fragidx)
+        key_splits = key.split('(')
+        if len(key_splits) > 1:
+            frag, orbname = key_splits
         else:
-            fragidx = None
+            frag = None
+            orbname = key_splits[0]
+
+        fragidx = None
+        if frag:
+            frag_splits = frag.split(':')
+            if len(frag_splits) > 1:
+                frag, fragidx = frag_splits
+                fragidx = int(fragidx)
 
         orbname = orbname.strip(')')
         orbname_splits = orbname.split('_')
@@ -258,7 +263,11 @@ class SFOs:
                 symmlabel = on[i:]
                 break
 
-        assert frag in self.fragments, f'Fragment {frag} is not present, must be one of [{" ".join(self.fragments)}]'
+        if ':' in symmlabel:
+            symmlabel = None
+
+        # print(frag, fragidx, orbname, symmlabel, spin)
+        assert frag is None or frag in self.fragments, f'Fragment {frag} is not present, must be one of [{" ".join(self.fragments)}]'
         assert spin is None or spin in self.spins, f'Spin state {spin} is not present for {"un"*self.is_unrestricted}restricted orbitals'
         assert symmlabel is None or symmlabel in self.symmetry_labels, f'Symmetry species {symmlabel} is not present, must be one of [{" ".join(self.symmetry_labels)}]'
         return frag, fragidx, orbname, symmlabel, spin
@@ -266,10 +275,12 @@ class SFOs:
     def get_sfo(self, frag=None, fragidx=None, orbname=None, symmlabel=None, spin=None, index=None):
         ret = []
         for sfo in self.sfos:
-            if sfo.fragment != frag:
+            if frag is not None and sfo.fragment != frag:
                 continue
+
             if fragidx is not None and sfo.fragmentindex != fragidx:
                 continue
+
             if spin is not None and sfo.spin != spin:
                 continue
 
@@ -280,13 +291,24 @@ class SFOs:
                 ret.append(sfo)
                 continue
 
-            if orbname == sfo.name:
+            if orbname is not None and orbname == sfo.name:
                 ret.append(sfo)
                 continue
 
-            if orbname == sfo._relname:
+            if orbname is not None and orbname == sfo._relname:
                 ret.append(sfo)
                 continue
+
+            if orbname is not None and orbname == sfo.AMSlevels_indexname:
+                ret.append(sfo)
+                continue
+
+            if orbname is not None and sfo.name.startswith(orbname):
+                ret.append(sfo)
+                continue
+
+        if len(ret) == 1:
+            return ret[0]
         return ret
 
     def __getitem__(self, key):
