@@ -387,6 +387,10 @@ class SFO:
         return f'{self.name}'
 
     @property
+    def AMSlevels_indexname(self):
+        return f'{self.index}{self.symmetry}'
+
+    @property
     def AMSlevels_relname(self):
         return self._relname
 
