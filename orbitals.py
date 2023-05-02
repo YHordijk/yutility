@@ -484,7 +484,10 @@ def _get_all_SFOs(kfpath):
             if spin == 'A':
                 overlaps = reader.read(symmlabel, 'S-CoreSFO')
             else:
-                overlaps = reader.read(symmlabel, 'S-CoreSFO_B')
+                try:
+                    overlaps = reader.read(symmlabel, 'S-CoreSFO_B')
+                except:
+                    overlaps = reader.read(symmlabel, 'S-CoreSFO')
             # read each row
             ov = []
             for i in range(nmo):
