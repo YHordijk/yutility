@@ -586,7 +586,7 @@ def orbint_interactions(sfos1, sfos2):
 
 
 def plot_sfos_prop(sfos1, sfos2, prop=S, cmap=None, use_relname=False, use_indexname=False):
-    assert prop in [orbint, pauli, S, dE]
+    # assert prop in [orbint, pauli, S, dE]
 
     if cmap is None:
         if prop is pauli:
