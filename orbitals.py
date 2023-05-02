@@ -347,7 +347,8 @@ class SFO:
                  occupation=None, 
                  overlaps=None,
                  spin=None,
-                 symmetry=None):
+                 symmetry=None,
+                 from_fragment_analysis=None):
         self.index = index
         self.fragorbindex = fragorbindex
         self.name = name
@@ -362,6 +363,7 @@ class SFO:
         self.overlaps = overlaps
         self.spin = spin
         self.symmetry = symmetry
+        self.from_fragment_analysis = from_fragment_analysis
 
     def __repr__(self):
         if self.spin != 'AB':
@@ -508,7 +510,8 @@ def _get_all_SFOs(kfpath):
                       occupation=occupations[i], 
                       symmetry=symm,
                       spin=spin,
-                      overlaps=S[symm][spin][:, i])
+                      overlaps=S[symm][spin][:, i],
+                      from_fragment_analysis=from_fragment_analysis)
             sfos.append(sfo)
 
     hofo_indices = {idx: [sfo.index for sfo in sfos if sfo.fragmentindex == idx and sfo.occupation > 0][-1] for idx in set(fragidx)}
