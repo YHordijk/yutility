@@ -766,31 +766,3 @@ if __name__ == '__main__':
     print((orbs.sfos['LA(54A)'].energy - orbs.sfos['Substrate(14A)'].energy) * 27.2114079527)
     print(orbs.sfos['LA(54A)'] @ orbs.sfos['Substrate(14A)'])
     print()
-
-    p = '/Users/yumanhordijk/PhD/LewisAcid_coordination/calculations_final/EDA_vacuum/I2_N_sigma/full/adf.rkf'
-    orbs = Orbitals(p)
-    orbs.rename_fragments(['subsystem1', 'subsystem2'], ['LA', 'Substrate'])
-    print('SIGMA')
-    print(orbs.sfos['LA(54A)'].relname, orbs.sfos['Substrate(15A)'].relname)
-    print((orbs.sfos['LA(54A)'].energy - orbs.sfos['Substrate(15A)'].energy) * 27.2114079527)
-    print(orbs.sfos['LA(54A)'] @ orbs.sfos['Substrate(15A)'])
-
-
-    print('\nBF3')
-    p = '/Users/yumanhordijk/PhD/LewisAcid_coordination/calculations_final/EDA_vacuum/BF3_N_pi/full/adf.rkf'
-    orbs = Orbitals(p)
-    orbs.rename_fragments(['subsystem1', 'subsystem2'], ['LA', 'Substrate'])
-    print('PI')
-    print(orbs.sfos['LA(17A)'].relname, orbs.sfos['Substrate(15A)'].relname)
-    print((orbs.sfos['LA(17A)'].energy - orbs.sfos['Substrate(15A)'].energy) * 27.2114079527)
-    print(orbs.sfos['LA(17A)'] @ orbs.sfos['Substrate(15A)'])
-    print()
-    
-    p = '/Users/yumanhordijk/PhD/LewisAcid_coordination/calculations_final/EDA_vacuum/BF3_N_sigma/full/adf.rkf'
-    orbs = Orbitals(p)
-    orbs.rename_fragments(['subsystem1', 'subsystem2'], ['LA', 'Substrate'])
-    print('SIGMA')
-    print(orbs.sfos['LA(17A)'].relname, orbs.sfos['Substrate(15A)'].relname)
-    print((orbs.sfos['LA(17A)'].energy - orbs.sfos['Substrate(15A)'].energy)* 27.2114079527)
-    print(orbs.sfos['LA(17A)'] @ orbs.sfos['Substrate(15A)'])
-    
