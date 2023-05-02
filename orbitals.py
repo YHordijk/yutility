@@ -87,13 +87,14 @@ class FMOs:
 
 
 class FMO:
-    def __init__(self, index, offset, energy, name, coeffs, occupation, rkf, rkf_path=None, symmetry=None, spin=None, overlaps=None):
+    def __init__(self, index, offset, energy, name, coeffs, occupation, rkf, rkf_path=None, symmetry=None, spin=None, overlaps=None, fragment=None):
         self.index = index
         self.offset = offset
         self.energy = energy
         self.name = name
         self.coeffs = coeffs
         self.occupation = occupation
+        self.fragment = fragment
         self.rkf = rkf
         self.rkf_path = rkf_path
         self.symmetry = symmetry
@@ -113,6 +114,14 @@ class FMO:
         if self.spin != 'AB':
             return f'{self.index}{self.symmetry}_{self.spin}'
         return f'{self.index}{self.symmetry}'
+
+    @property
+    def relname(self):
+        return self.__repr__()
+
+    @property
+    def AMSlevels_relname(self):
+        return self.relname
 
     def __repr__(self):
         if self.spin != 'AB':
@@ -622,9 +631,9 @@ def plot_sfos_prop(sfos1, sfos2, prop=S, cmap=None, use_relname=False, use_index
         plt.xticks(xticks, [orb.index_name for orb in sfos2], rotation=90)
         plt.yticks(yticks, [orb.index_name for orb in sfos1], rotation=0)
     else:
-        plt.xticks(xticks, [orb.AMSlevels_name for orb in sfos2], rotation=90)
-        plt.yticks(yticks, [orb.AMSlevels_name for orb in sfos1], rotation=0)
-    plt.title(r'$' + prop.__name__ + r'(' + psi1 + r', ' + psi2 + r')$')
+        plt.xticks(xticks, [repr(orb) for orb in sfos2], rotation=90)
+        plt.yticks(yticks, [repr(orb) for orb in sfos1], rotation=0)
+    plt.title(prop.__name__ + r'$(' + psi1 + r', ' + psi2 + r')$')
     plt.tight_layout()
 
     return plot.ShowCaller()
