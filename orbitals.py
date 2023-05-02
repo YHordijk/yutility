@@ -169,7 +169,7 @@ def _get_all_FMOs(kfpath):
             else:
                 orbname = f'HOMO-{abs(offset)}' if offset < 0 else 'HOMO'
 
-            fmos.append(FMO(index, offset, eps[index], orbname, coeffs[index], occs[index], reader, rkf_path=kfpath, symmetry=symlabel, spin=spin))
+            fmos.append(FMO(index + 1, offset, eps[index], orbname, coeffs[index], occs[index], reader, rkf_path=kfpath, symmetry=symlabel, spin=spin))
         return fmos
 
     if ('Symmetry', 'symlab') in reader:
