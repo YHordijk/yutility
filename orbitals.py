@@ -311,6 +311,10 @@ class SFOs:
     def symmetry_labels(self):
         return list(set([sfo.symmetry for sfo in self.sfos]))
 
+    @property
+    def from_fragment_analysis(self):
+        return self.sfos[0].from_fragment_analysis
+
     def rename_fragments(self, old, new):
         for sfo in self:
             if sfo.fragment not in old:
@@ -410,7 +414,16 @@ def _get_all_SFOs(kfpath):
     reader = plams.KFReader(kfpath)
     nsfos       = reader.read('SFOs', 'number')
     fragtypes   = reader.read('SFOs', 'fragtype').split()
-    fragidx     = reader.read('SFOs', 'fragment')
+    fragidx     = np.array(reader.read('SFOs', 'fragment'))
+
+    from_fragment_analysis = True
+    natoms = reader.read('Geometry', 'nr of atoms')
+    if max(fragidx) == natoms:
+        atom_order_index = reader.read('Geometry', 'atom order index')
+        atom_order_index = atom_order_index[:len(atom_order_index)//2]
+        fragidx     = [atom_order_index.index(i) + 1 for i in fragidx]
+        from_fragment_analysis = False
+
     fragnames   = [name for name, idx in zip(fragtypes, fragidx)]
     energies    = reader.read('SFOs', 'escale')
     occupations = reader.read('SFOs', 'occupation')
@@ -418,7 +431,7 @@ def _get_all_SFOs(kfpath):
     subspecies  = reader.read('SFOs', 'subspecies').split()
     sfonames    = [f'{ifo_}{subsp}' for ifo_, subsp in zip(ifo, subspecies)]
     indices     = reader.read('SFOs', 'fragorb')
-    
+
     if ('Symmetry', 'symlab') in reader:
         symmlabels = reader.read('Symmetry', 'symlab').strip().split()
         symmnorb = ensure_list(reader.read('Symmetry', 'norb'))
