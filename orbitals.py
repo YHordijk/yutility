@@ -8,6 +8,28 @@ from yutility.ytypes import Either
 j = os.path.join
 
 
+
+def get_calc_info(reader):
+    '''
+    Function to read useful info about orbitals from kf reader
+    '''
+    ret = {}
+
+    # determine if calculation used relativistic corrections
+    # if it did, variable 'escale' will be present in 'SFOs'
+    # if it didnt, only variable 'energy' will be present
+    ret['relativistic'] = ('SFOs', 'escale') in reader
+
+    # determine if SFOs are unrestricted or not
+    ret['unrestricted_sfos'] = ('SFOs', 'energy_B') in reader
+
+    # determine if MOs are unrestricted or not
+    symlabels = reader.read('Symmetry', 'symlab').strip().split()
+    ret['unrestricted_mos'] = (symlabels[0], 'eps_B') in reader
+
+    return ret
+
+
 class Orbitals:
     def __init__(self, kfpath, moleculename=None):
         self.kfpath = kfpath
@@ -226,7 +248,7 @@ class SFOs:
             # print(index, fragidx, sfo.index, sfo.fragmentindex)
         return ret
 
-    def __decode_key(self, key):
+    def _decode_key(self, key):
         '''
         Keys are given in the following format:
 
@@ -234,9 +256,13 @@ class SFOs:
 
         Where :fragidx is optional
         '''
+        if isinstance(key, int):
+            key = str(key)
+
         key_splits = key.split('(')
         if len(key_splits) > 1:
             frag, orbname = key_splits
+            orbname = orbname.strip(')')
         else:
             frag = None
             orbname = key_splits[0]
@@ -248,7 +274,7 @@ class SFOs:
                 frag, fragidx = frag_splits
                 fragidx = int(fragidx)
 
-        orbname = orbname.strip(')')
+        
         orbname_splits = orbname.split('_')
 
         if len(orbname_splits) > 1:
@@ -256,25 +282,32 @@ class SFOs:
         else:
             spin = None
 
+        
+        ''' 
+        get symmetry label from orbname
+            orbname: 'HOMOA',     symmlabel: 'A'
+            orbname: 'LUMO+4  B1.g', symmlabel: 'B1.g'
+            orbname: '29AA',       symmlabel: 'AA'
+        '''
         symmlabel = None
         on = orbname.replace('HOMO', '').replace('LUMO', '').replace('+', '').replace('-', '')
         for i, char in enumerate(on):
             if not char.isnumeric():
                 symmlabel = on[i:]
+                if ':' in symmlabel:
+                    symmlabel = None
                 break
 
-        if ':' in symmlabel:
-            symmlabel = None
-
         # print(frag, fragidx, orbname, symmlabel, spin)
-        assert frag is None or frag in self.fragments, f'Fragment {frag} is not present, must be one of [{" ".join(self.fragments)}]'
-        assert spin is None or spin in self.spins, f'Spin state {spin} is not present for {"un"*self.is_unrestricted}restricted orbitals'
-        assert symmlabel is None or symmlabel in self.symmetry_labels, f'Symmetry species {symmlabel} is not present, must be one of [{" ".join(self.symmetry_labels)}]'
+        # assert frag is None or frag in self.fragments, f'Fragment {frag} is not present, must be one of [{" ".join(self.fragments)}]'
+        # assert spin is None or spin in self.spins, f'Spin state {spin} is not present for {"un"*self.is_unrestricted}restricted orbitals'
+        # assert symmlabel is None or symmlabel in self.symmetry_labels, f'Symmetry species {symmlabel} is not present, must be one of [{" ".join(self.symmetry_labels)}]'
         return frag, fragidx, orbname, symmlabel, spin
 
     def get_sfo(self, frag=None, fragidx=None, orbname=None, symmlabel=None, spin=None, index=None):
         ret = []
         for sfo in self.sfos:
+            # print(sfo)
             if frag is not None and sfo.fragment != frag:
                 continue
 
@@ -313,11 +346,11 @@ class SFOs:
 
     def __getitem__(self, key):
         if isinstance(key, str):
-            args = self.__decode_key(key)
+            args = self._decode_key(key)
             return self.get_sfo(*args)
         elif isinstance(key, slice):
-            startargs = self.__decode_key(key.start)
-            stopargs = self.__decode_key(key.stop)
+            startargs = self._decode_key(key.start)
+            stopargs = self._decode_key(key.stop)
 
             start_sfo = ensure_list(self.get_sfo(*startargs))
             stop_sfo = ensure_list(self.get_sfo(*stopargs))
@@ -329,7 +362,7 @@ class SFOs:
 
             ret = []
             for idx in range(start_idx, stop_idx):
-                ret.extend(self.get_sfo(frag, fragidx, symmlabel=symmlabel, spin=spin, index=idx))
+                ret.extend(ensure_list(self.get_sfo(frag, fragidx, symmlabel=symmlabel, spin=spin, index=idx)))
             return ret
 
     @property
@@ -467,13 +500,19 @@ def _get_all_SFOs(kfpath):
         fragidx     = [atom_order_index.index(i) + 1 for i in fragidx]
         from_fragment_analysis = False
 
-    fragnames   = [name for name, idx in zip(fragtypes, fragidx)]
-    energies    = reader.read('SFOs', 'escale')
-    occupations = reader.read('SFOs', 'occupation')
-    ifo         = reader.read('SFOs', 'ifo')
-    subspecies  = reader.read('SFOs', 'subspecies').split()
-    sfonames    = [f'{ifo_}{subsp}' for ifo_, subsp in zip(ifo, subspecies)]
-    indices     = reader.read('SFOs', 'fragorb')
+    fragnames    = [name for name, idx in zip(fragtypes, fragidx)]
+    if ('SFOs', 'escale') in reader:
+        energies = reader.read('SFOs', 'escale')
+    else:
+        energies = reader.read('SFOs', 'energy')
+        if ('SFOs', 'energy_B') in reader:
+            energies_B = reader.read('SFOs', 'energy_B')
+
+    occupations  = reader.read('SFOs', 'occupation')
+    ifo          = reader.read('SFOs', 'ifo')
+    subspecies   = reader.read('SFOs', 'subspecies').split()
+    sfonames     = [f'{ifo_}{subsp}' for ifo_, subsp in zip(ifo, subspecies)]
+    indices      = reader.read('SFOs', 'fragorb')
 
     if ('Symmetry', 'symlab') in reader:
         symmlabels = reader.read('Symmetry', 'symlab').strip().split()
@@ -533,6 +572,7 @@ def _get_all_SFOs(kfpath):
         for spin in ['A', 'B'] if is_unrestricted else ['AB']:
             symm = sfo_symmlabel[i]
             symmidx = indices[i]
+
             sfo = SFO(i+1, 
                       indices[i], 
                       sfonames[i],
