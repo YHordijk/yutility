@@ -1,6 +1,5 @@
 import scm.plams as plams
 from yutility import units, log, settings, pathfunc
-from ychem.results import reaction2
 import os
 import numpy as np
 import subprocess
@@ -349,6 +348,7 @@ def orbital_cub(rkf_path, name, orbtype='SCF', symlabel='All', overwrite=False):
 
 
 if __name__ == '__main__':
+    from ychem.results import reaction2
     from ReactionRunner import generators
 
     class SubstrateCatalyst(generators.generic):
