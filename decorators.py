@@ -4,6 +4,14 @@ from yutility import units, log
 import sys
 
 
+def add_to_func(**kwargs):
+    def decorator(func):
+        for key, val in kwargs.items():
+            setattr(func, key, val)
+        return func
+    return decorator
+
+
 def timer(*args, **kwargs):
     if len(args) == 1 and len(kwargs) == 0 and callable(args[0]):
         func = args[0]
