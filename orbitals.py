@@ -274,7 +274,6 @@ class SFOs:
                 frag, fragidx = frag_splits
                 fragidx = int(fragidx)
 
-        
         orbname_splits = orbname.split('_')
 
         if len(orbname_splits) > 1:
@@ -282,7 +281,6 @@ class SFOs:
         else:
             spin = None
 
-        
         ''' 
         get symmetry label from orbname
             orbname: 'HOMOA',     symmlabel: 'A'
