@@ -2,7 +2,7 @@ from scm import plams
 import numpy as np
 import os
 import matplotlib.pyplot as plt
-from yutility import log, units, ensure_list, print_kf, run, plot, symmetry, decorators
+from yutility import log, units, ensure_list, print_kf, run, plot, symmetry, decorators, volume
 from yutility.ytypes import Either
 
 j = os.path.join
@@ -183,7 +183,7 @@ def read_SFO_data(reader):  # noqa: N802
             if occ > 0 and occ2 == 0:
                 homoidx = i
             if (occ == 0 and occ2 > 0) or i == len(ret['ifo'])-2:
-                relindices.extend(np.arange(newidx - homoidx, i - homoidx + 1))
+                relindices.extend(np.arange(newidx - homoidx, i - homoidx + 2))
                 newidx = i + 1
         return np.array(relindices)
 
@@ -423,6 +423,12 @@ class SFO:
     def occupied(self):
         return self.occupation > 0
 
+    def generate_orbital(self):
+        return run.orbital_cub(self.kfpath, self.index, orbtype='SFO', symlabel=self.symmetry)
+
+    def show(self):
+        self.generate_orbital().show()
+
 
 def occ_virt_mask(sfos1: list[SFO] or SFO, sfos2: list[SFO] or SFO) -> float or np.ndarray:
     ret = []
@@ -578,6 +584,7 @@ if __name__ == '__main__':
     plot_sfos_prop(sfos_donor, sfos_acceptor, orbint, use_relname=True).show()
     sfo_donor_best, sfo_acceptor_best, oi = sort_sfo_pairs(sfos_donor, sfos_acceptor, orbint)[-1]
     print(sfo_donor_best, sfo_acceptor_best)
+    volume.show_multiple([sfo_donor_best.generate_orbital(), sfo_acceptor_best.generate_orbital()])
     # print(sfo2.full_name)
 
     # reader = plams.KFReader(p)
