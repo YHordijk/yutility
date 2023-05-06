@@ -238,6 +238,9 @@ class SFO:
     def occupied(self):
         return self.occupation > 0
 
+    def generate_orbital(self):
+        return run.orbital_cub(self.rkf_path, self.index, orbtype='SFO', symlabel=self.symmetry)
+
 
 def occ_virt_mask(sfos1: list[SFO] or SFO, sfos2: list[SFO] or SFO) -> float or np.ndarray:
     ret = []
