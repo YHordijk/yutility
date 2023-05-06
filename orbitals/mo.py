@@ -25,9 +25,9 @@ class MOs:
         '''
         Keys are given in the following format:
 
-            {fragname}[:{fragidx}]({orbname})[_{spin}]
+            {orbname}[_{spin}]
 
-        Where [:fragidx] is optional
+        Where [_{spin}] is optional
         '''
 
         # get spin from the key
@@ -37,66 +37,46 @@ class MOs:
             spin = None
             orbname = key
 
-        # split key into fragment name and orbname 
-        if '(' in orbname:
-            fragname, orbname = orbname.split('(')
-            orbname = orbname.strip(')')
-        else:
-            fragname = None
+        return {'orbname': orbname, 'spin': spin}
 
-        # extract fragment index from fragment name if present
-        if fragname is not None and ':' in fragname:
-            fragname, fragidx = fragname.split(':')
-            fragidx = int(fragidx)
-        else:
-            fragidx = None
-
-        return {'fragname': fragname, 'fragidx': fragidx, 'orbname': orbname, 'spin': spin}
-
-    def get_sfo(self, orbname=None, fragname=None, fragidx=None, spin=None, index=None):
+    def get_mo(self, orbname=None, spin=None, index=None):
         ret = []
-        for sfo in self.sfos:
-            if orbname is not None and orbname not in [sfo.name]:
+        for mo in self.mos:
+            if orbname is not None and orbname not in [mo.name]:
                 continue
 
-            if fragname is not None and fragname != sfo.fragment:
+            if spin is not None and spin != mo.spin:
                 continue
 
-            if spin is not None and spin != sfo.spin:
+            if index is not None and index != mo.index:
                 continue
 
-            if fragidx is not None and fragidx != sfo.fragment_index:
-                continue
-
-            if index is not None and index != sfo.index:
-                continue
-
-            ret.append(sfo)
+            ret.append(mo)
 
         return ret
 
     def __getitem__(self, key):
         if isinstance(key, int):
-            return self.sfos[key - 1]
+            return self.mos[key - 1]
 
         if isinstance(key, str):
             decoded = self._decode_key(key)
-            ret = self.get_sfo(**decoded)
+            ret = self.get_mo(**decoded)
             return ret[0] if len(ret) == 1 else ret
 
         if isinstance(key, slice):
             start_decoded = self._decode_key(key.start)
             stop_decoded = self._decode_key(key.stop)
 
-            start_sfo = ensure_list(self.get_sfo(**start_decoded))
-            stop_sfo = ensure_list(self.get_sfo(**stop_decoded))
+            start_sfo = ensure_list(self.get_mo(**start_decoded))
+            stop_sfo = ensure_list(self.get_mo(**stop_decoded))
 
             start_index = min(sfo.index for sfo in start_sfo)
             stop_index = min(sfo.index for sfo in stop_sfo)
 
             ret = []
             for index in range(start_index, stop_index + 1):
-                ret.extend(self.get_sfo(index=index))
+                ret.extend(self.get_mo(index=index))
             return ret
 
     def get_calc_info(self):
@@ -145,6 +125,7 @@ class MOs:
                         'reader':               self.reader,
                         'kfpath':               self.kfpath,
                         # 'overlaps':             data['overlaps'][symlabel][spin][isfo],
+                        'coeffs':               data['coeffs'][symlabel][spin][idx],
                         'occupation':           data['occs'][symlabel][spin][idx],
                         'atomic_fragments':     self.uses_atomic_fragments,
                     })
@@ -162,6 +143,24 @@ class MO:
 
     def __repr__(self):
         return self.full_name
+
+    def __matmul__(self, other):
+        return self.get_coeff(other)
+    
+    def __rmatmul__(self, other):
+        return self.__matmul__(other)        
+
+    def get_coeff(self, other):
+        if isinstance(other, list):
+            return [self.get_coeff(sfo) for sfo in other]
+
+        if self.symmetry != other.symmetry:
+            return 0
+
+        if self.spin != other.spin:
+            return 0
+            
+        return self.coeffs[other.symmetry_type_index]
 
     @property
     def full_name(self):
