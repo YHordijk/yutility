@@ -101,7 +101,7 @@ class MOs:
 
     def get_calc_info(self):
         calc_info = orbitals.info.get_calc_info(self.reader)
-        self.is_unrestricted = calc_info['unrestricted_sfos']
+        self.is_unrestricted = calc_info['unrestricted_mos']
         self.uses_molecular_fragments = calc_info['used_regions']
         self.uses_atomic_fragments = not calc_info['used_regions']
         self.is_relativistic = calc_info['relativistic']
