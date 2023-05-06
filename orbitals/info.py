@@ -257,12 +257,15 @@ def read_MO_data(reader):  # noqa: N802
     ret['coeffs'] = {}
     for symlabel in ret['symlabels']:
         if calc_info['unrestricted_mos']:
+            c_A = ensure_list(reader.read(symlabel, 'Eig-CoreSFO_A'))
+            c_B = ensure_list(reader.read(symlabel, 'Eig-CoreSFO_B'))
             ret['coeffs'][symlabel] = {
-                'A': ensure_list(reader.read(symlabel, 'Eig-CoreSFO_A')),
-                'B': ensure_list(reader.read(symlabel, 'Eig-CoreSFO_B'))
+                'A': np.array(c_A).reshape(ret['nmo'][symlabel]['A'], ret['nmo'][symlabel]['A']),
+                'B': np.array(c_B).reshape(ret['nmo'][symlabel]['B'], ret['nmo'][symlabel]['B'])
             }
         else:
-            ret['coeffs'][symlabel] = {'AB': ensure_list(reader.read(symlabel, 'Eig-CoreSFO_A'))}
+            c = ensure_list(reader.read(symlabel, 'Eig-CoreSFO_A'))
+            ret['coeffs'][symlabel] = {'AB': np.array(c).reshape(ret['nmo'][symlabel]['AB'], ret['nmo'][symlabel]['AB'])}
 
     # get index of MO in symmetry label
     ret['symmidx'] = {}
