@@ -1,6 +1,7 @@
-from yutility import log, pathfunc
+from yutility import log, pathfunc, listfunc
 
-ensure_list = lambda x: [x] if not isinstance(x, (list, tuple, set)) else x
+ensure_list = listfunc.ensure_list
+squeeze_list = listfunc.squeeze_list
 
 
 def download_from_github(file, out, repo=None, token=None):
