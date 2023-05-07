@@ -14,9 +14,14 @@ class SFOs:
         self.reader = reader or plams.KFReader(kfpath)
         self.kfpath = kfpath
         if not self.kfpath:
-            self.kfpath = self.reader.path
+            self.kfpath = os.path.abspath(self.reader.path)
+        else:
+            self.kfpath = os.path.abspath(kfpath)
         self.get_calc_info()
         self.get_sfos()
+
+    def __iter__(self):
+        return iter(self.sfos)
 
     def _decode_key(self, key):
         '''
@@ -28,11 +33,13 @@ class SFOs:
         '''
 
         # get spin from the key
-        if '_' in key:
-            orbname, spin = key.split('_')
-        else:
-            spin = None
-            orbname = key
+        spin = None
+        orbname = key
+        for spin_part in ['_A', '_B', '_AB']:
+            if key.endswith(spin_part):
+                spin = spin_part[1:]
+                orbname = key.removesuffix(spin_part)
+                break
 
         # split key into fragment name and orbname 
         if '(' in orbname:
@@ -53,7 +60,7 @@ class SFOs:
     def get_sfo(self, orbname=None, fragname=None, fragidx=None, spin=None, index=None):
         ret = []
         for sfo in self.sfos:
-            if orbname is not None and orbname not in [sfo.name, sfo.relname]:
+            if orbname is not None and orbname not in [sfo.name, sfo.relname, sfo.index_name]:
                 if ':' in sfo.name and sfo.name.startswith(orbname):
                     pass
                 else:
@@ -77,7 +84,7 @@ class SFOs:
 
     def __getitem__(self, key):
         if isinstance(key, int):
-            return self.sfos[key - 1]
+            return squeeze_list(self.get_sfo(index=key))
 
         if isinstance(key, (tuple, list)):
             ret = []
@@ -114,6 +121,16 @@ class SFOs:
     @property
     def fragments(self):
         return set([sfo.fragment for sfo in self.sfos])
+
+    def rename_fragments(self, old, new):
+        old = ensure_list(old)
+        new = ensure_list(new)
+        for sfo in self:
+            if sfo.fragment not in old:
+                continue
+            idx = old.index(sfo.fragment)
+            sfo.fragment_unique_name = sfo.fragment_unique_name.replace(sfo.fragment, new[idx])
+            sfo.fragment = new[idx]
 
     def get_calc_info(self):
         calc_info = orbitals.info.get_calc_info(self.reader)
@@ -181,11 +198,15 @@ class SFO:
     def __repr__(self):
         return self.full_name
 
-    def __matmul__(self, *args, **kwargs):
-        return self.get_overlap(*args, **kwargs)
+    def __matmul__(self, other):
+        if isinstance(other, orbitals.mo.MO):
+            return other.__matmul__(self)
+        return self.get_overlap(other)
 
-    def __rmatmul__(self, *args, **kwargs):
-        return self.__matmul__(*args, **kwargs)
+    def __rmatmul__(self, other):
+        if isinstance(other, orbitals.mo.MO):
+            return other.__rmatmul__(self)
+        return self.__matmul__(other)
 
     def __sub__(self, other):
         if isinstance(other, list):
@@ -383,19 +404,25 @@ def plot_sfos_prop(sfos1, sfos2, prop=orbint, cmap='Greens', title=None, use_rel
 
 
 if __name__ == '__main__':
-    p = '../test/orbitals/rkf/BH3NH3.rkf'
+    # p = '../test/orbitals/rkf/BH3NH3.rkf'
+    # sfos = SFOs(kfpath=p)
+
+    # sfos_donor = sfos[:'Donor(LUMO+2)']
+    # sfos_acceptor = sfos['Acceptor(1A)':'Acceptor(LUMO+2)']
+    # sfo_donor_best, sfo_acceptor_best, oi = sort_sfo_pairs(sfos_donor, sfos_acceptor, orbint)[-1]
+    # plot_sfos_prop(sfos_donor, sfos_acceptor, orbint, use_relname=True).hold()
+
+    # p = '../test/orbitals/rkf/methyl.rkf'
+    # sfos = SFOs(kfpath=p)
+
+    # sfos_c = sfos['C(1S)', 'C(2S)', 'C(1P)']
+    # sfos_h = sfos.get_fragment_sfos('H')
+    # sfos_c_best, sfos_h_best, oi = sort_sfo_pairs(sfos_c, sfos_h, orbint)[-1]
+    # plot_sfos_prop(sfos_c, sfos_h, overlap, use_relname=False).hold()
+
+
+
+    p = '../test/orbitals/rkf/substrate_cat_complex.rkf'
     sfos = SFOs(kfpath=p)
 
-    sfos_donor = sfos[:'Donor(LUMO+2)']
-    sfos_acceptor = sfos['Acceptor(1A)':'Acceptor(LUMO+2)']
-    sfo_donor_best, sfo_acceptor_best, oi = sort_sfo_pairs(sfos_donor, sfos_acceptor, orbint)[-1]
-    print(sfo_donor_best, sfo_acceptor_best, oi)
-    plot_sfos_prop(sfos_donor, sfos_acceptor, orbint, use_relname=True).hold()
-
-    p = '../test/orbitals/rkf/methyl.rkf'
-    sfos = SFOs(kfpath=p)
-
-    sfos_c = sfos['C(1S)', 'C(2S)', 'C(1P)']
-    sfos_h = sfos.get_fragment_sfos('H')
-    sfos_c_best, sfos_h_best, oi = sort_sfo_pairs(sfos_c, sfos_h, orbint)[-1]
-    plot_sfos_prop(sfos_c, sfos_h, overlap, use_relname=False).hold()
+    print(sfos['268A'], sfos['12A'], sfos['268A'] @ sfos['12A'])
