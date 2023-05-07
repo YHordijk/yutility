@@ -185,7 +185,7 @@ def read_MO_data(reader):  # noqa: N802
 
     # MO energies
     ret['energy'] = {}
-    ret['energy']['sorted'] = []
+    ret['energy']['sorted'] = {'A': [], 'B': [], 'AB': []}
     energyprefix = 'escale' if calc_info['relativistic'] else 'eps'
     for symlabel in ret['symlabels']:
         if calc_info['unrestricted_mos']:
@@ -193,12 +193,14 @@ def read_MO_data(reader):  # noqa: N802
                 'A': ensure_list(reader.read(symlabel, f'{energyprefix}_A')),
                 'B': ensure_list(reader.read(symlabel, f'{energyprefix}_B'))
             }
-            ret['energy']['sorted'].extend(ensure_list(reader.read(symlabel, f'{energyprefix}_A')))
-            ret['energy']['sorted'].extend(ensure_list(reader.read(symlabel, f'{energyprefix}_B')))
+            ret['energy']['sorted']['A'].extend(ensure_list(reader.read(symlabel, f'{energyprefix}_A')))
+            ret['energy']['sorted']['B'].extend(ensure_list(reader.read(symlabel, f'{energyprefix}_B')))
         else:
             ret['energy'][symlabel] = {'AB': ensure_list(reader.read(symlabel, f'{energyprefix}_A'))}
-            ret['energy']['sorted'].extend(ensure_list(reader.read(symlabel, f'{energyprefix}_A')))
-    ret['energy']['sorted'] = sorted(ret['energy']['sorted'])
+            ret['energy']['sorted']['AB'].extend(ensure_list(reader.read(symlabel, f'{energyprefix}_A')))
+    ret['energy']['sorted']['A'] = sorted(ret['energy']['sorted']['A'])
+    ret['energy']['sorted']['B'] = sorted(ret['energy']['sorted']['B'])
+    ret['energy']['sorted']['AB'] = sorted(ret['energy']['sorted']['AB'])
 
     ret['energy_idx'] = {}
     all_idx = {'A': [], 'B': [], 'AB': []}
@@ -207,7 +209,7 @@ def read_MO_data(reader):  # noqa: N802
             energies_A = ensure_list(reader.read(symlabel, f'{energyprefix}_A'))
             idx_A = []
             for energy_A in energies_A:
-                idx = ret['energy']['sorted'].index(energy_A)
+                idx = ret['energy']['sorted']['A'].index(energy_A)
                 while idx in all_idx['A']:
                     idx += 1
                 idx_A.append(idx)
@@ -216,7 +218,7 @@ def read_MO_data(reader):  # noqa: N802
             energies_B = ensure_list(reader.read(symlabel, f'{energyprefix}_B'))
             idx_B = []
             for energy_B in energies_B:
-                idx = ret['energy']['sorted'].index(energy_B)
+                idx = ret['energy']['sorted']['B'].index(energy_B)
                 while idx in all_idx['B']:
                     idx += 1
                 idx_B.append(idx)
@@ -230,7 +232,7 @@ def read_MO_data(reader):  # noqa: N802
             energies = ensure_list(reader.read(symlabel, f'{energyprefix}_A'))
             idxs = []
             for energy_B in energies:
-                idx = ret['energy']['sorted'].index(energy_B)
+                idx = ret['energy']['sorted']['AB'].index(energy_B)
                 while idx in all_idx['AB']:
                     idx += 1
                 idxs.append(idx)
@@ -239,7 +241,7 @@ def read_MO_data(reader):  # noqa: N802
 
     # MO occupations
     ret['occs'] = {}
-    ret['noccs'] = 0
+    ret['noccs'] = {}
     for symlabel in ret['symlabels']:
         if calc_info['unrestricted_mos']:
             ret['occs'][symlabel] = {
@@ -247,11 +249,13 @@ def read_MO_data(reader):  # noqa: N802
                 'B': ensure_list(reader.read(symlabel, 'froc_B'))
             }
 
-            ret['noccs'] += len([occ for occ in ensure_list(reader.read(symlabel, 'froc_A')) if occ > 0])
-            ret['noccs'] += len([occ for occ in ensure_list(reader.read(symlabel, 'froc_B')) if occ > 0])
+            ret['noccs'][symlabel] = {
+                'A': len([occ for occ in ensure_list(reader.read(symlabel, 'froc_A')) if occ > 0]),
+                'B': len([occ for occ in ensure_list(reader.read(symlabel, 'froc_B')) if occ > 0])
+            }
         else:
             ret['occs'][symlabel] = {'AB': ensure_list(reader.read(symlabel, 'froc_A'))}
-            ret['noccs'] += len([occ for occ in ensure_list(reader.read(symlabel, 'froc_A')) if occ > 0])
+            ret['noccs'][symlabel] = {'AB': len([occ for occ in ensure_list(reader.read(symlabel, 'froc_A')) if occ > 0]),}
  
     # MO coefficients
     ret['coeffs'] = {}

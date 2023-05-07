@@ -9,12 +9,16 @@ j = os.path.join
 
 
 class MOs:
-    def __init__(self, kfpath=None, reader=None):
+    def __init__(self, kfpath=None, reader=None, moleculename=None):
         assert reader or kfpath, 'Please provide a KFReader or path to a kf-file'
         self.reader = reader or plams.KFReader(kfpath)
         self.kfpath = kfpath
         if not self.kfpath:
-            self.kfpath = self.reader.path
+            self.kfpath = os.path.abspath(self.reader.path)
+        else:
+            self.kfpath = os.path.abspath(kfpath)
+
+        self.moleculename = moleculename
         self.get_calc_info()
         self.get_mos()
 
@@ -42,7 +46,7 @@ class MOs:
     def get_mo(self, orbname=None, spin=None, index=None):
         ret = []
         for mo in self.mos:
-            if orbname is not None and orbname not in [mo.name]:
+            if orbname is not None and orbname not in [mo.name, mo.relative_name, mo.relname]:
                 continue
 
             if spin is not None and spin != mo.spin:
@@ -57,7 +61,13 @@ class MOs:
 
     def __getitem__(self, key):
         if isinstance(key, int):
-            return self.mos[key - 1]
+            return squeeze_list(self.get_mo(index=key))
+
+        if isinstance(key, (tuple, list)):
+            ret = []
+            for key_ in key:
+                ret.extend(ensure_list(self.__getitem__(key_)))    
+            return squeeze_list(ret)
 
         if isinstance(key, str):
             decoded = self._decode_key(key)
@@ -98,7 +108,7 @@ class MOs:
                 for idx in range(data['nmo'][symlabel][spin]):
                     energy = data['energy'][symlabel][spin][idx]
                     mo_index = data['energy_idx'][symlabel][spin][idx]
-                    relindex = mo_index + 1 - data['noccs']
+                    relindex = mo_index + 1 - data['noccs'][symlabel][spin]
                     if relindex > 0:
                         if relindex == 1:
                             relname = 'LUMO'
@@ -109,11 +119,13 @@ class MOs:
                             relname = 'HOMO'
                         else:
                             relname = f'HOMO-{abs(relindex)}'
+
                     mo_data.append({
                         'index':                mo_index + 1,
                         'relindex':             relindex,
                         'index_in_symlabel':    idx,
-                        'name':                 f'{idx + 1}{symlabel}',
+                        'name':                 f'{mo_index + 1}{symlabel}',
+                        'moleculename':         self.moleculename,
                         'relname':              relname,
                         # 'fragment_index':       data['fragidx'][idx],
                         # 'fragment':             data['fragtypes'][idx],
