@@ -4,10 +4,11 @@ import numpy as np
 
 
 class Orbitals:
-    def __init__(self, path):
+    def __init__(self, path, moleculename=None):
         self.reader = plams.KFReader(path)
-        self.mos = mo.MOs(reader=self.reader)
+        self.mos = mo.MOs(reader=self.reader, moleculename=moleculename)
         self.sfos = sfo.SFOs(reader=self.reader)
+        self.rename_fragments = self.sfos.rename_fragments
 
     def mulliken_contribution(self, sfo, mo):
         if sfo.symmetry != mo.symmetry:
