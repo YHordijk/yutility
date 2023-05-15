@@ -50,7 +50,7 @@ class Orbitals:
             Mulliken contribution of SFO $\mu$ to MO $i$.
 
         The marginals of the Mulliken population matrix $P_{i\mu}$ should equal
-        the occupation numbers of the MOs.
+        the occupation numbers of the MOs on axis 1 and the 
         '''
         return mo.occupation * self.mulliken_contribution(sfo, mo)
 
@@ -63,15 +63,16 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
     from yutility import ensure_list
 
-    p = '../test/orbitals/rkf/methyl_unrestricted_frags_symm.rkf'
+    p = '../test/orbitals/rkf/ethaneEDA.rkf'
     orbs = Orbitals(p)
 
     contributions = []
     for mo_ in orbs.mos:
         contributions.append([])
         for sfo_ in orbs.sfos:
-            contributions[-1].append(orbs.mulliken_contribution(sfo_, mo_))
+            contributions[-1].append(orbs.mulliken_population(sfo_, mo_))
 
     print(np.sum(contributions, axis=1))
+    print(np.sum(contributions, axis=0))
     plt.imshow(contributions)
     plt.show()
