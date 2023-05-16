@@ -129,10 +129,10 @@ def load(path):
 
 
 def copy_data(mol1, mol2):
-    mol1['flags'] = mol2['flags']
-    mol1['molecule'].identifier_data = mol2['molecule'].identifier_data
+    mol1['flags'] = mol2['flags'].copy()
+    mol1['molecule'].identifier_data = mol2['molecule'].identifier_data.copy()
     for a1, a2 in zip(mol1['molecule'].atoms, mol2['molecule'].atoms):
-        a1.identifier_data = a2.identifier_data
+        a1.identifier_data = a2.identifier_data.copy()
 
 
 def get_labeled_atoms(molecule, label, origin=None, return_idx=False):
@@ -155,6 +155,22 @@ def get_labeled_atoms(molecule, label, origin=None, return_idx=False):
     if return_idx:
         return [molecule.atoms.index(a) for a in atoms]
     return atoms
+
+
+def filter_atoms(molecule, label=None, origin=None, return_idx=False):
+    ret = []
+    for i, atom in enumerate(molecule):
+        if label is not None and label not in atom.identifier_data['labels']:
+            continue
+        if origin is not None and atom.identifier_data['origin'] != origin:
+            continue
+
+        if return_idx:
+            ret.append(i)
+        else:
+            ret.append(atom)
+    return ret
+
 
 
 def TSRC(molecule):
