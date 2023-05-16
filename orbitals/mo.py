@@ -9,7 +9,7 @@ j = os.path.join
 
 
 class MOs:
-    def __init__(self, kfpath=None, reader=None, moleculename=None):
+    def __init__(self, kfpath=None, reader=None, moleculename=None, **kwargs):
         assert reader or kfpath, 'Please provide a KFReader or path to a kf-file'
         self.reader = reader or plams.KFReader(kfpath)
         self.kfpath = kfpath
@@ -141,7 +141,13 @@ class MOs:
                         'occupation':           data['occs'][symlabel][spin][idx],
                         'atomic_fragments':     self.uses_atomic_fragments,
                     })
-        self.mos = [MO(**mo_datum) for mo_datum in mo_data]
+        mos = [MO(**mo_datum) for mo_datum in mo_data]
+
+        # if self.is_unrestricted:
+        #     for idx in range(data['nmo'][symlabel]['A']):
+
+
+        self.mos = mos
 
 
 class MO:

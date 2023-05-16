@@ -9,7 +9,7 @@ j = os.path.join
 
 
 class SFOs:
-    def __init__(self, kfpath=None, reader=None):
+    def __init__(self, kfpath=None, reader=None, **kwargs):
         assert reader or kfpath, 'Please provide a KFReader or path to a kf-file'
         self.reader = reader or plams.KFReader(kfpath)
         self.kfpath = kfpath
@@ -101,6 +101,9 @@ class SFOs:
             return squeeze_list(ret)
 
         if isinstance(key, slice):
+            start_decoded = self._decode_key(key.start)
+            start_decoded.pop('orbname', None)
+            start_decoded.pop('index', None)
             start_sfo = ensure_list(self.__getitem__(key.start or 1))
             stop_sfo = ensure_list(self.__getitem__(key.stop or 0))
 
@@ -109,7 +112,7 @@ class SFOs:
 
             ret = []
             for index in range(start_index, stop_index + 1):
-                ret.extend(self.get_sfo(index=index))
+                ret.extend(self.get_sfo(index=index, **start_decoded))
             return squeeze_list(ret)
 
     def get_fragment_sfos(self, fragname):
@@ -183,7 +186,51 @@ class SFOs:
                     'occupation':           data['occupations'][spin][idx],
                     'atomic_fragments':     self.uses_atomic_fragments,
                 })
+
         self.sfos = [SFO(**sfo_datum) for sfo_datum in sfo_data]
+
+        # for unrestricted molecular fragments we want to assign the SOMO and SUMO and fix the HOMO and LUMO names
+        if self.is_unrestricted and self.uses_molecular_fragments:
+            # this only applies to unrestricted calculations using molecular fragments
+            # SOMO and SUMO are independent for each fragment
+            for fragname in self.fragments:
+                fragsfos = self.get_fragment_sfos(fragname)
+                # first check if fragment is radical or closed shell
+                if sum(sfo.occupation for sfo in fragsfos) % 2 == 0:
+                    continue
+                
+                # loop through all sfo's to locate the SOMO, this will be the index where the sum of occupations for a and b spin sfos is 1
+                for idx in range(1, len(fragsfos)//2 + 1):
+                    # print(fragsfos)
+                    sfo_of_idx = [sfo for sfo in fragsfos if sfo.fragment_orb_index == idx]
+                    if 0 < sfo_of_idx[0].occupation + sfo_of_idx[1].occupation < 2:
+                        somo_idx = idx
+                        break
+
+                # then loop through all sfo's again to fix their names
+                for idx in range(1, len(fragsfos)//2 + 1):
+                    # relindex is 0 for SOMO and SUMO, -1 for HOMO and +1 for LUMO
+                    relindex = idx - somo_idx
+                    sfo_of_idx = [sfo for sfo in fragsfos if sfo.fragment_orb_index == idx]
+                    if relindex == -1:
+                        sfo_of_idx[0].relname = 'HOMO'
+                        sfo_of_idx[1].relname = 'HOMO'
+                    elif relindex < -1:
+                        sfo_of_idx[0].relname = f'HOMO{relindex+1}'
+                        sfo_of_idx[1].relname = f'HOMO{relindex+1}'
+                    elif relindex == 1:
+                        sfo_of_idx[0].relname = 'LUMO'
+                        sfo_of_idx[1].relname = 'LUMO'
+                    elif relindex > 1:
+                        sfo_of_idx[0].relname = f'LUMO+{relindex-1}'
+                        sfo_of_idx[1].relname = f'LUMO+{relindex-1}'
+                    elif idx == somo_idx:
+                        if sfo_of_idx[0].occupation == 1:
+                            sfo_of_idx[0].relname = 'SOMO'
+                            sfo_of_idx[1].relname = 'SUMO'
+                        else:
+                            sfo_of_idx[1].relname = 'SOMO'
+                            sfo_of_idx[0].relname = 'SUMO'
 
 
 class SFO:
@@ -281,7 +328,7 @@ def occ_occ_mask(sfos1: list[SFO] or SFO, sfos2: list[SFO] or SFO) -> float or n
     return np.array(ret).squeeze()
 
 
-@decorators.add_to_func(title=r'$S$')
+@decorators.add_to_func(title=r'$S$', scale=100)
 def overlap(sfos1: list[SFO] or SFO, sfos2: list[SFO] or SFO) -> float or np.ndarray:
     ret = []
     for sfo1 in ensure_list(sfos1):
@@ -301,7 +348,7 @@ def energy_gap(sfos1: list[SFO] or SFO, sfos2: list[SFO] or SFO) -> float or np.
     return np.array(ret).squeeze()
 
 
-@decorators.add_to_func(title=r'$\Delta E_{oi}$')
+@decorators.add_to_func(title=r'$\Delta E_{oi}$', scale=1e3)
 def orbint(sfos1: list[SFO] or SFO, sfos2: list[SFO] or SFO, use_mask: bool = True) -> float or np.ndarray:
     S = overlap(sfos1, sfos2)
     dE = energy_gap(sfos1, sfos2)
@@ -344,11 +391,16 @@ def sort_sfo_pairs(sfos1, sfos2, prop=orbint):
     return ret
 
 
-def plot_sfos_prop(sfos1, sfos2, prop=orbint, cmap='Greens', title=None, use_relname=False, use_indexname=False):
+def plot_sfos_prop(sfos1, sfos2, prop=orbint, cmap='Greens', title=None, use_relname=False, use_indexname=False, scale=None):
     if cmap is None:
         cmap = 'Greens'
         if hasattr(prop, 'cmap'):
             cmap = prop.cmap
+
+    if scale is None:
+        scale = 1
+        if hasattr(prop, 'scale'):
+            scale = prop.scale
 
     if title is None:
         title = prop.__name__
@@ -380,7 +432,7 @@ def plot_sfos_prop(sfos1, sfos2, prop=orbint, cmap='Greens', title=None, use_rel
             if np.isnan(val):
                 continue
             color = 'w' if val > np.nanmax(M) / 2 else 'k'
-            plt.gca().text(k, i, f'{val:.2f}', ha="center", va="center", color=color, fontsize=8)
+            plt.gca().text(k, i, f'{val*scale:.2f}', ha="center", va="center", color=color, fontsize=8)
 
     psi1 = r'\phi_{' + sfos1[0].fragment_unique_name + r'}'
     psi2 = r'\phi_{' + sfos2[0].fragment_unique_name + r'}'
@@ -389,13 +441,13 @@ def plot_sfos_prop(sfos1, sfos2, prop=orbint, cmap='Greens', title=None, use_rel
     yticks = range(len(sfos1))
     xticks = range(len(sfos2))
     if use_relname:
-        plt.xticks(xticks, [orb.relname for orb in sfos2], rotation=45)
-        plt.yticks(yticks, [orb.relname for orb in sfos1], rotation=0)
+        plt.xticks(xticks, [orb.relative_name for orb in sfos2], rotation=90)
+        plt.yticks(yticks, [orb.relative_name for orb in sfos1], rotation=0)
     elif use_indexname:
-        plt.xticks(xticks, [orb.index_name for orb in sfos2], rotation=45)
+        plt.xticks(xticks, [orb.index_name for orb in sfos2], rotation=90)
         plt.yticks(yticks, [orb.index_name for orb in sfos1], rotation=0)
     else:
-        plt.xticks(xticks, [repr(orb) for orb in sfos2], rotation=45)
+        plt.xticks(xticks, [repr(orb) for orb in sfos2], rotation=90)
         plt.yticks(yticks, [repr(orb) for orb in sfos1], rotation=0)
     plt.title(title + r'$(' + psi1 + r', ' + psi2 + r')$', fontsize=16)
     plt.tight_layout()
@@ -412,17 +464,17 @@ if __name__ == '__main__':
     # sfo_donor_best, sfo_acceptor_best, oi = sort_sfo_pairs(sfos_donor, sfos_acceptor, orbint)[-1]
     # plot_sfos_prop(sfos_donor, sfos_acceptor, orbint, use_relname=True).hold()
 
-    # p = '../test/orbitals/rkf/methyl.rkf'
+    p = '/Users/yumanhordijk/PhD/ychem/calculations2/c1d4ca95a3911eb1f79bf4ef91cc7a88b479d7dc8357860bfdb3e577747ebc3a/transitionstate/EDA/EDA/full/adf.rkf'
+    sfos = SFOs(kfpath=p)
+    for sfo in sfos:
+        print(sfo, sfo.relative_name)
+    sfos_c = sfos['Substrate(HOMO-11)':'Substrate(LUMO+3)']
+    sfos_h = sfos['Radical(HOMO-2)':'Radical(LUMO+3)']
+    # sfos_c_best, sfos_h_best, oi = sort_sfo_pairs(sfos_c, sfos_h, orbint)[-1]
+    plot_sfos_prop(sfos_c, sfos_h, overlap, use_relname=True).hold()
+
+
+    # p = '../test/orbitals/rkf/substrate_cat_complex.rkf'
     # sfos = SFOs(kfpath=p)
 
-    # sfos_c = sfos['C(1S)', 'C(2S)', 'C(1P)']
-    # sfos_h = sfos.get_fragment_sfos('H')
-    # sfos_c_best, sfos_h_best, oi = sort_sfo_pairs(sfos_c, sfos_h, orbint)[-1]
-    # plot_sfos_prop(sfos_c, sfos_h, overlap, use_relname=False).hold()
-
-
-
-    p = '../test/orbitals/rkf/substrate_cat_complex.rkf'
-    sfos = SFOs(kfpath=p)
-
-    print(sfos['268A'], sfos['12A'], sfos['268A'] @ sfos['12A'])
+    # print(sfos['268A'], sfos['12A'], sfos['268A'] @ sfos['12A'])
