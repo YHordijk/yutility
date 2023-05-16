@@ -155,13 +155,18 @@ def charge(ch=0, sett=None, preset='BLYP-D3(BJ)/TZ2P/Good'):
     return sett
 
 
-def spin_polarization(sp=0., sett=None, preset='BLYP-D3(BJ)/TZ2P/Good'):
-    if sett is None:
-        sett = default(preset)
+def spin_polarization(sp=0., sett=None):
+    sett = sett or plams.Settings()
 
     sett.input.adf.SpinPolarization = sp
     if sp != 0.:
         sett.input.adf.Unrestricted = 'Yes'
+    return sett
+
+def unrestricted(unr='Yes', sett=None):
+    sett = sett or plams.Settings()
+    
+    sett.input.adf.Unrestricted = 'Yes'
     return sett
 
 
