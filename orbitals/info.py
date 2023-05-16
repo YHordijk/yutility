@@ -1,5 +1,5 @@
 import numpy as np
-from yutility import ensure_list
+from yutility import ensure_list, symmetry
 
 
 def get_calc_info(reader):
@@ -17,7 +17,10 @@ def get_calc_info(reader):
     ret['unrestricted_sfos'] = ('SFOs', 'energy_B') in reader
 
     # get the symmetry labels
-    ret['symlabels'] = reader.read('Symmetry', 'symlab').strip().split()
+    if ('Symmetry', 'symlab') in reader:
+        ret['symlabels'] = reader.read('Symmetry', 'symlab').strip().split()
+    else:
+        ret['symlabels'] = symmetry.labels[reader.read('Geometry', 'grouplabel').strip()]
 
     # determine if MOs are unrestricted or not
     ret['unrestricted_mos'] = (ret['symlabels'][0], 'eps_B') in reader
@@ -51,7 +54,11 @@ def read_SFO_data(reader):  # noqa: N802
 
     ret = {}
     # symlabels
-    ret['symlabels'] = reader.read('Symmetry', 'symlab').strip().split()
+    if ('Symmetry', 'symlab') in reader:
+        ret['symlabels'] = reader.read('Symmetry', 'symlab').strip().split()
+    else:
+        ret['symlabels'] = symmetry.labels[reader.read('Geometry', 'grouplabel').strip()]
+
     ret['symlabel_by_sfo'] = [] 
 
     # number of SFOs per symlabel
@@ -169,7 +176,10 @@ def read_MO_data(reader):  # noqa: N802
 
     ret = {}
     # symlabels
-    ret['symlabels'] = reader.read('Symmetry', 'symlab').strip().split()
+    if ('Symmetry', 'symlab') in reader:
+        ret['symlabels'] = reader.read('Symmetry', 'symlab').strip().split()
+    else:
+        ret['symlabels'] = symmetry.labels[reader.read('Geometry', 'grouplabel').strip()]
 
     # number of MOs
     ret['nmo'] = {}
@@ -212,7 +222,7 @@ def read_MO_data(reader):  # noqa: N802
                 idx = ret['energy']['sorted']['A'].index(energy_A)
                 while idx in all_idx['A']:
                     idx += 1
-                idx_A.append(idx)
+                idx_A.append(idx) 
                 all_idx['A'].append(idx)
 
             energies_B = ensure_list(reader.read(symlabel, f'{energyprefix}_B'))
