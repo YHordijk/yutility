@@ -313,38 +313,55 @@ def orbital_cub(rkf_path, name, orbtype='SCF', symlabel='All', overwrite=False):
     return volume.CubeFile(get_cub_file())
 
 
+# class ADFFragmentResults(plams.ADFFragmentResults):
+#     def __init__(self, **kwargs):
+#         super().__init__(**kwargs)
 
-# class ADFFragmentJob(plams.MultiJob):
-#     _result_type = plams.ADFFragmentResults
 
-#     def __init__(self, fragment1=None, fragment2=None, full_settings=None, frag1_settings=None, frag2_settings=None, fragment_names=None, **kwargs):
-#         plams.MultiJob.__init__(self, **kwargs)
-#         self.fragment1 = fragment1.copy() if isinstance(fragment1, plams.Molecule) else fragment1
-#         self.fragment2 = fragment2.copy() if isinstance(fragment2, plams.Molecule) else fragment2
-#         self.fragment_names = fragment_names or ['frag1', 'frag2']
-#         self.full_settings = full_settings or plams.Settings()
-#         self.frag1_settings = frag1_settings or plams.Settings()
-#         self.frag2_settings = frag2_settings or plams.Settings()
 
-#     def prerun(self):
-#         self.f1 = plams.AMSJob(name=self.fragment_names[0], molecule=self.fragment1, settings=self.settings + self.frag1_settings)
-#         self.f2 = plams.AMSJob(name=self.fragment_names[1], molecule=self.fragment2, settings=self.settings + self.frag2_settings)
+class ADFFragmentJob(plams.MultiJob):
+    _result_type = plams.ADFFragmentResults
 
-#         for at in self.fragment1:
-#             at.properties.suffix = 'adf.f=subsystem1'
-#         for at in self.fragment2:
-#             at.properties.suffix = 'adf.f=subsystem2'
+    def __init__(self, fragment1=None, fragment2=None, full_settings=None, frag1_settings=None, frag2_settings=None, fragment_names=None, **kwargs):
+        plams.MultiJob.__init__(self, **kwargs)
+        self.fragment1 = fragment1.copy() if isinstance(fragment1, plams.Molecule) else fragment1
+        self.fragment2 = fragment2.copy() if isinstance(fragment2, plams.Molecule) else fragment2
+        self.fragment_names = fragment_names or ['frag1', 'frag2']
+        self.full_settings = full_settings or plams.Settings()
+        self.frag1_settings = frag1_settings or plams.Settings()
+        self.frag2_settings = frag2_settings or plams.Settings()
 
-#         self.full = plams.AMSJob(name='full',
-#                                  molecule=self.fragment1 + self.fragment2,
-#                                  settings=self.settings + self.full_settings)
+    def prerun(self):
+        self.f1 = plams.AMSJob(name=self.fragment_names[0], molecule=self.fragment1, settings=self.settings + self.frag1_settings)
+        self.f2 = plams.AMSJob(name=self.fragment_names[1], molecule=self.fragment2, settings=self.settings + self.frag2_settings)
 
-#         self.full.settings.input.adf.fragments.subsystem1 = (self.f1, 'adf')
-#         self.full.settings.input.adf.fragments.subsystem2 = (self.f2, 'adf')
+        for at in self.fragment1:
+            at.properties.suffix = f'adf.f={self.fragment_names[0]}'
+        for at in self.fragment2:
+            at.properties.suffix = f'adf.f={self.fragment_names[1]}'
 
-#         self.children = [self.f1, self.f2, self.full]
+        self.full = plams.AMSJob(name='full',
+                                 molecule=self.fragment1 + self.fragment2,
+                                 settings=self.settings + self.full_settings)
 
-# def fragment(mol1, mol2, sett)
+        self.full.settings.input.adf.fragments[self.fragment_names[0]] = (self.f1, 'adf')
+        self.full.settings.input.adf.fragments[self.fragment_names[1]] = (self.f2, 'adf')
+
+        self.children = [self.f1, self.f2, self.full]
+
+
+def EDA(mol1, mol2, settings=None, full_settings=None, frag1_settings=None, frag2_settings=None, fragment_names=None, folder=None, path=DEFAULT_RUN_PATH, do_init=True):
+    with log.NoPrint():
+        os.makedirs(path, exist_ok=True)
+        if do_init:
+            init(path, folder)
+
+        job = ADFFragmentJob(settings=settings, fragment1=mol1, fragment2=mol2, 
+                             full_settings=full_settings, frag1_settings=frag1_settings, 
+                             frag2_settings=frag2_settings, name='EDA', fragment_names=fragment_names)
+        result = job.run()
+
+        return result
 
 
 if __name__ == '__main__':
