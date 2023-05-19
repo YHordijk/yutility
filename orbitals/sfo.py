@@ -155,35 +155,36 @@ class SFOs:
                 isfo = data['isfo'][idx] - 1
                 subspecies = data['subspecies'][idx]
                 ifo = data['ifo'][idx]
-                relindex = data['relindices'][spin][idx]
-                if relindex > 0:
-                    if relindex == 1:
-                        relname = 'LUMO'
+                if data['relindices'] is not None:
+                    relindex = data['relindices'][spin][idx]
+                    if relindex > 0:
+                        if relindex == 1:
+                            relname = 'LUMO'
+                        else:
+                            relname = f'LUMO+{relindex-1}'
                     else:
-                        relname = f'LUMO+{relindex-1}'
-                else:
-                    if relindex == 0:
-                        relname = 'HOMO'
-                    else:
-                        relname = f'HOMO-{abs(relindex)}'
+                        if relindex == 0:
+                            relname = 'HOMO'
+                        else:
+                            relname = f'HOMO-{abs(relindex)}'
 
                 sfo_data.append({
                     'index':                idx + 1,
-                    'relindex':             relindex,
+                    'relindex':             None if data['relindices'] is None else relindex,
                     'name':                 f'{ifo}{subspecies}',
-                    'relname':              relname,
+                    'relname':              None if data['relindices'] is None else relname,
                     'fragment_index':       data['fragidx'][idx],
                     'fragment':             data['fragtypes'][idx],
                     'fragment_unique_name': data['fraguniquenames'][idx],
-                    'fragment_orb_index':   data['fragorb'][idx],
+                    'fragment_orb_index':   None if data['fragorb'] is None else data['fragorb'][idx],
                     'symmetry_type_index':  isfo,
                     'symmetry':             symlabel,
-                    'energy':               data['energy'][spin][idx] * 27.21139664,
+                    'energy':               None if data['energy'][spin] is None else data['energy'][spin][idx] * 27.21139664,
                     'spin':                 spin,
                     'reader':               self.reader,
                     'kfpath':               self.kfpath,
-                    'overlaps':             data['overlaps'][symlabel][spin][isfo],
-                    'occupation':           data['occupations'][spin][idx],
+                    'overlaps':             None if data['overlaps'][symlabel][spin] is None else data['overlaps'][symlabel][spin][isfo],
+                    'occupation':           None if data['occupations'] is None else data['occupations'][spin][idx],
                     'atomic_fragments':     self.uses_atomic_fragments,
                 })
 
@@ -402,8 +403,12 @@ def plot_sfos_prop(sfos1, sfos2, prop=orbint, cmap='Greens', title=None, use_rel
         if hasattr(prop, 'scale'):
             scale = prop.scale
 
+    prop_name = ''
+    if hasattr(prop, '__name__'):
+        prop_name = prop.__name__
+
     if title is None:
-        title = prop.__name__
+        title = prop_name
         if hasattr(prop, 'title'):
             title = prop.title
 
@@ -413,7 +418,7 @@ def plot_sfos_prop(sfos1, sfos2, prop=orbint, cmap='Greens', title=None, use_rel
         M = prop
 
     plotname = sfos1[0].spin + ' ' + sfos1[0].kfpath
-    plt.figure(figsize=(10, 8), num=f'{prop.__name__} {plotname}')
+    plt.figure(figsize=(10, 8), num=f'{prop_name} {plotname}')
     occ_virt_border1 = [i for i in range(1, len(sfos1)) if sfos1[i-1].occupation != sfos1[i].occupation]
     occ_virt_border1 = 0 if len(occ_virt_border1) == 0 else occ_virt_border1[0]
     occ_virt_border2 = [i for i in range(1, len(sfos2)) if sfos2[i-1].occupation != sfos2[i].occupation]
@@ -434,8 +439,13 @@ def plot_sfos_prop(sfos1, sfos2, prop=orbint, cmap='Greens', title=None, use_rel
             color = 'w' if val > np.nanmax(M) / 2 else 'k'
             plt.gca().text(k, i, f'{val*scale:.2f}', ha="center", va="center", color=color, fontsize=8)
 
-    psi1 = r'\phi_{' + sfos1[0].fragment_unique_name + r'}'
-    psi2 = r'\phi_{' + sfos2[0].fragment_unique_name + r'}'
+    try:
+        psi1 = r'\phi_{' + sfos1[0].fragment_unique_name + r'}'
+        psi2 = r'\phi_{' + sfos2[0].fragment_unique_name + r'}'
+    except:
+        psi1 = 'Frag1'
+        psi2 = 'Frag2'
+
     plt.xlabel('$'+psi2+'$', fontsize=16)
     plt.ylabel('$'+psi1+'$', fontsize=16)
     yticks = range(len(sfos1))
