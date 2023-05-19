@@ -2,6 +2,7 @@ import numpy as np
 from yutility import ensure_list, symmetry
 from scm import plams
 
+
 def get_calc_info(reader):
     '''
     Function to read useful info about orbitals from kf reader
@@ -34,7 +35,7 @@ def get_calc_info(reader):
 
     frag_order = reader.read('Geometry', 'fragment and atomtype index')
     frag_order = frag_order[:len(frag_order)//2]
-    ret['used_regions'] = max(frag_order) == len(frag_order)
+    ret['used_regions'] = max(frag_order) != len(frag_order)
 
     # get symmetry labels
 
@@ -53,14 +54,15 @@ def check_rkf(path):
 
     return len(missing) == 0
 
+
 def required_variables(path):
     reader = plams.KFReader(path)
     if ('Symmetry', 'symlab') in reader:
         symlabels = reader.read('Symmetry', 'symlab').strip().split()
     elif ('Geometry', 'grouplabel') in reader:
-        ret['symlabels'] = symmetry.labels[reader.read('Geometry', 'grouplabel').strip()]
+        symlabels = symmetry.labels[reader.read('Geometry', 'grouplabel').strip()]
     else:
-        ret['symlabels'] = symmetry.labels['NOSYM']
+        symlabels = symmetry.labels['NOSYM']
 
     ret = []
     ret = ret + [(symlabel, 'Eig-CoreSFO_A') for symlabel in symlabels] + [(symlabel, 'Eig-CoreSFO_B') for symlabel in symlabels]
