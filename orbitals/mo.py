@@ -141,13 +141,39 @@ class MOs:
                         'occupation':           data['occs'][symlabel][spin][idx],
                         'atomic_fragments':     self.uses_atomic_fragments,
                     })
-        mos = [MO(**mo_datum) for mo_datum in mo_data]
+        self.mos = [MO(**mo_datum) for mo_datum in mo_data]
 
-        # if self.is_unrestricted:
-        #     for idx in range(data['nmo'][symlabel]['A']):
+        somo_idx = None
+        if self.is_unrestricted:
+            for idx in range(len(self.mos)//2):
+                mos = self.get_mo(index=idx)
+                if 0 < sum(mo.occupation for mo in mos) % 2 < 2:
+                    somo_idx = idx
+                    break
+            if somo_idx is not None:
+                for idx in range(len(self.mos)//2):
+                    relindex = idx - somo_idx
+                    mos = self.get_mo(index=idx)
+                    if relindex == -1:
+                        mos[0].relname = 'HOMO'
+                        mos[1].relname = 'HOMO'
+                    elif relindex < -1:
+                        mos[0].relname = f'HOMO{relindex+1}'
+                        mos[1].relname = f'HOMO{relindex+1}'
+                    elif relindex == 1:
+                        mos[0].relname = 'LUMO'
+                        mos[1].relname = 'LUMO'
+                    elif relindex > 1:
+                        mos[0].relname = f'LUMO+{relindex-1}'
+                        mos[1].relname = f'LUMO+{relindex-1}'
+                    elif idx == somo_idx:
+                        if mos[0].occupation == 1:
+                            mos[0].relname = 'SOMO'
+                            mos[1].relname = 'SUMO'
+                        else:
+                            mos[1].relname = 'SOMO'
+                            mos[0].relname = 'SUMO'
 
-
-        self.mos = mos
 
 
 class MO:
