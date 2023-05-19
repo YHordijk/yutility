@@ -284,7 +284,6 @@ class ClosedShellEDA(unittest.TestCase):
         self.assertEqual(round(sfo1 @ sfo2, 4), 0.3530)
 
 
-
 class OpenShellEDA(unittest.TestCase):
     def setUp(self):
         self.orbs = orbitals.Orbitals('rkf/ethaneEDA.rkf', moleculename='Ethane')
@@ -408,13 +407,29 @@ class OpenShellEDA(unittest.TestCase):
 
 
     def test_sfo_name(self):
-        self.assertEqual(self.sfo.name, '2A')
+        self.assertEqual(self.sfo.name, '1A')
 
     def test_sfo_full_name(self):
-        self.assertEqual(self.sfo.full_name, 'Left(2A)_A')
+        self.assertEqual(self.sfo.full_name, 'Left(1A)_A')
+
+    def test_sfo_full_name2(self):
+        sfo = self.orbs.sfos['Left(SOMO)']
+        self.assertEqual(sfo.full_name, 'Left(5A)_A')
+
+    def test_sfo_full_name3(self):
+        sfo = self.orbs.sfos['Right(SUMO)']
+        self.assertEqual(sfo.full_name, 'Right(5A)_A')
 
     def test_sfo_relative_name(self):
         self.assertEqual(self.sfo.relative_name, 'Left(HOMO-3)_A')
+
+    def test_sfo_relative_name2(self):
+        sfo = self.orbs.sfos['Left(SOMO)']
+        self.assertEqual(sfo.relative_name, 'Left(SOMO)_A')
+
+    def test_sfo_relative_name3(self):
+        sfo = self.orbs.sfos['Right(SUMO)']
+        self.assertEqual(sfo.relative_name, 'Right(SUMO)_A')
 
     def test_sfo_occupation(self):
         self.assertEqual(self.sfo.occupation, 1)
@@ -435,7 +450,7 @@ class OpenShellEDA(unittest.TestCase):
         self.assertEqual(self.sfo.kfpath, os.path.abspath('rkf/ethaneEDA.rkf'))
 
     def test_sfo_relindex(self):
-        self.assertEqual(self.sfo.relindex, -3)
+        self.assertEqual(self.sfo.relindex, -4)
 
 
     # def test_coeff(self):
@@ -461,4 +476,4 @@ class OpenShellEDA(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main(verbosity=1)
+    unittest.main(verbosity=2)
