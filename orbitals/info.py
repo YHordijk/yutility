@@ -1,6 +1,6 @@
 import numpy as np
 from yutility import ensure_list, symmetry
-
+from scm import plams
 
 def get_calc_info(reader):
     '''
@@ -19,20 +19,75 @@ def get_calc_info(reader):
     # get the symmetry labels
     if ('Symmetry', 'symlab') in reader:
         ret['symlabels'] = reader.read('Symmetry', 'symlab').strip().split()
-    else:
+    elif ('Geometry', 'grouplabel') in reader:
         ret['symlabels'] = symmetry.labels[reader.read('Geometry', 'grouplabel').strip()]
+    else:
+        ret['symlabels'] = symmetry.labels['NOSYM']
 
     # determine if MOs are unrestricted or not
     ret['unrestricted_mos'] = (ret['symlabels'][0], 'eps_B') in reader
 
     # determine if the calculation used regions or not
-    natoms = reader.read('Geometry', 'nr of atoms')
-    nfrags = reader.read('Geometry', 'nr of fragments')
-    ret['used_regions'] = natoms != nfrags
+    # natoms = reader.read('Geometry', 'nr of atoms')
+    # nfrags = reader.read('Geometry', 'nr of fragments')
+    # ret['used_regions'] = natoms != nfrags
+
+    frag_order = reader.read('Geometry', 'fragment and atomtype index')
+    frag_order = frag_order[:len(frag_order)//2]
+    ret['used_regions'] = max(frag_order) == len(frag_order)
 
     # get symmetry labels
 
     return ret
+
+
+def check_rkf(path):
+    reader = plams.KFReader(path)
+    missing = []
+    for required in required_variables(path):
+        if required not in reader:
+            missing.append(required)
+
+    for required in missing:
+        print(f'Missing {required[0]}: {required[1]}')
+
+    return len(missing) == 0
+
+def required_variables(path):
+    reader = plams.KFReader(path)
+    if ('Symmetry', 'symlab') in reader:
+        symlabels = reader.read('Symmetry', 'symlab').strip().split()
+    elif ('Geometry', 'grouplabel') in reader:
+        ret['symlabels'] = symmetry.labels[reader.read('Geometry', 'grouplabel').strip()]
+    else:
+        ret['symlabels'] = symmetry.labels['NOSYM']
+
+    ret = []
+    ret = ret + [(symlabel, 'Eig-CoreSFO_A') for symlabel in symlabels] + [(symlabel, 'Eig-CoreSFO_B') for symlabel in symlabels]
+    ret = ret + [(symlabel, 'S-CoreSFO') for symlabel in symlabels] + [(symlabel, 'S-CoreSFO_B') for symlabel in symlabels]
+    ret = ret + [(symlabel, 'escale_A') for symlabel in symlabels] + [(symlabel, 'escale_B') for symlabel in symlabels]
+    ret = ret + [(symlabel, 'eps_A') for symlabel in symlabels] + [(symlabel, 'eps_B') for symlabel in symlabels]
+    ret = ret + [(symlabel, 'froc_A') for symlabel in symlabels] + [(symlabel, 'froc_B') for symlabel in symlabels]
+    ret = ret + [
+        ('Symmetry', 'symlab'),
+        ('Geometry', 'grouplabel'),
+        ('Geometry', 'atom order index'),
+        ('SFOs', 'number'),
+        ('SFOs', 'isfo'),
+        ('SFOs', 'fragment'),
+        ('SFOs', 'fragtype'),
+        ('SFOs', 'fragorb'),
+        ('SFOs', 'subspecies'),
+        ('SFOs', 'ifo'),
+        ('SFOs', 'escale'),
+        ('SFOs', 'escale_B'),
+        ('SFOs', 'energy'),
+        ('SFOs', 'energy_B'),
+        ('SFOs', 'occupation'),
+        ('SFOs', 'occupation_B'),
+    ]
+
+    return set(ret)
 
 
 def read_SFO_data(reader):  # noqa: N802
@@ -56,27 +111,41 @@ def read_SFO_data(reader):  # noqa: N802
     # symlabels
     if ('Symmetry', 'symlab') in reader:
         ret['symlabels'] = reader.read('Symmetry', 'symlab').strip().split()
-    else:
+    elif ('Geometry', 'grouplabel') in reader:
         ret['symlabels'] = symmetry.labels[reader.read('Geometry', 'grouplabel').strip()]
+    else:
+        ret['symlabels'] = symmetry.labels['NOSYM']
 
     ret['symlabel_by_sfo'] = [] 
 
     # number of SFOs per symlabel
     ret['nsfo'] = {}
-    norb = ensure_list(reader.read('Symmetry', 'norb'))
+    total = 0
     for i, symlabel in enumerate(ret['symlabels']):
-        ret['nsfo'][symlabel] = norb[i]
-        ret['symlabel_by_sfo'].extend(norb[i] * [symlabel])
-    ret['nsfo']['total'] = reader.read('SFOs', 'number')
+        norb = int(np.sqrt(len(reader.read(symlabel, 'Eig-CoreSFO_A'))))
+        total += norb
+        ret['nsfo'][symlabel] = norb
+        ret['symlabel_by_sfo'].extend(norb * [symlabel])
+
+    ret['nsfo']['total'] = total
 
     # isfo, index of sfo in symlabel
-    ret['isfo'] = reader.read('SFOs', 'isfo')
+    if ('SFOs', 'isfo') not in reader:
+        ret['isfo'] = range(1, total+1)
+    else:
+        ret['isfo'] = reader.read('SFOs', 'isfo')
 
     # fragment, index of fragment sfo belongs to
     ret['fragidx'] = reader.read('SFOs', 'fragment')
 
     # fragmenttype, name of fragment sfo belongs to
-    ret['fragtypes'] = reader.read('SFOs', 'fragtype').strip().split()
+    if ('SFOs', 'fragtype') not in reader:
+        fragtypes = [typ.strip() for typ in reader.read('Geometry', 'fragmenttype').split()]
+        frag_order = reader.read('Geometry', 'fragment and atomtype index')
+        frag_order = frag_order[len(frag_order)//2:]
+        ret['fragtypes'] = [fragtypes[frag_order[i-1]-1] for i in ret['fragidx']]
+    else:
+        ret['fragtypes'] = reader.read('SFOs', 'fragtype').strip().split()
 
     # get fragment + index unique pairs to construct unique fragment names
     ret['fraguniquenames'] = []
@@ -89,7 +158,10 @@ def read_SFO_data(reader):  # noqa: N802
             ret['fraguniquenames'].append(f'{name}:{i}')
             
     # fragorb, index of sfo in fragment
-    ret['fragorb'] = reader.read('SFOs', 'fragorb')
+    if ('SFOs', 'fragorb') in reader:
+        ret['fragorb'] = reader.read('SFOs', 'fragorb')
+    else:
+        ret['fragorb'] = None
 
     # subspecies sfo belongs to
     ret['subspecies'] = reader.read('SFOs', 'subspecies').strip().split()
@@ -107,27 +179,37 @@ def read_SFO_data(reader):  # noqa: N802
     # SFO energies
     # and get index if energies are sorted
     energyprefix = 'escale' if calc_info['relativistic'] else 'energy'
-    if calc_info['unrestricted_sfos']:
-        ret['energy'] = {
-            'A': reader.read('SFOs', f'{energyprefix}'),
-            'B': reader.read('SFOs', f'{energyprefix}_B')
-        }
-        ret['energyidx'] = {
-            'A': np.argsort(ret['energy']['A']),
-            'B': np.argsort(ret['energy']['B']),
-        }
+    if ('SFOs', energyprefix) in reader:
+        if calc_info['unrestricted_sfos']:
+            ret['energy'] = {
+                'A': reader.read('SFOs', f'{energyprefix}'),
+                'B': reader.read('SFOs', f'{energyprefix}_B')
+            }
+            ret['energyidx'] = {
+                'A': np.argsort(ret['energy']['A']),
+                'B': np.argsort(ret['energy']['B']),
+            }
+        else:
+            ret['energy'] = {'AB': reader.read('SFOs', f'{energyprefix}')}
+            ret['energyidx'] = {'AB': np.argsort(ret['energy']['AB'])}
     else:
-        ret['energy'] = {'AB': reader.read('SFOs', f'{energyprefix}')}
-        ret['energyidx'] = {'AB': np.argsort(ret['energy']['AB'])}
+        ret['energy'] = {
+                'A': None,
+                'B': None,
+                'AB': None
+            }
 
     # SFO occupations
-    if calc_info['unrestricted_sfos']:
-        ret['occupations'] = {
-            'A': np.array(reader.read('SFOs', 'occupation')),
-            'B': np.array(reader.read('SFOs', 'occupation_B'))
-        }
+    if ('SFOs', 'occupation') in reader:
+        if calc_info['unrestricted_sfos']:
+            ret['occupations'] = {
+                'A': np.array(reader.read('SFOs', 'occupation')),
+                'B': np.array(reader.read('SFOs', 'occupation_B'))
+            }
+        else:
+            ret['occupations'] = {'AB': np.array(reader.read('SFOs', 'occupation'))}
     else:
-        ret['occupations'] = {'AB': np.array(reader.read('SFOs', 'occupation'))}
+        ret['occupations'] = None
 
     # get indices relative to HOMO for each fragment
     def get_rel_indices(spin):
@@ -145,28 +227,40 @@ def read_SFO_data(reader):  # noqa: N802
                 relindices.extend(np.arange(newidx - homoidx, i - homoidx + 2))
         return np.array(relindices)
 
-    if calc_info['unrestricted_sfos']:
-        ret['relindices'] = {
-            'A': get_rel_indices('A'),
-            'B': get_rel_indices('B')
-        }
+    if ret['occupations'] is not None:
+        if calc_info['unrestricted_sfos']:
+            ret['relindices'] = {
+                'A': get_rel_indices('A'),
+                'B': get_rel_indices('B')
+            }
+        else:
+            ret['relindices'] = {'AB': get_rel_indices('AB')}
     else:
-        ret['relindices'] = {'AB': get_rel_indices('AB')}
+        ret['relindices'] = None
 
     # overlaps
     ret['overlaps'] = {}
     for symlabel in ret['symlabels']:
         nsfo = ret['nsfo'][symlabel]
         if calc_info['unrestricted_sfos']:
-            S_A = ensure_list(reader.read(symlabel, 'S-CoreSFO'))
-            S_B = ensure_list(reader.read(symlabel, 'S-CoreSFO_B'))
-            ret['overlaps'][symlabel] = {
-                'A': square_overlaps(S_A, nsfo),
-                'B': square_overlaps(S_B, nsfo)
-            }
+            if (symlabel, 'S-CoreSFO') in reader:
+                S_A = ensure_list(reader.read(symlabel, 'S-CoreSFO'))
+                S_B = ensure_list(reader.read(symlabel, 'S-CoreSFO_B'))
+                ret['overlaps'][symlabel] = {
+                    'A': square_overlaps(S_A, nsfo),
+                    'B': square_overlaps(S_B, nsfo)
+                }
+            else:
+                ret['overlaps'][symlabel] = {
+                    'A': None,
+                    'B': None
+                }
         else:
-            S = ensure_list(reader.read(symlabel, 'S-CoreSFO'))
-            ret['overlaps'][symlabel] = {'AB': square_overlaps(S, nsfo)}
+            if (symlabel, 'S-CoreSFO') in reader:
+                S = ensure_list(reader.read(symlabel, 'S-CoreSFO'))
+                ret['overlaps'][symlabel] = {'AB': square_overlaps(S, nsfo)}
+            else:
+                ret['overlaps'][symlabel] = {'AB': None}
 
     return ret
 
@@ -178,20 +272,21 @@ def read_MO_data(reader):  # noqa: N802
     # symlabels
     if ('Symmetry', 'symlab') in reader:
         ret['symlabels'] = reader.read('Symmetry', 'symlab').strip().split()
-    else:
+    elif ('Geometry', 'grouplabel') in reader:
         ret['symlabels'] = symmetry.labels[reader.read('Geometry', 'grouplabel').strip()]
+    else:
+        ret['symlabels'] = symmetry.labels['NOSYM']
 
     # number of MOs
     ret['nmo'] = {}
     for symlabel in ret['symlabels']:
         if calc_info['unrestricted_mos']:
             ret['nmo'][symlabel] = {
-                'A': reader.read(symlabel, 'nmo_A'),
-                'B': reader.read(symlabel, 'nmo_B')
+                'A': int(np.sqrt(len(reader.read(symlabel, 'Eig-CoreSFO_A')))),
+                'B': int(np.sqrt(len(reader.read(symlabel, 'Eig-CoreSFO_B'))))
             }
         else:
-            ret['nmo'][symlabel] = {'AB': reader.read(symlabel, 'nmo_A')}
-    ret['nmo']['total'] = sum(ensure_list(reader.read('Symmetry', 'norb')))
+            ret['nmo'][symlabel] = {'AB': int(np.sqrt(len(reader.read(symlabel, 'Eig-CoreSFO_A'))))}
 
     # MO energies
     ret['energy'] = {}
