@@ -175,7 +175,7 @@ class MO:
         if self.symmetry != other.symmetry:
             return 0
 
-        if self.spin != other.spin:
+        if self.spin != other.spin and 'AB' not in [self.spin, other.spin]:
             return 0
             
         return self.coeffs[other.symmetry_type_index]
