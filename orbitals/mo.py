@@ -145,13 +145,13 @@ class MOs:
 
         somo_idx = None
         if self.is_unrestricted:
-            for idx in range(len(self.mos)//2):
+            for idx in range(1, len(self.mos)//2 + 1):
                 mos = self.get_mo(index=idx)
                 if 0 < sum(mo.occupation for mo in mos) % 2 < 2:
                     somo_idx = idx
                     break
             if somo_idx is not None:
-                for idx in range(len(self.mos)//2):
+                for idx in range(1, len(self.mos)//2 + 1):
                     relindex = idx - somo_idx
                     mos = self.get_mo(index=idx)
                     if relindex == -1:
@@ -173,7 +173,6 @@ class MOs:
                         else:
                             mos[1].relname = 'SOMO'
                             mos[0].relname = 'SUMO'
-
 
 
 class MO:
@@ -239,7 +238,7 @@ class MO:
 
 
 if __name__ == '__main__':
-    p = '../test/orbitals/rkf/methyl_unrestricted_frags_symm.rkf'
+    p = '../test/orbitals/rkf/methyl.rkf'
     mos = MOs(kfpath=p)
     for mo in sorted(mos, key=lambda mo: mo.energy):
-        print(mo, mo.occupied, mo.relative_name)
+        print(mo, mo.occupation, mo.relative_name)
