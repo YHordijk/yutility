@@ -1,5 +1,4 @@
 import numpy as np
-import scipy
 import scm.plams as plams
 from math import sin, cos
 from yutility import molecule as yu_molecule
