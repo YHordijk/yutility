@@ -56,10 +56,15 @@ def center(mol, atom):
     mol.translate(-center_coords)
 
 
-def random_point_on_sphere(radius, center=np.array([0, 0, 0])):
-    x = np.random.randn(3)
+def random_point_on_sphere(radius, dim=3):
+    x = np.random.randn(dim)
     x = x/np.linalg.norm(x) * radius
     return x
+
+
+def random_point_in_sphere(max_radius, min_radius=0, dim=3):
+    radius = np.random.rand() * (max_radius - min_radius) + min_radius
+    return random_point_on_sphere(radius, dim=dim)
 
 
 def get_rotation_matrix(x=None, y=None, z=None):
@@ -130,4 +135,14 @@ def align_molecule(molecule, origin=None):
 
 
 if __name__ == '__main__':
-    print(random_point_on_sphere(5))
+    # import matplotlib.pyplot as plt
+    # xs = [random_point_on_sphere(5, dim=1)[0] for _ in range(1000)]
+    # plt.hist(xs)
+    # plt.show()
+    # print()
+
+    T = Transform()
+    T.translate([0, 0, 3])
+
+    v = np.arange(12).reshape(3, 4)
+    print(T(v))
