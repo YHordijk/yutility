@@ -1,4 +1,5 @@
 import numpy as np
+import scipy
 import scm.plams as plams
 from math import sin, cos
 from yutility import molecule as yu_molecule
@@ -81,7 +82,9 @@ class Transform:
         '''
 
         if S is None:
-            S = [x or 0, y or 0, z or 0]
+            S = [x or 1, y or 1, z or 1]
+        elif isinstance(S, (float, int)):
+            S = [S, S, S]
 
         self.M = self.M @ self.build_matrix(S=S)
 
@@ -93,31 +96,31 @@ class Transform:
         Build and return a transformation matrix. 
         This matrix encodes in one matrix rotations, translations and scaling.
 
-        M = | R   r |, where R \in R^3x3, r \in R^3, 0_3 = [0, 0, 0] \in R^3 and 1 \in R
-            | 0_3 1 |
+        M = | R@diag(S)   T |, where R \in R^3x3, r \in R^3, 0_3 = [0, 0, 0] \in R^3 and 1 \in R
+            | 0_3         1 |
 
         When applied to a positional vector [x, y, z, 1] it will apply these 
         transformations simultaneously. 
 
         Note: This matrix is an element of the special SE(3) Lie group.
         '''
+
         R = R if R is not None else get_rotation_matrix()
         T = T if T is not None else np.array([0, 0, 0])
         S = S if S is not None else np.array([1, 1, 1])
 
         return np.array([
-            [R[0, 0]*S[0], R[0, 1], R[0, 2], T[0]],
-            [R[1, 0], R[1, 1]*S[1], R[1, 2], T[1]],
-            [R[2, 0], R[2, 1], R[2, 2]*S[2], T[2]],
-            [0, 0, 0, 1]
-        ])
+            [R[0, 0]*S[0], R[0, 1],      R[0, 2],      T[0]],
+            [R[1, 0],      R[1, 1]*S[1], R[1, 2],      T[1]],
+            [R[2, 0],      R[2, 1],      R[2, 2]*S[2], T[2]],
+            [0,            0,            0,            1]])
         
     def __call__(self, *args, **kwargs):
         return self.apply(*args, **kwargs)
 
-    def apply(self, v: Matrix(3, ...)) -> Matrix(3, ...):
+    def apply(self, v: Matrix(..., 3)) -> Matrix(..., 3):
         r'''
-        Applies the transformation matrix to vector(s) v \in R^3xN
+        Applies the transformation matrix to vector(s) v \in R^Nx3
         v should be a series of column vectors.
 
         Application is a three-step process.
@@ -125,11 +128,12 @@ class Transform:
          2) Apply the transformation matrix M \dot v
          3) Remove the bottom row vector of ones and return the result
         '''
-        v = np.asarray(v)
+
+        v = np.asarray(v).T
         N = v.shape[1]
         v = np.vstack([v, np.ones(N)])
         vprime = self.M @ v
-        return vprime[:3, :]
+        return vprime[:3, :].T
 
     def __matmul__(self, other):
         if isinstance(other, Transform):
@@ -141,9 +145,95 @@ class Transform:
         a new Transform object and multiplying the two transform matrices
         and assigning it to the new object.
         '''
+
         new = Transform()
         new.M = self.M @ other.M
         return new
+
+
+def KabschTransform(X: Matrix(..., 3), 
+                    Y: Matrix(..., 3)) -> Matrix(3, 3):
+    '''
+    Use Kabsch-Umeyama algorithm to calculate the optimal rotation matrix, translation
+    and scaling to superimpose X unto Y. 
+
+    It is numerically stable and works when the covariance matrix is singular.
+    Both sets of points must be the same size for this algorithm to work.
+    The coordinates are first centered onto their centroids before determining the 
+    optimal rotation matrix.
+
+    Returns
+        Transform objects holding the rotation matrix, translation vector and scale vector
+
+    References
+        https://en.wikipedia.org/wiki/Orthogonal_Procrustes_problem
+        https://en.wikipedia.org/wiki/Kabsch_algorithm
+    '''
+
+    # make sure arrays are 2d and the same size
+    X, Y = np.atleast_2d(X), np.atleast_2d(Y)
+    assert X.shape == Y.shape, f"Matrices X with shape {X.shape} and Y with shape {Y.shape} are not the same size"
+
+    # center the coordinates
+    centroid_x = np.mean(X, axis=0)
+    centroid_y = np.mean(Y, axis=0)
+    Xc = X - centroid_x
+    Yc = Y - centroid_y
+
+    # get RMSD from points to centroid, this will act as the size
+    # of the body made up by the points
+    s_x = RMSD(Xc, axis=0)
+    s_y = RMSD(Yc, axis=0)
+
+    # scale points such that they have the same size
+    Xcs = Xc / s_x
+    Ycs = Yc / s_y
+
+    # calculate covariance matrix
+    H = Xcs.T @ Ycs
+
+    # first do SVD on covariance matrix
+    U, _, V = np.linalg.svd(H)
+    # get the sign of the determinant of V.T @ U.T
+    sign = np.sign(np.linalg.det(V.T@U.T))
+    # build matrix for 
+    # then build the optimal rotation matrix
+    d = np.diag([1, 1, sign])
+    R = V.T @ d @ U.T
+
+    # build the transformation:
+    # for a sequence of transformation operations
+    # we have to invert their order
+    # We have that Y ~= (R @ (X - centroid_x).T).T * s_y / s_x + centroid(y)
+    # the normal order is to first translate X by -centroid_x
+    # then rotate with R
+    # scale by s_y / s_x
+    # finally translate by +centroid_y
+    T = Transform()
+    T.translate(centroid_y)
+    T.scale(s_y / s_x)
+    T.rotate(R)
+    T.translate(-centroid_x)
+    return T
+
+
+def RMSD(X: Matrix(..., 3), 
+         Y: Matrix(..., 3) = None,
+         axis: int = None) -> float:
+    '''
+    Calculate Root Mean Squared Deviations between two sets of points
+    X and Y. if Y is not given, the RMSD of X will be evaluated w.r.t. the origin.
+    Optionally the axis can be given to calculate the RMSD along different axes.
+    '''
+    Y = Y if Y is not None else 0
+    return np.sqrt(np.sum((X - Y)**2, axis=axis)/X.shape[0])
+
+
+def RMSD_kabsch(X: Matrix(..., 3), 
+                Y: Matrix(..., 3)) -> float:
+    # get optimal transformation
+    Tkabsch = KabschTransform(X, Y)
+    return RMSD(Tkabsch(X), Y)
 
 
 def align_to_plane(mol, atoms, plane='xy'):
@@ -176,7 +266,6 @@ def align_to_axis(mol, atoms, axis='x', plane='xy'):
     align_coords = [np.array(a.coords) for a in atoms]
     vec = align_coords[1] - align_coords[0]
     angle = plams.angle(vec, axis_directions[axis])
-    print(angle)
     R = plams.axis_rotation_matrix(normal_to_plane[plane], -angle)
     mol.rotate(R)
 
@@ -271,8 +360,26 @@ if __name__ == '__main__':
     # plt.show()
     # print()
 
+    # demo for Transforms and Kabsch algorithm
+    # we have a random Transform which rotates, translates and scales
     T = Transform()
-    T.translate([0, 0, 3])
+    T.rotate(x=1, y=1, z=-1)
+    T.scale(x=20, y=-100)
+    T.translate(x=3, y=0, z=-10)
+    T.rotate(x=-1, y=-1, z=1)
 
-    v = np.arange(12).reshape(3, 4)
-    print(T(v))
+    print(T)
+
+    # we generate some coordinates X
+    # X = np.random.randn(5, 3)
+    X = np.arange(5*3).reshape(5, 3)
+    # apply the transformation to X to obtain Y
+    Y = T(X)
+
+    # get the kabsch optimal transformation
+    Tkabsch = KabschTransform(X, Y)
+
+    # print the RMSD between Tkabsch(X) and Y
+    # small value indicates that alignment went well
+    # this also means that Tkabsch and T are equivalent transformations
+    print('RMSD =', RMSD(Tkabsch(X), Y))
