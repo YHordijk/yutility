@@ -127,7 +127,7 @@ class Transform:
          2) Apply the transformation matrix M \dot v
          3) Remove the bottom row vector of ones and return the result
         '''
-
+        v = np.atleast_2d(v)
         v = np.asarray(v).T
         N = v.shape[1]
         v = np.vstack([v, np.ones(N)])
@@ -163,9 +163,6 @@ class KabschTransform(Transform):
         The coordinates are first centered onto their centroids before determining the 
         optimal rotation matrix.
 
-        Returns
-            Transform objects holding the rotation matrix, translation vector and scale vector
-
         References
             https://en.wikipedia.org/wiki/Orthogonal_Procrustes_problem
             https://en.wikipedia.org/wiki/Kabsch_algorithm
@@ -193,7 +190,9 @@ class KabschTransform(Transform):
         # calculate covariance matrix
         H = Xcs.T @ Ycs
 
-        # first do SVD on covariance matrix
+        # first do single value decomposition on covariance matrix
+        # this step ensures that the algorithm is numerically stable
+        # and removes problems with singular covariance matrices
         U, _, V = np.linalg.svd(H)
         # get the sign of the determinant of V.T @ U.T
         sign = np.sign(np.linalg.det(V.T@U.T))
@@ -234,6 +233,12 @@ def RMSD_kabsch(X: Matrix(..., 3),
     # get optimal transformation
     Tkabsch = KabschTransform(X, Y)
     return RMSD(Tkabsch(X), Y)
+
+
+@plams.add_to_class(plams.Molecule)
+def apply_transform(self, transform: Transform):
+    for atom in self.atoms:
+        atom.coords = transform.apply(atom.coords)[0]
 
 
 def align_to_plane(mol, atoms, plane='xy'):
@@ -326,31 +331,31 @@ def center_mol(coords):
     return coords - c
 
 
-def align_molecule(molecule, origin=None):
-    if len(yu_molecule.get_labeled_atoms(
-            molecule, 'plane', origin=origin)) > 0:
-        align_to_plane(
-            molecule,
-            yu_molecule.get_labeled_atoms(
-                molecule,
-                'plane',
-                origin=origin))
-    if len(yu_molecule.get_labeled_atoms(
-            molecule, 'align', origin=origin)) > 0:
-        align_to_axis(
-            molecule,
-            yu_molecule.get_labeled_atoms(
-                molecule,
-                'align',
-                origin=origin))
-    if len(yu_molecule.get_labeled_atoms(
-            molecule, 'center', origin=origin)) > 0:
-        center(
-            molecule,
-            yu_molecule.get_labeled_atoms(
-                molecule,
-                'center',
-                origin=origin)[0])
+# def align_molecule(molecule, origin=None):
+#     if len(yu_molecule.get_labeled_atoms(
+#             molecule, 'plane', origin=origin)) > 0:
+#         align_to_plane(
+#             molecule,
+#             yu_molecule.get_labeled_atoms(
+#                 molecule,
+#                 'plane',
+#                 origin=origin))
+#     if len(yu_molecule.get_labeled_atoms(
+#             molecule, 'align', origin=origin)) > 0:
+#         align_to_axis(
+#             molecule,
+#             yu_molecule.get_labeled_atoms(
+#                 molecule,
+#                 'align',
+#                 origin=origin))
+#     if len(yu_molecule.get_labeled_atoms(
+#             molecule, 'center', origin=origin)) > 0:
+#         center(
+#             molecule,
+#             yu_molecule.get_labeled_atoms(
+#                 molecule,
+#                 'center',
+#                 origin=origin)[0])
 
 
 if __name__ == '__main__':
@@ -368,8 +373,6 @@ if __name__ == '__main__':
     T.translate(x=3, y=0, z=-10)
     T.rotate(x=-1, y=-1, z=1)
 
-    print(T)
-
     # we generate some coordinates X
     # X = np.random.randn(5, 3)
     X = np.arange(5*3).reshape(5, 3)
@@ -383,3 +386,12 @@ if __name__ == '__main__':
     # small value indicates that alignment went well
     # this also means that Tkabsch and T are equivalent transformations
     print('RMSD =', RMSD(Tkabsch(X), Y))
+    print('Y =', Y)
+    print('Tkabsch(X) =', Tkabsch(X))
+
+    mol = plams.Molecule(r"D:\Users\Yuman\Desktop\PhD\ychem\calculations2\1d0673a30f1785b890fc1007d2248a01755aa7b12f69edb22fd52f836fda8dcd.003\radical\input_mol.xyz")
+    T = Transform()
+    T.translate(x=10)
+    print(mol)
+    mol.apply_transform(T)
+    print(mol)
