@@ -90,10 +90,10 @@ class Transform:
     def build_matrix(self, 
                      R: Matrix(3, 3) = None, 
                      T: Vector(3) = None, 
-                     S: Vector(3) = None):
+                     S: Vector(3) = None) -> Matrix(4, 4):
         r'''
         Build and return a transformation matrix. 
-        This matrix encodes in one matrix rotations, translations and scaling.
+        This 4x4 matrix encodes rotations, translations and scaling.
 
         M = | R@diag(S)   T |, where R \in R^3x3, r \in R^3, 0_3 = [0, 0, 0] \in R^3 and 1 \in R
             | 0_3         1 |
@@ -150,70 +150,71 @@ class Transform:
         return new
 
 
-def KabschTransform(X: Matrix(..., 3), 
-                    Y: Matrix(..., 3)) -> Matrix(3, 3):
-    '''
-    Use Kabsch-Umeyama algorithm to calculate the optimal rotation matrix, translation
-    and scaling to superimpose X unto Y. 
+class KabschTransform(Transform):
+    def __init__(self, 
+                 X: Matrix(..., 3), 
+                 Y: Matrix(..., 3)):
+        '''
+        Use Kabsch-Umeyama algorithm to calculate the optimal rotation matrix, translation
+        and scaling to superimpose X unto Y. 
 
-    It is numerically stable and works when the covariance matrix is singular.
-    Both sets of points must be the same size for this algorithm to work.
-    The coordinates are first centered onto their centroids before determining the 
-    optimal rotation matrix.
+        It is numerically stable and works when the covariance matrix is singular.
+        Both sets of points must be the same size for this algorithm to work.
+        The coordinates are first centered onto their centroids before determining the 
+        optimal rotation matrix.
 
-    Returns
-        Transform objects holding the rotation matrix, translation vector and scale vector
+        Returns
+            Transform objects holding the rotation matrix, translation vector and scale vector
 
-    References
-        https://en.wikipedia.org/wiki/Orthogonal_Procrustes_problem
-        https://en.wikipedia.org/wiki/Kabsch_algorithm
-    '''
+        References
+            https://en.wikipedia.org/wiki/Orthogonal_Procrustes_problem
+            https://en.wikipedia.org/wiki/Kabsch_algorithm
+        '''
 
-    # make sure arrays are 2d and the same size
-    X, Y = np.atleast_2d(X), np.atleast_2d(Y)
-    assert X.shape == Y.shape, f"Matrices X with shape {X.shape} and Y with shape {Y.shape} are not the same size"
+        # make sure arrays are 2d and the same size
+        X, Y = np.atleast_2d(X), np.atleast_2d(Y)
+        assert X.shape == Y.shape, f"Matrices X with shape {X.shape} and Y with shape {Y.shape} are not the same size"
 
-    # center the coordinates
-    centroid_x = np.mean(X, axis=0)
-    centroid_y = np.mean(Y, axis=0)
-    Xc = X - centroid_x
-    Yc = Y - centroid_y
+        # center the coordinates
+        centroid_x = np.mean(X, axis=0)
+        centroid_y = np.mean(Y, axis=0)
+        Xc = X - centroid_x
+        Yc = Y - centroid_y
 
-    # get RMSD from points to centroid, this will act as the size
-    # of the body made up by the points
-    s_x = RMSD(Xc, axis=0)
-    s_y = RMSD(Yc, axis=0)
+        # get RMSD from points to centroid, this will act as the size
+        # of the body made up by the points
+        s_x = RMSD(Xc, axis=0)
+        s_y = RMSD(Yc, axis=0)
 
-    # scale points such that they have the same size
-    Xcs = Xc / s_x
-    Ycs = Yc / s_y
+        # scale points such that they have the same size
+        Xcs = Xc / s_x
+        Ycs = Yc / s_y
 
-    # calculate covariance matrix
-    H = Xcs.T @ Ycs
+        # calculate covariance matrix
+        H = Xcs.T @ Ycs
 
-    # first do SVD on covariance matrix
-    U, _, V = np.linalg.svd(H)
-    # get the sign of the determinant of V.T @ U.T
-    sign = np.sign(np.linalg.det(V.T@U.T))
-    # build matrix for 
-    # then build the optimal rotation matrix
-    d = np.diag([1, 1, sign])
-    R = V.T @ d @ U.T
+        # first do SVD on covariance matrix
+        U, _, V = np.linalg.svd(H)
+        # get the sign of the determinant of V.T @ U.T
+        sign = np.sign(np.linalg.det(V.T@U.T))
+        # build matrix for 
+        # then build the optimal rotation matrix
+        d = np.diag([1, 1, sign])
+        R = V.T @ d @ U.T
 
-    # build the transformation:
-    # for a sequence of transformation operations
-    # we have to invert their order
-    # We have that Y ~= (R @ (X - centroid_x).T).T * s_y / s_x + centroid(y)
-    # the normal order is to first translate X by -centroid_x
-    # then rotate with R
-    # scale by s_y / s_x
-    # finally translate by +centroid_y
-    T = Transform()
-    T.translate(centroid_y)
-    T.scale(s_y / s_x)
-    T.rotate(R)
-    T.translate(-centroid_x)
-    return T
+        # build the transformation:
+        # for a sequence of transformation operations
+        # we have to invert their order
+        # We have that Y ~= (R @ (X - centroid_x).T).T * s_y / s_x + centroid(y)
+        # the normal order is to first translate X by -centroid_x
+        # then rotate with R
+        # scale by s_y / s_x
+        # finally translate by +centroid_y
+        self.M = self.build_matrix()
+        self.translate(centroid_y)
+        self.scale(s_y / s_x)
+        self.rotate(R)
+        self.translate(-centroid_x)
 
 
 def RMSD(X: Matrix(..., 3), 
