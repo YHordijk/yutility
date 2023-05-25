@@ -156,7 +156,7 @@ class KabschTransform(Transform):
                  Y: Matrix(..., 3)):
         '''
         Use Kabsch-Umeyama algorithm to calculate the optimal rotation matrix, translation
-        and scaling to superimpose X unto Y. 
+        and scaling to superimpose X onto Y. 
 
         It is numerically stable and works when the covariance matrix is singular.
         Both sets of points must be the same size for this algorithm to work.
@@ -202,8 +202,7 @@ class KabschTransform(Transform):
         R = V.T @ d @ U.T
 
         # build the transformation:
-        # for a sequence of transformation operations
-        # we have to invert their order
+        # for a sequence of transformation operations we have to invert their order
         # We have that Y ~= (R @ (X - centroid_x).T).T * s_y / s_x + centroid(y)
         # the normal order is to first translate X by -centroid_x
         # then rotate with R
@@ -230,9 +229,23 @@ def RMSD(X: Matrix(..., 3),
 
 def RMSD_kabsch(X: Matrix(..., 3), 
                 Y: Matrix(..., 3)) -> float:
-    # get optimal transformation
+    '''
+    Calculate the RMSD after Kabsch-transformation of the coordinates.
+    This will yield the smallest possible RMSD for the two sets of coordinates
+    '''
     Tkabsch = KabschTransform(X, Y)
     return RMSD(Tkabsch(X), Y)
+
+
+def RMSD_combinatorial(X: Matrix(..., 3), 
+                       Y: Matrix(..., 3),
+                       use_kabsch: bool = True) -> float:
+    '''
+    Exhaustively look through permutations of X to minimize the RMSD.
+    This can get very expensive very quickly. Optionally we can use the Kabsch
+    algorithm to calculate the smallest RMSD.
+    '''
+
 
 
 @plams.add_to_class(plams.Molecule)
@@ -359,11 +372,36 @@ def center_mol(coords):
 
 
 if __name__ == '__main__':
-    # import matplotlib.pyplot as plt
-    # xs = [random_point_on_sphere(5, dim=1)[0] for _ in range(1000)]
-    # plt.hist(xs)
-    # plt.show()
-    # print()
+    import matplotlib.pyplot as plt
+    
+    # X = np.array([[-1, 0, 0], [0, 0, 0], [0, 1, -1]])
+    X = plams.Molecule('/Users/yumanhordijk/PhD/ychem/calculations2/c1d4ca95a3911eb1f79bf4ef91cc7a88b479d7dc8357860bfdb3e577747ebc3a/catalyst/input_mol.xyz').as_array()
+    T = Transform()
+    T.translate(y=-1.5)
+    T.rotate(z=.3)
+    Y = T(X)
+    R = []
+
+    trans = np.linspace(-5, 5, 100)
+    rot = np.linspace(-np.pi, np.pi, 100)
+
+    for trans_ in trans:
+        R.append([])
+        for rot_ in rot:
+            T = Transform()
+            T.translate(x=trans_)
+            T.rotate(z=rot_)
+            R[-1].append(RMSD(X, T(Y)))
+
+    plt.title(r'RMSD between two ZnCl$_2$ molecules first Translated, then Rotated')
+    im = plt.imshow(R, extent=(trans.min(), trans.max(), rot.min(), rot.max()), origin='lower', cmap='coolwarm', aspect='auto')
+    cbar = plt.colorbar(im, label=r'RMSD (Angstrom)')
+    plt.xlabel('Translation on X-axis (Angstrom)')
+    plt.ylabel('Rotation around Z-axis')
+    plt.tight_layout()
+    plt.show()
+
+
 
     # demo for Transforms and Kabsch algorithm
     # we have a random Transform which rotates, translates and scales
@@ -395,3 +433,7 @@ if __name__ == '__main__':
     print(mol)
     mol.apply_transform(T)
     print(mol)
+
+
+
+    
