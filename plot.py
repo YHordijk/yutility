@@ -23,6 +23,47 @@ class ShowCaller:
         plt.close()
 
 
+def auto_texts(texts, constrain_x=False, constrain_y=False):
+    fig = plt.gcf()
+    fig.draw_without_rendering()
+    ax = plt.gca()
+    rend = fig.canvas.get_renderer()
+
+    position_original = [text.get_position() for text in texts]
+    for i in range(100):
+        bbs = [text.get_window_extent().transformed(ax.transData.inverted()) for text in texts]
+        forces = []
+        for i, bb1 in enumerate(bbs):
+            force = [0, 0]
+
+            # attractive force
+            if not constrain_x:
+                force[0] -= (bb1.min[0] - position_original[i][0]) / 10
+            if not constrain_y:
+                force[1] -= (bb1.min[1] - position_original[i][1]) / 10
+
+            for bb2 in bbs:
+                if bb1 == bb2:
+                    continue
+                if not bb1.overlaps(bb2):
+                    continue
+
+                # repulsive force
+                if not constrain_x:
+                    force[0] += (bb1.max[0] - bb2.max[0])/abs((bb1.max[0] - bb2.max[0])) * abs((bb1.max[0] - bb2.max[0]))**2
+                if not constrain_y:
+                    force[1] += (bb1.max[1] - bb2.max[1])/abs((bb1.max[1] - bb2.max[1])) * abs((bb1.max[1] - bb2.max[1]))**2
+
+            forces.append(force)
+
+        for text, force in zip(texts, forces):
+            # print(force)
+            pos = text.get_position()
+            new_pos = pos[0] + force[0] * .1, pos[1] + force[1] * .1
+            text.set_position(new_pos)
+
+
+
 def density(points, lim, resolution=1000, s2=.002):
     s2 = s2 * (lim[1] - lim[0])**2
     x = np.linspace(*lim, resolution)
@@ -224,3 +265,13 @@ def matrix_bubble(M, xlabels=None, ylabels=None, cmap='RdBu', minval=None, cente
     plt.gca().set_aspect('equal')
     # if colorbar:
     #   cbar = plt.colorbar(plt.gcf())
+
+
+if __name__ == '__main__':
+    plt.scatter([-10, 10], [-10, 10])
+    texts = []
+    for x, y in zip(range(4), range(4)):
+        texts.append(plt.text(np.random.rand(1), np.random.rand(1), 'hello'))
+
+    auto_texts(texts)
+    plt.show()
