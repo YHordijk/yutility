@@ -61,8 +61,10 @@ class DBSelectResult:
             dbs[unq] = DBSelectResult([x for i, x in enumerate(self) if mask_data[i] == unq], self.columns, self.types)
         return dbs
 
-    def where(self, mask):
-        return DBSelectResult([x for i, x in enumerate(self) if mask[i]], self.columns, self.types)
+    def where(self, *masks):
+        masks = ensure_list(masks)
+
+        return DBSelectResult([x for i, x in enumerate(self) if all(mask[i] for mask in masks)], self.columns, self.types)
 
     def sortby(self, key, sortfunc=None):
         sortval = []
