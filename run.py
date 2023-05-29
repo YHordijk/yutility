@@ -1,5 +1,5 @@
 import scm.plams as plams
-from yutility import units, log, settings, pathfunc
+from yutility import units, log, settings, pathfunc, plotfunc
 import os
 import numpy as np
 import subprocess
@@ -229,11 +229,14 @@ class NMRResults:
         standard = kwargs.pop('standard', self.default_standards.get(element, 0))
         kwargs.pop('lineshape', None)
         plt.plot(x, y, **kwargs)
+        annotations = []
         for atom, peak in self.chemical_shift_by_element_and_atom(element).items():
             plt.vlines(standard - peak, 0, max(y) * 1.1, colors='grey', linestyles='dashed')
-            plt.gca().annotate(f'{element}{atom+1}', xycoords='data', va='top', ha='left', xy=(standard - peak, self.evaluate(standard - peak)[1]), textcoords='offset pixels', xytext=(10, 50))
+            annot = plt.gca().annotate(f'{element}{atom+1}', xycoords='data', va='top', ha='left', xy=(standard - peak, self.evaluate(standard - peak)[1]), textcoords='offset pixels', xytext=(10, 50))
+            annotations.append(annot)
         plt.xlabel(rf'{element}-NMR $\delta$ (PPM)')
         plt.ylabel('Intensity')
+        plotfunc.auto_text(annotations)
 
 
 def nmr(mol, dft_settings=None, folder=None, path=DEFAULT_RUN_PATH, do_init=True):
