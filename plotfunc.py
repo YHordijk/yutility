@@ -5,9 +5,6 @@ import numpy as np
 import atexit
 
 
-print('Deprecation Warning: plot.py is now plotfunc.py')
-
-
 class ShowCaller:
     def show(self, block=False):
         atexit.register(plt.show, block=True)
@@ -63,7 +60,6 @@ def auto_texts(texts, constrain_x=False, constrain_y=False):
             pos = text.get_position()
             new_pos = pos[0] + force[0] * .1, pos[1] + force[1] * .1
             text.set_position(new_pos)
-
 
 
 def density(points, lim, resolution=1000, s2=.002):
@@ -274,6 +270,13 @@ if __name__ == '__main__':
     texts = []
     for x, y in zip(range(4), range(4)):
         texts.append(plt.text(np.random.rand(1), np.random.rand(1), 'hello'))
+    # plt.show()
 
+    plt.figure()
+
+    plt.scatter([-10, 10], [-10, 10])
+    texts = []
+    for x, y in zip(range(4), range(4)):
+        texts.append(plt.text(np.random.rand(1), np.random.rand(1), 'hello'))
     auto_texts(texts)
     plt.show()
