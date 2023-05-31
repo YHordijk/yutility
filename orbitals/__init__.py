@@ -7,10 +7,14 @@ from yutility import plot
 
 class Orbitals:
     def __init__(self, path, moleculename=None):
-        self.reader = plams.KFReader(path)
+        if isinstance(path, (plams.KFReader, plams.KFFile)):
+            self.reader = path
+        else:
+            self.reader = plams.KFReader(path)
         self.mos = mo.MOs(reader=self.reader, moleculename=moleculename)
         self.sfos = sfo.SFOs(reader=self.reader)
         self.rename_fragments = self.sfos.rename_fragments
+        self.fragments = self.sfos.fragments
 
     def mulliken_contribution(self, sfo, mo):
         r'''
@@ -60,6 +64,27 @@ class Orbitals:
 def load(path):
     return Orbitals(path)
 
+
+def sort_orb_pairs(orbs1, orbs2, prop=None):
+    '''
+    Sort pairs from sfos1 and sfos2 based on the values prop(sfos1, sfos2)
+    args:
+        sfos1, sfos2: lists of SFO objects
+        prop:         function taking SFO objects or lists of SFO objects
+    return:
+        list of tuples containing (sfo1, sfo2, prop(sfo1, sfo2)) sorted by prop(sfo1, sfo2)
+        here sfo1 and sfo2 are taken from sfos1 and sfos2
+    '''
+    M = prop(orbs1, orbs2)
+    ret = []
+    for i, orb1 in enumerate(ensure_list(orbs1)):
+        for j, orb2 in enumerate(ensure_list(orbs2)):
+            if np.isnan(M[i, j]):
+                continue
+            ret.append((orb1, orb2, M[i, j]))
+
+    ret = sorted(ret, key=lambda pair: pair[-1])
+    return ret
 
 
 def plot_property(orbs1, orbs2, prop=None, cmap='Greens', title=None, use_relname=False, use_indexname=False, scale=None):
@@ -140,19 +165,15 @@ def plot_property(orbs1, orbs2, prop=None, cmap='Greens', title=None, use_relnam
 
 
 if __name__ == '__main__':
-    import matplotlib.pyplot as plt
     from yutility import ensure_list
 
-    p = '../test/orbitals/rkf/ethaneEDA.rkf'
+    p = '../test/orbitals/rkf/BH3NH3.rkf'
     orbs = Orbitals(p)
+    print(orbs.fragments)
 
-    contributions = []
-    for mo_ in orbs.mos:
-        contributions.append([])
-        for sfo_ in orbs.sfos:
-            contributions[-1].append(orbs.mulliken_population(sfo_, mo_))
+    sfos1 = orbs.sfos[:'Donor(LUMO+6)']
+    sfos2 = orbs.sfos[:'Acceptor(LUMO+6)']
 
-    print(np.sum(contributions, axis=1))
-    print(np.sum(contributions, axis=0))
-    plt.imshow(contributions)
-    plt.show()
+    plot_property(sfos1, sfos2, sfo.orbint).show()
+    pairs = sort_orb_pairs(sfos1, sfos2, sfo.orbint)
+    print(pairs[-1])
