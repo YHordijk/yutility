@@ -32,6 +32,9 @@ class SFOs:
         Where [:fragidx] is optional
         '''
 
+        if isinstance(key, int):
+            return {'index': key}
+
         # get spin from the key
         spin = None
         orbname = key
@@ -83,8 +86,8 @@ class SFOs:
         return ret
 
     def __getitem__(self, key):
-        if isinstance(key, int):
-            return squeeze_list(self.get_sfo(index=key))
+        # if isinstance(key, int):
+        #     return squeeze_list(self.get_sfo(index=key))
 
         if isinstance(key, (tuple, list)):
             ret = []
@@ -92,7 +95,7 @@ class SFOs:
                 ret.extend(ensure_list(self.__getitem__(key_)))    
             return squeeze_list(ret)
 
-        if isinstance(key, str):
+        if isinstance(key, (str, int)):
             if key in self.fragments:
                 return squeeze_list(self.get_fragment_sfos(key))
 
@@ -101,11 +104,17 @@ class SFOs:
             return squeeze_list(ret)
 
         if isinstance(key, slice):
-            start_decoded = self._decode_key(key.start)
-            start_decoded.pop('orbname', None)
-            start_decoded.pop('index', None)
-            start_sfo = ensure_list(self.__getitem__(key.start or 1))
-            stop_sfo = ensure_list(self.__getitem__(key.stop or 0))
+            start_sfo = ensure_list(self.__getitem__(key.start) or self.sfos[0])
+            stop_sfo = ensure_list(self.__getitem__(key.stop) or self.sfos[-1])
+
+            if key.start:
+                start_decoded = self._decode_key(key.start)
+                start_decoded.pop('orbname', None)
+                start_decoded.pop('index', None)
+            elif key.stop:
+                start_decoded = self._decode_key(key.stop)
+                start_decoded.pop('orbname', None)
+                start_decoded.pop('index', None)
 
             start_index = min(sfo.index for sfo in start_sfo)
             stop_index = max(sfo.index for sfo in stop_sfo)
