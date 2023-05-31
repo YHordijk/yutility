@@ -29,9 +29,10 @@ def auto_texts(texts, constrain_x=False, constrain_y=False):
     ax = plt.gca()
 
     position_original = [text.get_position() for text in texts]
-    for i in range(100):
+    for i in range(1000):
         bbs = [text.get_window_extent().transformed(ax.transData.inverted()) for text in texts]
         forces = []
+        moved_any = False
         for i, bb1 in enumerate(bbs):
             force = [0, 0]
 
@@ -47,13 +48,19 @@ def auto_texts(texts, constrain_x=False, constrain_y=False):
                 if not bb1.overlaps(bb2):
                     continue
 
+                moved_any = True
+
                 # repulsive force
                 if not constrain_x:
-                    force[0] += (bb1.max[0] - bb2.max[0])/abs((bb1.max[0] - bb2.max[0])) * abs((bb1.max[0] - bb2.max[0]))**2
+                    force[0] += (bb1.max[0] - bb2.max[0])/abs((bb1.max[0] - bb2.max[0])) * abs(bb1.max[0] - bb2.max[0])
                 if not constrain_y:
-                    force[1] += (bb1.max[1] - bb2.max[1])/abs((bb1.max[1] - bb2.max[1])) * abs((bb1.max[1] - bb2.max[1]))**2
+                    force[1] += (bb1.max[1] - bb2.max[1])/abs((bb1.max[1] - bb2.max[1])) * abs(bb1.max[1] - bb2.max[1])
 
+            # force = np.array(force)/np.linalg.norm(force)
             forces.append(force)
+
+        if not moved_any:
+            break
 
         for text, force in zip(texts, forces):
             # print(force)
