@@ -87,7 +87,7 @@ def sort_orb_pairs(orbs1, orbs2, prop=None):
     return ret
 
 
-def plot_property(orbs1, orbs2, prop=None, cmap='Greens', title=None, use_relname=False, use_indexname=False, scale=None):
+def plot_property(orbs1, orbs2, prop=None, cmap='Greens', title=None, unit=None, use_relname=False, use_indexname=False, scale=None):
     if cmap is None:
         cmap = 'Greens'
         if hasattr(prop, 'cmap'):
@@ -107,6 +107,15 @@ def plot_property(orbs1, orbs2, prop=None, cmap='Greens', title=None, use_relnam
         if hasattr(prop, 'title'):
             title = prop.title
 
+    if unit is None:
+        if hasattr(prop, 'unit'):
+            unit = prop.unit
+
+    if unit is not None:
+        unit = '(' + unit + ')'
+    else:
+        unit = ''
+ 
     if callable(prop):
         M = prop(orbs1, orbs2)
     else:
@@ -158,22 +167,48 @@ def plot_property(orbs1, orbs2, prop=None, cmap='Greens', title=None, use_relnam
     else:
         plt.xticks(xticks, [repr(orb) for orb in orbs2], rotation=90)
         plt.yticks(yticks, [repr(orb) for orb in orbs1], rotation=0)
-    plt.title(title + r'$(' + psi1 + r', ' + psi2 + r')$', fontsize=16)
+    plt.title(title + r'$(' + psi1 + r', ' + psi2 + r')$ ' + unit, fontsize=16)
     plt.tight_layout()
 
     return plot.ShowCaller()
 
 
-if __name__ == '__main__':
-    from yutility import ensure_list
+# @decorators.add_to_func(title=r'$\Delta E_{oi}$', scale=1e3, unit=r'10$^3$ eV$^{-1}$')
+# def orbint(sfos1: list[SFO] or SFO, sfos2: list[SFO] or SFO, use_mask: bool = True) -> float or np.ndarray:
+#     S = overlap(sfos1, sfos2)
+#     dE = energy_gap(sfos1, sfos2)
+#     oi = np.array(S**2/dE)
+#     if use_mask:
+#         mask = occ_virt_mask(sfos1, sfos2)
+#         oi[np.logical_not(mask)] = None
+#     return oi.squeeze()
 
+
+# def highest_contr(sfos: list[sfo.SFO] or sfo.SFO, mos: list[mo.MO] or mo.MO) -> float or np.ndarray:
+    
+
+
+if __name__ == '__main__':
     p = '../test/orbitals/rkf/BH3NH3.rkf'
     orbs = Orbitals(p)
     print(orbs.fragments)
 
-    sfos1 = orbs.sfos[:'Donor(LUMO+6)']
-    sfos2 = orbs.sfos[:'Acceptor(LUMO+6)']
+    sfos1 = orbs.sfos[:'Donor(LUMO+4)']
+    sfos2 = orbs.sfos[:'Acceptor(LUMO+4)']
 
-    plot_property(sfos1, sfos2, sfo.orbint).show()
+    plot_property(sfos1, sfos2, sfo.orbint, use_relname=True).show()
     pairs = sort_orb_pairs(sfos1, sfos2, sfo.orbint)
     print(pairs[-1])
+
+
+    p = '../test/orbitals/rkf/substrate_cat_complex.rkf'
+    orbs = Orbitals(p)
+    print(orbs.fragments)
+
+    sfos = orbs.sfos['C:1(1P)']
+    mos = orbs.mos['HOMO-10':'LUMO+10']
+
+    plot_property(sfos1, sfos2, sfo.orbint, use_relname=True).show()
+    pairs = sort_orb_pairs(sfos1, sfos2, sfo.orbint)
+    print(pairs[-1])
+
