@@ -14,7 +14,6 @@ class Orbitals:
         self.mos = mo.MOs(reader=self.reader, moleculename=moleculename)
         self.sfos = sfo.SFOs(reader=self.reader)
         self.rename_fragments = self.sfos.rename_fragments
-        self.fragments = self.sfos.fragments
 
     def mulliken_contribution(self, sfo, mo):
         r'''
@@ -59,6 +58,10 @@ class Orbitals:
         the occupation numbers of the MOs on axis 1 and the 
         '''
         return mo.occupation * self.mulliken_contribution(sfo, mo)
+
+    @property
+    def fragments(self):
+        return self.sfos.fragments
 
 
 def load(path):
@@ -185,7 +188,7 @@ def plot_property(orbs1, orbs2, prop=None, cmap='Greens', title=None, unit=None,
 
 
 # def highest_contr(sfos: list[sfo.SFO] or sfo.SFO, mos: list[mo.MO] or mo.MO) -> float or np.ndarray:
-    
+
 
 
 if __name__ == '__main__':
@@ -197,8 +200,8 @@ if __name__ == '__main__':
     sfos2 = orbs.sfos[:'Acceptor(LUMO+4)']
 
     plot_property(sfos1, sfos2, sfo.orbint, use_relname=True).show()
-    pairs = sort_orb_pairs(sfos1, sfos2, sfo.orbint)
-    print(pairs[-1])
+    best_pair = sort_orb_pairs(sfos1, sfos2, sfo.orbint)[-1]
+    best_pair[1].generate_orbital().show()
 
 
     p = '../test/orbitals/rkf/substrate_cat_complex.rkf'
@@ -206,6 +209,8 @@ if __name__ == '__main__':
     print(orbs.fragments)
 
     sfos = orbs.sfos['C:1(1P)']
+    for sfo in sfos:
+        sfo.generate_orbital().show()
     mos = orbs.mos['HOMO-10':'LUMO+10']
 
     plot_property(sfos1, sfos2, sfo.orbint, use_relname=True).show()
