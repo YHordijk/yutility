@@ -71,7 +71,7 @@ def density(points, lim, resolution=1000, s2=.002):
     return x, dens/dens.max()
 
 
-def scatter(x, y, xlabel=None, ylabel=None, plot_marginals=True, s=3, alpha=.5, groups=None, groupsname=None, legendloc='outside right upper'):
+def plot(x, y, xlabel=None, ylabel=None, plot_marginals=True, s=3, alpha=.5, groups=None, groupsname=None, linewidth=1, marker='o', legendloc='outside right upper'):
     # Create Fig and gridspec
     if plot_marginals:
         grid = plt.GridSpec(4, 4, hspace=0, wspace=0)
@@ -93,7 +93,7 @@ def scatter(x, y, xlabel=None, ylabel=None, plot_marginals=True, s=3, alpha=.5, 
         ax_main = plt.gcf().add_subplot(grid[0, 0])
 
     for group_label, group_index in zip(group_labels, group_indices):
-        ax_main.scatter(x[group_index], y[group_index], s=s, alpha=alpha, label=group_label)
+        ax_main.plot(x[group_index], y[group_index], alpha=alpha, label=group_label, linewidth=linewidth, marker=marker, markersize=s)
 
     if plot_marginals:
         for group_label, group_index in zip(group_labels, group_indices):
@@ -124,6 +124,10 @@ def scatter(x, y, xlabel=None, ylabel=None, plot_marginals=True, s=3, alpha=.5, 
         plt.gcf().legend(loc=legendloc, title=groupsname)
 
     return ShowCaller()
+
+
+def scatter(*args, **kwargs):
+    return plot(*args, linewidth=0, **kwargs)
 
 
 def heatmap(M, extent=None, xlabel=None, ylabel=None, plot_marginals=True, cmap='Blues', groupcmap='tab10'):
