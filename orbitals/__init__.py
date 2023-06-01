@@ -2,7 +2,7 @@ from yutility.orbitals import sfo, mo, info, indirect
 from scm import plams
 import numpy as np
 import matplotlib.pyplot as plt
-from yutility import plot
+from yutility import plot, ensure_list
 
 
 class Orbitals:
