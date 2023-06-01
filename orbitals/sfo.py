@@ -132,7 +132,7 @@ class SFOs:
 
     @property
     def fragments(self):
-        return set([sfo.fragment for sfo in self.sfos])
+        return set([sfo.fragment_unique_name for sfo in self.sfos])
 
     def rename_fragments(self, old, new):
         old = ensure_list(old)
@@ -288,29 +288,39 @@ class SFO:
 
             return self.overlaps[other.symmetry_type_index]
 
+    def make_name(self, spin=True, frag_name=False, relative_name=False, index_name=False):
+        name = ''
+
+        if frag_name:
+            name += self.fragment_unique_name + '('
+
+        if relative_name:
+            name += self.relname
+        elif index_name:
+            name += str(self.index) + self.symmetry
+        else:
+            name += self.name
+
+        if frag_name:
+            name += ')'
+
+        if self.spin != 'AB' and spin:
+            name += f'_{self.spin}'
+
+        return name
+
+
     @property
     def full_name(self):
-        spin_part = ''
-        if self.spin != 'AB':
-            spin_part = f'_{self.spin}'
-
-        return f'{self.fragment_unique_name}({self.name}){spin_part}'
+        return self.make_name(frag_name=True, spin=True)
 
     @property
     def index_name(self):
-        spin_part = ''
-        if self.spin != 'AB':
-            spin_part = f'_{self.spin}'
-
-        return f'{self.index}{self.symmetry}{spin_part}' 
+        return self.make_name(frag_name=False, spin=True, index_name=True)
 
     @property
     def relative_name(self):
-        spin_part = ''
-        if self.spin != 'AB':
-            spin_part = f'_{self.spin}'
-
-        return f'{self.fragment_unique_name}({self.relname}){spin_part}'
+        return self.make_name(frag_name=False, spin=True, relative_name=True)
 
     @property
     def occupied(self):
@@ -348,7 +358,7 @@ def overlap(sfos1: list[SFO] or SFO, sfos2: list[SFO] or SFO) -> float or np.nda
     return np.array(ret).squeeze()
 
 
-@decorators.add_to_func(title=r'$\epsilon$')
+@decorators.add_to_func(title=r'$\epsilon$', unit='eV')
 def energy_gap(sfos1: list[SFO] or SFO, sfos2: list[SFO] or SFO) -> float or np.ndarray:
     ret = []
     for sfo1 in ensure_list(sfos1):
@@ -358,7 +368,7 @@ def energy_gap(sfos1: list[SFO] or SFO, sfos2: list[SFO] or SFO) -> float or np.
     return np.array(ret).squeeze()
 
 
-@decorators.add_to_func(title=r'$\Delta E_{oi}$', scale=1e3)
+@decorators.add_to_func(title=r'$\Delta E_{oi}$', scale=1e3, unit=r'10$^3$ eV$^{-1}$')
 def orbint(sfos1: list[SFO] or SFO, sfos2: list[SFO] or SFO, use_mask: bool = True) -> float or np.ndarray:
     S = overlap(sfos1, sfos2)
     dE = energy_gap(sfos1, sfos2)
