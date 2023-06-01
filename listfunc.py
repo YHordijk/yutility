@@ -2,6 +2,14 @@ ensure_list = lambda x: [x] if not isinstance(x, (list, tuple, set)) else x
 squeeze_list = lambda x: x[0] if len(x) == 1 else x
 
 
+def argsort(lst, key=None):
+    if key is None:
+        key = lambda x: x
+
+    enumerated_key = lambda x: key(x[1])
+    return [x[0] for x in sorted(enumerate(lst), key=enumerated_key)]
+
+
 def remove(lst, x):
     x = ensure_list(x)
     for x_ in x:
