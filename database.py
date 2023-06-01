@@ -1,5 +1,5 @@
 import sqlite3 as sql
-from yutility import log, ensure_list, dictfunc, plot
+from yutility import log, ensure_list, dictfunc, plotfunc, listfunc
 import os
 import numpy as np
 import matplotlib.pyplot as plt
@@ -66,13 +66,15 @@ class DBSelectResult:
 
         return DBSelectResult([x for i, x in enumerate(self) if all(mask[i] for mask in masks)], self.columns, self.types)
 
-    def sortby(self, key, sortfunc=None):
+    def sortby(self, key, sortfunc=None, reference=None):
         sortval = []
         if sortfunc is None:
             sortfunc = lambda x: x
-        for x in self[key]:
-            sortval.append(sortfunc(x))
-        idx = sorted(range(len(self)), key=lambda i: sortval[i])
+            if reference is not None:
+                sortfunc = lambda x: reference.index(x)
+
+        x = self[key]
+        idx = listfunc.argsort(x, sortfunc)
         return DBSelectResult(self[idx], self.columns, self.types)
 
     def remove_empty(self, keys='*'):
@@ -111,7 +113,7 @@ class DBSelectResult:
             groups = self[groupkey]
         else:
             groups = None
-        return plot.pair_plot([self[key] for key in keys], keys, groups=groups, groupsname=groupkey, **kwargs)
+        return plotfunc.pair_plot([self[key] for key in keys], keys, groups=groups, groupsname=groupkey, **kwargs)
 
     def plot(self, xkey, ykey, groupkey=None, figsize=None, **kwargs):
         plt.figure(figsize=figsize)
@@ -119,7 +121,7 @@ class DBSelectResult:
             groups = self[groupkey]
         else:
             groups = None
-        return plot.scatter(self[xkey], self[ykey], xlabel=xkey, ylabel=ykey, groups=groups, groupsname=groupkey, **kwargs)
+        return plotfunc.plot(self[xkey], self[ykey], xlabel=xkey, ylabel=ykey, groups=groups, groupsname=groupkey, **kwargs)
 
     def heatmap(self, xkey, ykey, groupkey=None, resolution=(200, 200), s2=.002, figsize=None, **kwargs):
         x, y = self[xkey], self[ykey]
@@ -149,7 +151,7 @@ class DBSelectResult:
             Ms_.append(M)
 
         plt.figure(figsize=figsize)
-        return plot.heatmap(Ms_, extent=(x.min(), x.max(), y.min(), y.max()), xlabel=xkey, ylabel=ykey, **kwargs)
+        return plotfunc.heatmap(Ms_, extent=(x.min(), x.max(), y.min(), y.max()), xlabel=xkey, ylabel=ykey, **kwargs)
 
     def column_type(self, key):
         return self.types[self.columns.index(key)]
