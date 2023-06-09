@@ -3,6 +3,7 @@ import scm.plams as plams
 from math import sin, cos
 from yutility import molecule as yu_molecule
 from yutility.ytypes import Matrix, Either, Vector
+import itertools
 
 
 normal_to_plane = {'xy': np.array([0., 0., 1.]),
@@ -244,7 +245,24 @@ def RMSD_combinatorial(X: Matrix(..., 3),
     Exhaustively look through permutations of X to minimize the RMSD.
     This can get very expensive very quickly. Optionally we can use the Kabsch
     algorithm to calculate the smallest RMSD.
+
+    Be careful! This method scales O(n!)
     '''
+
+    RMSD_func = RMSD_kabsch if use_kabsch else RMSD
+    return min([RMSD_func(X, y) for y in itertools.permutations(Y)])
+
+
+# def RMSD_iterative_kabsch(X: Matrix(..., 3), 
+#                    Y: Matrix(..., 3),
+#                    iterations: int = 100) -> float:
+#     '''
+#     '''
+#     def pick_closest():
+        
+        
+#     for i in range(iterations):
+
 
 
 
@@ -436,4 +454,4 @@ if __name__ == '__main__':
 
 
 
-    
+
