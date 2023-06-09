@@ -170,14 +170,21 @@ class DBSelectResult:
 
 
 class DataBase:
-    def __init__(self, db_path):
+    def __init__(self, db_path=None):
+        self.is_temp = False
         self.db_path = db_path
+        if db_path is None:
+            self.is_temp = True
+            self.db_path = 'tmp.db'
+
         self.name = os.path.split(db_path)[1]
         self.connection = sql.connect(self.db_path)
         self.cursor = self.connection.cursor()
 
     def __str__(self):
         tables = [f'{name}({self.get_table_size(name)}x{len(self.get_column_names(name))})' for name in self.get_table_names()]
+        if self.is_temp:
+            return f'DataBase(is_temp=True, tables=[{", ".join(tables)}])'
         return f'DataBase(file={self.name}, tables=[{", ".join(tables)}])'
 
     def __enter__(self):
@@ -186,6 +193,8 @@ class DataBase:
     def close(self):
         self.connection.commit()
         self.connection.close()
+        if self.is_temp:
+            os.remove(self.db_path)
 
     def __exit__(self, *args):
         self.close()
@@ -351,4 +360,3 @@ def merge_databases(databases, new_name):
                     db.insert_dict(table, datum_dict, ensure_columns=True)
 
     return DataBase(new_name)
-
