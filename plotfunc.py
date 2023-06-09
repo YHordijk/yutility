@@ -82,8 +82,8 @@ def plot(x, y, xlabel=None, ylabel=None, plot_marginals=True, s=3, alpha=.5, gro
     # Create Fig and gridspec
     if plot_marginals:
         grid = plt.GridSpec(4, 4, hspace=0, wspace=0)
-    else:
-        grid = plt.GridSpec(1, 1)
+    # else:
+    #     grid = plt.GridSpec(1, 1)
 
     group_labels = [None]
     group_indices = [np.arange(len(x))]
@@ -96,11 +96,14 @@ def plot(x, y, xlabel=None, ylabel=None, plot_marginals=True, s=3, alpha=.5, gro
         ax_main = plt.gcf().add_subplot(grid[1:, :-1])
         ax_right = plt.gcf().add_subplot(grid[1:, -1], sharey=ax_main, xticks=[], xticklabels=[])
         ax_top = plt.gcf().add_subplot(grid[0, :-1], sharex=ax_main, yticks=[], yticklabels=[])
-    else:
-        ax_main = plt.gcf().add_subplot(grid[0, 0])
+    # else:
+    #     ax_main = plt.gcf().add_subplot(grid[0, 0])
+        for group_label, group_index in zip(group_labels, group_indices):
+            ax_main.plot(x[group_index], y[group_index], alpha=alpha, label=group_label, linewidth=linewidth, marker=marker, markersize=s)
 
-    for group_label, group_index in zip(group_labels, group_indices):
-        ax_main.plot(x[group_index], y[group_index], alpha=alpha, label=group_label, linewidth=linewidth, marker=marker, markersize=s)
+    else:
+        for group_label, group_index in zip(group_labels, group_indices):
+            plt.plot(x[group_index], y[group_index], alpha=alpha, label=group_label, linewidth=linewidth, marker=marker, markersize=s)
 
     if plot_marginals:
         for group_label, group_index in zip(group_labels, group_indices):
@@ -124,8 +127,12 @@ def plot(x, y, xlabel=None, ylabel=None, plot_marginals=True, s=3, alpha=.5, gro
             lim = [lim[0], lim[1] * 1.05]
             ax_top.set_ylim(lim)
 
-    ax_main.set_xlabel(xlabel)
-    ax_main.set_ylabel(ylabel)
+        ax_main.set_xlabel(xlabel)
+        ax_main.set_ylabel(ylabel)
+    else:
+        plt.xlabel(xlabel)
+        plt.ylabel(ylabel)
+
 
     if groups is not None:
         plt.gcf().legend(loc=legendloc, title=groupsname)
