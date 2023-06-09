@@ -121,7 +121,11 @@ class DBSelectResult:
             groups = self[groupkey]
         else:
             groups = None
-        return plotfunc.plot(self[xkey], self[ykey], xlabel=xkey, ylabel=ykey, groups=groups, groupsname=groupkey, **kwargs)
+
+        ykey = ensure_list(ykey)
+        for key in ykey:
+            shower = plotfunc.plot(self[xkey], self[key], xlabel=xkey, ylabel=', '.join(ykey), groups=groups, groupsname=groupkey, **kwargs)
+        return shower
 
     def heatmap(self, xkey, ykey, groupkey=None, resolution=(200, 200), s2=.002, figsize=None, **kwargs):
         x, y = self[xkey], self[ykey]
