@@ -1,5 +1,5 @@
 import sqlite3 as sql
-from yutility import log, ensure_list, dictfunc, plotfunc, listfunc
+from yutility import log, ensure_list, dictfunc, plotfunc, listfunc, edit_distance
 import os
 import numpy as np
 import matplotlib.pyplot as plt
@@ -36,6 +36,13 @@ class DBSelectResult:
         if isinstance(key, (list, tuple, np.ndarray)):
             return np.array(self.data)[key]
         
+        if key not in self.columns:
+            closest = edit_distance.get_closest(key, self.columns)
+            closest_dist = edit_distance.lev(closest[0], key)
+            if closest_dist >=3:
+                raise KeyError(f'Could not find key {key}, must be one of {", ".join(self.columns)}')
+            else:
+                raise KeyError(f'Could not find key {key}, did you mean {", ".join(closest)}?')
         col_idx = self.columns.index(key)
         return np.array([datum[col_idx] for datum in self.data])
 
