@@ -168,6 +168,13 @@ class NMRResults:
         return self.read('Geometry', 'atomtype').split()
 
     @property
+    def ordered_shifts(self):
+        '''
+        Returns chemical shifts following the input order of atoms
+        '''
+        return self.read('Properties', 'NMR Shieldings InputOrder')
+
+    @property
     def chemical_shifts(self):
         peaks = {}
         for element in self.elements:
@@ -191,6 +198,9 @@ class NMRResults:
         return self.evaluate(*args, **kwargs)
 
     def evaluate(self, shifts=None, element='H', width=0.1, standard=None, lineshape='lorentz', **kwargs):
+        if element not in self.elements:
+            return None, None
+
         lineshape_func = {
             'lorentz': lambda peak: 1/(1 + 4*(shifts - peak)**2/width**2),
             'gaussian': lambda peak: np.exp(-.6931471806 * (4*(shifts - peak)**2/width**2))
@@ -223,6 +233,9 @@ class NMRResults:
 
     def draw_spectrum(self, *args, **kwargs):
         x, y = self.evaluate(*args, **kwargs)
+        if x is None:
+            return
+
         element = kwargs.pop('element', 'H')
         kwargs.pop('shifts', None)
         kwargs.pop('width', None)
@@ -236,7 +249,7 @@ class NMRResults:
             annotations.append(annot)
         plt.xlabel(rf'{element}-NMR $\delta$ (PPM)')
         plt.ylabel('Intensity')
-        plotfunc.auto_text(annotations)
+        plotfunc.auto_texts(annotations)
 
 
 def nmr(mol, dft_settings=None, folder=None, path=DEFAULT_RUN_PATH, do_init=True):
