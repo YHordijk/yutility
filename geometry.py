@@ -211,7 +211,7 @@ class KabschTransform(Transform):
         # finally translate by +centroid_y
         self.M = self.build_matrix()
         self.translate(centroid_y)
-        self.scale(s_y / s_x)
+        # self.scale(s_y / s_x)
         self.rotate(R)
         self.translate(-centroid_x)
 
