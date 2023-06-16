@@ -4,6 +4,7 @@ from math import sin, cos
 from yutility import molecule as yu_molecule
 from yutility.ytypes import Matrix, Either, Vector
 import itertools
+import scipy
 
 
 normal_to_plane = {'xy': np.array([0., 0., 1.]),
@@ -179,22 +180,24 @@ class KabschTransform(Transform):
         Xc = X - centroid_x
         Yc = Y - centroid_y
 
-        # get RMSD from points to centroid, this will act as the size
-        # of the body made up by the points
-        s_x = RMSD(Xc, axis=0)
-        s_y = RMSD(Yc, axis=0)
+        # # get RMSD from points to centroid, this will act as the size
+        # # of the body made up by the points
+        # s_x = RMSD(Xc, axis=0)
+        # s_y = RMSD(Yc, axis=0)
 
-        # scale points such that they have the same size
-        Xcs = Xc / s_x
-        Ycs = Yc / s_y
+        # # scale points such that they have the same size
+        # Xc = Xc / s_x
+        # Yc = Yc / s_y
 
         # calculate covariance matrix
-        H = Xcs.T @ Ycs
+        H = Xc.T @ Yc
 
         # first do single value decomposition on covariance matrix
         # this step ensures that the algorithm is numerically stable
         # and removes problems with singular covariance matrices
-        U, _, V = np.linalg.svd(H)
+        # U, _, V = np.linalg.svd(H)
+        U, _, V = scipy.linalg.svd(H)
+
         # get the sign of the determinant of V.T @ U.T
         sign = np.sign(np.linalg.det(V.T@U.T))
         # build matrix for 
