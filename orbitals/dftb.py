@@ -72,116 +72,20 @@ def read_SFO_data(reader):  # noqa: N802
 def read_MO_data(reader):  # noqa: N802
     calc_info = info.get_calc_info(reader)
 
+    assert calc_info['engine'] == 'dftb'
+
     ret = {}
-    # symlabels
-    if ('Symmetry', 'symlab') in reader:
-        ret['symlabels'] = reader.read('Symmetry', 'symlab').strip().split()
-    elif ('Geometry', 'grouplabel') in reader:
-        ret['symlabels'] = symmetry.labels[reader.read('Geometry', 'grouplabel').strip()]
-    else:
-        ret['symlabels'] = symmetry.labels['NOSYM']
 
-    # number of MOs
-    ret['nmo'] = {}
-    for symlabel in ret['symlabels']:
-        if calc_info['unrestricted_mos']:
-            ret['nmo'][symlabel] = {
-                'A': int(np.sqrt(len(reader.read(symlabel, 'Eig-CoreSFO_A')))),
-                'B': int(np.sqrt(len(reader.read(symlabel, 'Eig-CoreSFO_B'))))
-            }
-        else:
-            ret['nmo'][symlabel] = {'AB': int(np.sqrt(len(reader.read(symlabel, 'Eig-CoreSFO_A'))))}
-
-    # MO energies
-    ret['energy'] = {}
-    ret['energy']['sorted'] = {'A': [], 'B': [], 'AB': []}
-    energyprefix = 'escale' if calc_info['relativistic'] else 'eps'
-    for symlabel in ret['symlabels']:
-        if calc_info['unrestricted_mos']:
-            ret['energy'][symlabel] = {
-                'A': ensure_list(reader.read(symlabel, f'{energyprefix}_A')),
-                'B': ensure_list(reader.read(symlabel, f'{energyprefix}_B'))
-            }
-            ret['energy']['sorted']['A'].extend(ensure_list(reader.read(symlabel, f'{energyprefix}_A')))
-            ret['energy']['sorted']['B'].extend(ensure_list(reader.read(symlabel, f'{energyprefix}_B')))
-        else:
-            ret['energy'][symlabel] = {'AB': ensure_list(reader.read(symlabel, f'{energyprefix}_A'))}
-            ret['energy']['sorted']['AB'].extend(ensure_list(reader.read(symlabel, f'{energyprefix}_A')))
-    ret['energy']['sorted']['A'] = sorted(ret['energy']['sorted']['A'])
-    ret['energy']['sorted']['B'] = sorted(ret['energy']['sorted']['B'])
-    ret['energy']['sorted']['AB'] = sorted(ret['energy']['sorted']['AB'])
-
-    ret['energy_idx'] = {}
-    all_idx = {'A': [], 'B': [], 'AB': []}
-    for symlabel in ret['symlabels']:
-        if calc_info['unrestricted_mos']:
-            energies_A = ensure_list(reader.read(symlabel, f'{energyprefix}_A'))
-            idx_A = []
-            for energy_A in energies_A:
-                idx = ret['energy']['sorted']['A'].index(energy_A)
-                while idx in all_idx['A']:
-                    idx += 1
-                idx_A.append(idx) 
-                all_idx['A'].append(idx)
-
-            energies_B = ensure_list(reader.read(symlabel, f'{energyprefix}_B'))
-            idx_B = []
-            for energy_B in energies_B:
-                idx = ret['energy']['sorted']['B'].index(energy_B)
-                while idx in all_idx['B']:
-                    idx += 1
-                idx_B.append(idx)
-                all_idx['B'].append(idx)
-
-            ret['energy_idx'][symlabel] = {
-                'A': idx_A,
-                'B': idx_B
-            }
-        else:
-            energies = ensure_list(reader.read(symlabel, f'{energyprefix}_A'))
-            idxs = []
-            for energy_B in energies:
-                idx = ret['energy']['sorted']['AB'].index(energy_B)
-                while idx in all_idx['AB']:
-                    idx += 1
-                idxs.append(idx)
-                all_idx['AB'].append(idx)
-            ret['energy_idx'][symlabel] = {'AB': idxs}
-
-    # MO occupations
-    ret['occs'] = {}
-    ret['noccs'] = {}
-    for symlabel in ret['symlabels']:
-        if calc_info['unrestricted_mos']:
-            ret['occs'][symlabel] = {
-                'A': ensure_list(reader.read(symlabel, 'froc_A')),
-                'B': ensure_list(reader.read(symlabel, 'froc_B'))
-            }
-
-            ret['noccs'][symlabel] = {
-                'A': len([occ for occ in ensure_list(reader.read(symlabel, 'froc_A')) if occ > 0]),
-                'B': len([occ for occ in ensure_list(reader.read(symlabel, 'froc_B')) if occ > 0])
-            }
-        else:
-            ret['occs'][symlabel] = {'AB': ensure_list(reader.read(symlabel, 'froc_A'))}
-            ret['noccs'][symlabel] = {'AB': len([occ for occ in ensure_list(reader.read(symlabel, 'froc_A')) if occ > 0]),}
- 
-    # MO coefficients
-    ret['coeffs'] = {}
-    for symlabel in ret['symlabels']:
-        if calc_info['unrestricted_mos']:
-            c_A = ensure_list(reader.read(symlabel, 'Eig-CoreSFO_A'))
-            c_B = ensure_list(reader.read(symlabel, 'Eig-CoreSFO_B'))
-            ret['coeffs'][symlabel] = {
-                'A': np.array(c_A).reshape(ret['nmo'][symlabel]['A'], ret['nmo'][symlabel]['A']),
-                'B': np.array(c_B).reshape(ret['nmo'][symlabel]['B'], ret['nmo'][symlabel]['B'])
-            }
-        else:
-            c = ensure_list(reader.read(symlabel, 'Eig-CoreSFO_A'))
-            ret['coeffs'][symlabel] = {'AB': np.array(c).reshape(ret['nmo'][symlabel]['AB'], ret['nmo'][symlabel]['AB'])}
-
-    # get index of MO in symmetry label
-    ret['symmidx'] = {}
+    ret['symlabels'] = ['A']
+    # read the number of MOs
+    nmo = reader.read('Orbitals', 'nOrbitals')
+    ret['nmo'] = {'A': {'AB': nmo}}
+    ret['energy'] = {'A': {'AB': reader.read('Orbitals', 'Energies(1)')}}
+    occs = reader.read('Orbitals', 'Occupations(1)')
+    ret['occs'] = {'A': {'AB': occs}}
+    ret['noccs'] = {'A': {'AB': sum([occ > 0 for occ in occs])}}
+    ret['coeffs'] = {'A': {'AB': np.array(reader.read('Orbitals', 'Coefficients(1)')).reshape(nmo, nmo)}}
+    ret['energy_idx'] = {'A': {'AB': list(range(nmo))}}
 
     return ret
 
@@ -189,3 +93,4 @@ if __name__ == '__main__':
     reader = plams.KFReader('../test/orbitals/rkf/substrate_dftb.rkf')
     reader = plams.KFReader('../test/orbitals/rkf/substrate_cat_complex_dftb.rkf')
     print(read_SFO_data(reader))
+    print(read_MO_data(reader))

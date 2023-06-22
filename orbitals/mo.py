@@ -238,7 +238,8 @@ class MO:
 
 
 if __name__ == '__main__':
-    p = '../test/orbitals/rkf/methyl.rkf'
+    # p = '../test/orbitals/rkf/methyl.rkf'
+    p = '../test/orbitals/rkf/substrate_cat_complex_dftb.rkf'
     mos = MOs(kfpath=p)
     for mo in sorted(mos, key=lambda mo: mo.energy):
         print(mo, mo.occupation, mo.relative_name)
