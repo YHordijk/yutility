@@ -156,7 +156,6 @@ class SFOs:
 
     def get_sfos(self):
         data = orbitals.info.read_SFO_data(self.reader)
-
         sfo_data = []
         for idx in range(data['nsfo']['total']):
             for spin in self.spins:
@@ -492,14 +491,19 @@ if __name__ == '__main__':
     # sfo_donor_best, sfo_acceptor_best, oi = sort_sfo_pairs(sfos_donor, sfos_acceptor, orbint)[-1]
     # plot_sfos_prop(sfos_donor, sfos_acceptor, orbint, use_relname=True).hold()
 
-    p = '/Users/yumanhordijk/PhD/ychem/calculations2/c1d4ca95a3911eb1f79bf4ef91cc7a88b479d7dc8357860bfdb3e577747ebc3a/transitionstate/EDA/EDA/full/adf.rkf'
+
+    # reader = plams.KFReader('../test/orbitals/rkf/substrate_cat_complex_dftb.rkf')
+    # sfos = SFOs(reader=reader)
+
+    # p = '/Users/yumanhordijk/PhD/ychem/calculations2/c1d4ca95a3911eb1f79bf4ef91cc7a88b479d7dc8357860bfdb3e577747ebc3a/transitionstate/EDA/EDA/full/adf.rkf'
+    p = '../test/orbitals/rkf/substrate_cat_complex_dftb.rkf'
     sfos = SFOs(kfpath=p)
     for sfo in sfos:
         print(sfo, sfo.relative_name)
-    sfos_c = sfos['Substrate(HOMO-11)':'Substrate(LUMO+3)']
-    sfos_h = sfos['Radical(HOMO-2)':'Radical(LUMO+3)']
+    sfos_c = sfos['substrate(HOMO-11)':'substrate(LUMO+3)']
+    sfos_h = sfos[:'cat(LUMO+3)']
     # sfos_c_best, sfos_h_best, oi = sort_sfo_pairs(sfos_c, sfos_h, orbint)[-1]
-    plot_sfos_prop(sfos_c, sfos_h, overlap, use_relname=True).hold()
+    plot_sfos_prop(sfos_c, sfos_h, overlap, use_relname=False, use_indexname=True).hold()
 
 
     # p = '../test/orbitals/rkf/substrate_cat_complex.rkf'
