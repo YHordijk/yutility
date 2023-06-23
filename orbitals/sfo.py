@@ -27,7 +27,7 @@ class SFOs:
         '''
         Keys are given in the following format:
 
-            {fragname}[:{fragidx}]({orbname})[_{spin}]
+            {fragname}[:{fragidx}]({orbname}[ {symmetry}])[_{spin}]
 
         Where [:fragidx] is optional
         '''
@@ -51,6 +51,10 @@ class SFOs:
         else:
             fragname = None
 
+        symmetry = None
+        if ' ' in orbname:
+            orbname, symmetry = orbname.split()
+
         # extract fragment index from fragment name if present
         if fragname is not None and ':' in fragname:
             fragname, fragidx = fragname.split(':')
@@ -58,9 +62,9 @@ class SFOs:
         else:
             fragidx = None
 
-        return {'fragname': fragname, 'fragidx': fragidx, 'orbname': orbname, 'spin': spin}
+        return {'fragname': fragname, 'fragidx': fragidx, 'orbname': orbname, 'spin': spin, 'symmetry': symmetry}
 
-    def get_sfo(self, orbname=None, fragname=None, fragidx=None, spin=None, index=None):
+    def get_sfo(self, orbname=None, fragname=None, fragidx=None, spin=None, index=None, symmetry=None):
         ret = []
         for sfo in self.sfos:
             if orbname is not None and orbname not in [sfo.name, sfo.relname, sfo.index_name]:
@@ -79,6 +83,9 @@ class SFOs:
                 continue
 
             if index is not None and index != sfo.index:
+                continue
+
+            if symmetry is not None and symmetry != sfo.symmetry:
                 continue
 
             ret.append(sfo)
