@@ -69,13 +69,19 @@ def auto_texts(texts, constrain_x=False, constrain_y=False):
             text.set_position(new_pos)
 
 
-def density(points, lim, resolution=1000, s2=.002):
+def density(points, lim=None, resolution=1000, s2=.002, normalize=True):
+    if lim is None:
+        mi, ma = min(points), max(points)
+        lim = mi - (ma - mi)*.1, ma + (ma - mi)*.1
+
     s2 = s2 * (lim[1] - lim[0])**2
     x = np.linspace(*lim, resolution)
     dens = np.zeros(resolution)
     for point in points:
         dens += np.exp(-(x - point)**2/s2)
-    return x, dens/dens.max()
+    if normalize:
+        dens = dens/dens.max()
+    return x, dens
 
 
 def plot(x, y, xlabel=None, ylabel=None, plot_marginals=True, s=3, alpha=.5, groups=None, groupsname=None, linewidth=1, marker='o', legendloc='outside right upper'):
