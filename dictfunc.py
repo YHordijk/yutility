@@ -1,3 +1,16 @@
+
+class DotDict(dict):
+    def __getattr__(self, key):
+        val = self.__getitem__(key)
+        if isinstance(val, dict):
+            val = DotDict(val)
+            self.__setattr__(key, val)
+        return val
+
+    def __setattr__(self, key, val):
+        self.__setitem__(key, val)
+        
+
 def remove_empty(a: dict):
     lst = dict_to_list(a)
     lst = [branch for branch in lst if branch[-1] is not None]
