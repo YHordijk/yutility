@@ -8,8 +8,10 @@ class DotDict(dict):
         return val
 
     def __setattr__(self, key, val):
+        if isinstance(val, dict):
+            val = DotDict(val)
         self.__setitem__(key, val)
-        
+
 
 def remove_empty(a: dict):
     lst = dict_to_list(a)
