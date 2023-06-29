@@ -40,31 +40,63 @@ def default(preset='BLYP-D3(BJ)/TZ2P/Good'):
     elif functional.endswith('-D3'):
         sett.input.adf.XC.Dispersion = 'GRIMME3'
         functional = functional[:-3]
+    elif functional.endswith('-D4'):
+        sett.input.adf.XC.Dispersion = 'GRIMME4'
+        functional = functional[:-3]
     elif functional.endswith('-dDsC'):
         sett.input.adf.XC.Dispersion = 'dDsC'
         functional = functional[:-5]
     elif functional.endswith('-dUFF'):
         sett.input.adf.XC.Dispersion = 'UFF'
         functional = functional[:-5]
+    elif functional.endswith('-MBD@rsSC'):
+        sett.input.adf.XC.Dispersion = 'MBD'
+        functional = functional[:-9]
     elif functional.endswith('-D'):
         sett.input.adf.XC.Dispersion = 'Default'
         functional = functional[:-2]
 
+    # LDA functionals
+    if  functional in ['VWN', 'PW92']:
+        sett.input.adf.XC.LDA = functional
+
     # GGA functionals
-    if any(fun in functional for fun in [
-           'BLYP', 'BP86', 'OLYP', 'OPBE', 'PBE', 'PBEsol']):
+    elif functional in ['BLYP', 'BP86', 'GAM', 'HTBS', 'KT1', 'KT2', 'mPW', 'mPBE', 'N12', 'OLYP', 'OPBE', 'PBE', 'PBEsol', 'PW91', 'revPBE', 'RPBE', 'BEE']:
         sett.input.adf.XC.GGA = functional
+
     # Hybrid functionals
-    elif any(fun in functional for fun in ['B3LYP', 'B1LYP']):
+    # BH&H and BHandH should be equivalent
+    elif functional.replace('&', 'and') in ['B3LYP', 'B1LYP', 'B1PW91', 'B3LYP*', 'BHandH', 'BHandHLYP', 'KMLYP', 'MPW1PW', 'MPW1K', 'O3LYP', 'OPBE0', 'PBE0', 'S12h', 'X3LYP', 'HTBS']:
         sett.input.adf.XC.Hybrid = functional
+
     # MetaGGA
-    elif any(fun in functional for fun in ['M06L', 'MN15-L', 'SCAN']):
+    elif functional in ['M06L', 'MN15-L', 'MVS', 'revTPSS', 'rSCAN', 'revSCAN', 'r2SCAN' 'SCAN', 'SSB', 'TASKxc', 'TPSS']:
         sett.input.adf.XC.MetaGGA = functional
+
+    # range separated
+    elif functional in ['LCY-BLYP', 'LCY-BP86', 'LCY-PBE', 'CAM-B3LYP', 'CAMY-B3LYP', 'HSE03', 'HSE06', 'M11', 'MN12-SX', 'N12-SX', 'WB97', 'WB97X']:
+        sett.input.adf.XC.libxc = functional
+
+    # DoubleHybrid
+    elif functional in ['rev-DOD-PBEP86', 'rev-DOD-BLYP', 'rev-DOD-PBE', 'B2PLYP', 'B2GPPLYP']:
+        sett.input.adf.XC.DoubleHybrid = functional
+
+    # MetaHybrid
+    elif functional in ['MN15', 'M06', 'M06-2X', 'M06-HF', 'revSCAN0', 'TPSSH']:
+        sett.input.adf.XC.MetaHybrid = functional
+
+    # libxc
+    elif functional == 'BMK':
+        sett.input.adf.XC.LibXC = 'HYB_MGGA_X_BMK GGA_C_BMK'
+
     # LDA is standard functional
     elif functional == 'LDA':
         pass
+
     elif functional == 'SAOP':
         sett.input.adf.XC.model = 'SAOP'
+    else:
+        raise ValueError(f'XC-functional {functional} not defined')
 
     # numerical quality
     sett.input.adf.NumericalQuality = numerical_quality
@@ -224,7 +256,7 @@ def solvent(name=None, eps=None, rad=None, sett=None, use_klamt=False, preset='B
 
 
 if __name__ == '__main__':
-    s = default('LDA/SZ/Basic')
+    s = default('BLYP-D3(BJ)/TZ2P/VeryGood')
     s = solvent('AceticAcid', sett=s, use_klamt=True)
     print(s)
     # optimization(s)
