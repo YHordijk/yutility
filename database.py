@@ -68,6 +68,9 @@ class DBSelectResult:
             dbs[unq] = DBSelectResult([x for i, x in enumerate(self) if mask_data[i] == unq], self.columns, self.types)
         return dbs
 
+    def uniques(self, key: str):
+        return set(self[key])
+
     def where(self, *masks):
         masks = ensure_list(masks)
 
