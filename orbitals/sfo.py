@@ -331,16 +331,23 @@ class SFO:
     def occupied(self):
         return self.occupation > 0
 
+    @property
+    def singly_occupied(self):
+        return self.occupation == 1
+
     def generate_orbital(self):
         return run.orbital_cub(self.kfpath, self.index, orbtype='SFO', symlabel=self.symmetry)
 
 
 def occ_virt_mask(sfos1: list[SFO] or SFO, sfos2: list[SFO] or SFO) -> float or np.ndarray:
+    '''
+    Mask specifying whether a pair of SFOs has one occupied and one virtual orbital
+    '''
     ret = []
     for sfo1 in ensure_list(sfos1):
         ret.append([])
         for sfo2 in ensure_list(sfos2):
-            ret[-1].append(sfo1.occupied != sfo2.occupied)
+            ret[-1].append((sfo1.occupied != sfo2.occupied) or sfo1.singly_occupied or sfo2.singly_occupied)
     return np.array(ret).squeeze()
 
 
