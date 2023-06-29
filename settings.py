@@ -66,7 +66,7 @@ def default(preset='BLYP-D3(BJ)/TZ2P/Good'):
 
     # Hybrid functionals
     # BH&H and BHandH should be equivalent
-    elif functional.replace('&', 'and') in ['B3LYP', 'B1LYP', 'B1PW91', 'B3LYP*', 'BHandH', 'BHandHLYP', 'KMLYP', 'MPW1PW', 'MPW1K', 'O3LYP', 'OPBE0', 'PBE0', 'S12h', 'X3LYP', 'HTBS']:
+    elif functional in ['B3LYP', 'B1LYP', 'B1PW91', 'B3LYP*', 'BHandH', 'BHandHLYP', 'KMLYP', 'MPW1PW', 'MPW1K', 'O3LYP', 'OPBE0', 'PBE0', 'S12h', 'X3LYP', 'HTBS']:
         sett.input.adf.XC.Hybrid = functional
 
     # MetaGGA
