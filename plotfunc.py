@@ -16,6 +16,7 @@ class ShowCaller:
         return self
 
     def savefig(self, *args, **kwargs):
+        kwargs.setdefault('bbox_inches', 'tight')
         plt.savefig(*args, **kwargs)
         return self
 
