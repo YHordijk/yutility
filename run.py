@@ -19,20 +19,21 @@ def workdir():
     return plams.config.default_jobmanager.workdir
 
 
-def run(mol, sett, name='calc', folder=None, path=DEFAULT_RUN_PATH, do_init=True):
+def run(mol, sett, name='calc', folder=None, path=DEFAULT_RUN_PATH, do_init=True, run_kwargs={}):
     with log.NoPrint():
         os.makedirs(path, exist_ok=True)
         if do_init:
             init(path, folder)
 
         job = plams.AMSJob(molecule=mol, settings=sett, name=name)
-        results = job.run()
+        results = job.run(**run_kwargs)
         if not check_success(job) is True:
             try:
                 job.pickle()
             except BaseException:
                 pass
-        plams.finish()
+        if do_init:
+            plams.finish()
         return results
 
 
