@@ -8,8 +8,12 @@ def get_calc_info(reader):
     Function to read useful info about orbitals from kf reader
     '''
     ret = {}
-
-    engine = reader.read('General', 'program').strip()
+    # check what the engine is first. We can read DFTB and ADF files for now
+    if ('General', 'program') in reader:
+        engine = reader.read('General', 'program').strip()
+    # if program cannot be read from reader it is probably an old version of ADF, so we should default to ADF
+    else:
+        engine = 'ADF'
     ret['engine'] = engine
 
     if engine == 'ADF':
@@ -97,20 +101,22 @@ def required_variables(reader):
 
 
 def read_SFO_data(reader):
-    if reader.read('General', 'program').strip() == 'ADF':
+    program = get_calc_info(reader)['engine']
+    if program == 'ADF':
         from yutility.orbitals import adf
         return adf.read_SFO_data(reader)
 
-    elif reader.read('General', 'program').strip() == 'dftb':
+    elif program == 'dftb':
         from yutility.orbitals import dftb
         return dftb.read_SFO_data(reader)
 
 
 def read_MO_data(reader):
-    if reader.read('General', 'program').strip() == 'ADF':
+    program = get_calc_info(reader)['engine']
+    if program == 'ADF':
         from yutility.orbitals import adf
         return adf.read_MO_data(reader)
 
-    elif reader.read('General', 'program').strip() == 'dftb':
+    elif program == 'dftb':
         from yutility.orbitals import dftb
         return dftb.read_MO_data(reader)
