@@ -23,7 +23,8 @@ class Emojis:
     empty = '⠀⠀'
     finish = '🏁'
     warning = '⚠️'
-    question = '❔ '
+    question = '❔'
+    info = 'ℹ️'
     rarrow = '─>'
     larrow = '<─'
     lrarrow = rlarrow = '<─>'
@@ -64,7 +65,7 @@ def time_stamp():
     return f'[{now.year}/{str(now.month).zfill(2)}/{str(now.day).zfill(2)} {str(now.hour).zfill(2)}:{str(now.minute).zfill(2)}:{str(now.second).zfill(2)}] '
 
 
-def log(message='', end='\n'):
+def log(message='', end='\n', print_time_stamp=True):
     if type(message) is dict:
         message = json.dumps(message, indent=4, sort_keys=True)
     message = str(message)
@@ -74,7 +75,7 @@ def log(message='', end='\n'):
             m = m[:max_width - 4] + ' ...' 
 
         m = '\t'*tab_level + m
-        if print_date:
+        if print_date and print_time_stamp:
             m = time_stamp() + m
 
         print(m, file=logfile, end=end, flush=True)
@@ -176,7 +177,6 @@ def loading_bar(i, N, Nsegments=50, Nsteps=10, start_char='├', end_char='│',
             center_seg = fill_char
         elif i == 0:
             center_seg = empty_char
-            
         else:
             center_seg = center_char
         empty_seg = empty_char*(Nsegments-segment)
@@ -366,9 +366,10 @@ if __name__ == '__main__':
     arrow('Third and final substep of first step', ['straight', 'end'])
     arrow()
     arrow('Second step', ['split'])
+    arrow('Substep of second step', ['straight', 'split'])
+    arrow('Substep of substep of second step', ['straight', 'straight', 'end'])
+    arrow('Substep of substep of substep of second step', ['straight', 'straight', 'skip', 'end'])
     arrow('Substep of second step', ['straight', 'end'])
-    arrow('Substep of substep of second step', ['straight', 'skip', 'end'])
-    arrow('Substep of substep of substep of second step', ['straight', 'skip', 'skip', 'end'])
     arrow()
     arrow('Final step', ['split'])
     arrow()
