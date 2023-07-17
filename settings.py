@@ -157,13 +157,13 @@ def pes_scan(constraint, n=15, sett=None, preset='BLYP-D3(BJ)/TZ2P/Good'):
     return sett
 
 
-def vibrations(sett=None, preset='BLYP-D3(BJ)/TZ2P/Good'):
+def vibrations(sett=None, tolerance=-10, preset='BLYP-D3(BJ)/TZ2P/Good'):
     if sett is None:
         sett = default(preset)
 
     sett.input.ams.Properties.NormalModes = 'Yes'
     sett.input.ams.Properties.PESPointCharacter = 'Yes'
-    sett.input.ams.PESPointCharacter.NegativeFrequenciesTolerance = '-50'
+    sett.input.ams.PESPointCharacter.NegativeFrequenciesTolerance = tolerance
     sett.input.ams.NormalModes.ReScanFreqRange = '-10000000.0 10.0'
     return sett
 
