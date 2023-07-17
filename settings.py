@@ -1,5 +1,5 @@
 import scm.plams as plams
-
+from yutility import log
 
 def default(preset='BLYP-D3(BJ)/TZ2P/Good'):
     '''
@@ -24,6 +24,7 @@ def default(preset='BLYP-D3(BJ)/TZ2P/Good'):
     decode = preset.split('/')
 
     functional, basis_size, numerical_quality = decode
+    numerical_quality = numerical_quality.lower()
     sett.input.adf.basis.Type = basis_size
     sett.input.adf.basis.Core = 'None'
     sett.input.adf.symmetry = 'NOSYM'
@@ -70,8 +71,10 @@ def default(preset='BLYP-D3(BJ)/TZ2P/Good'):
         sett.input.adf.XC.Hybrid = functional
 
     # MetaGGA
-    elif functional in ['M06L', 'MN15-L', 'MVS', 'revTPSS', 'rSCAN', 'revSCAN', 'r2SCAN' 'SCAN', 'SSB', 'TASKxc', 'TPSS']:
+    elif functional in ['M06L', 'MN15-L', 'MVS', 'SCAN', 'revTPSS', 'SSB', 'TASKxc', 'TPSS']:
         sett.input.adf.XC.MetaGGA = functional
+    elif functional in ['rSCAN', 'revSCAN', 'r2SCAN', 'r2SCAN-3c']:
+        sett.input.adf.XC.LibXC = functional
 
     # range separated
     elif functional in ['LCY-BLYP', 'LCY-BP86', 'LCY-PBE', 'CAM-B3LYP', 'CAMY-B3LYP', 'HSE03', 'HSE06', 'M11', 'MN12-SX', 'N12-SX', 'WB97', 'WB97X']:
@@ -82,8 +85,10 @@ def default(preset='BLYP-D3(BJ)/TZ2P/Good'):
         sett.input.adf.XC.DoubleHybrid = functional
 
     # MetaHybrid
-    elif functional in ['MN15', 'M06', 'M06-2X', 'M06-HF', 'revSCAN0', 'TPSSH']:
+    elif functional in ['MN15', 'M06', 'M06-2X', 'M06-HF', 'TPSSH']:
         sett.input.adf.XC.MetaHybrid = functional
+    elif functional in ['revSCAN0']:
+        sett.input.adf.XC.libxc = functional
 
     # libxc
     elif functional == 'BMK':
@@ -93,10 +98,15 @@ def default(preset='BLYP-D3(BJ)/TZ2P/Good'):
     elif functional == 'LDA':
         pass
 
+    # SAOP is a special model functional
     elif functional == 'SAOP':
         sett.input.adf.XC.model = 'SAOP'
+
     else:
         raise ValueError(f'XC-functional {functional} not defined')
+
+    if functional == 'r2SCAN-3c' and basis_size != 'mTZ2P' and numerical_quality != 'good':
+        log.warn(f'Use of r2SCAN-3c/{basis_size}/{numerical_quality} is not recommended.\nUse r2SCAN-3c/mTZ2P/good instead')
 
     # numerical quality
     sett.input.adf.NumericalQuality = numerical_quality
@@ -119,17 +129,16 @@ def optimization(sett=None, preset='BLYP-D3(BJ)/TZ2P/Good'):
     return sett
 
 
-def transition_state(a, b, f=1.0, sett=None, preset='BLYP-D3(BJ)/TZ2P/Good'):
+def transition_state(a=None, b=None, f=1.0, sett=None, preset='BLYP-D3(BJ)/TZ2P/Good'):
     if sett is None:
         sett = default(preset)
 
     sett.input.ams.task = 'TransitionStateSearch'
-    try:
-        sett.input.ams.TransitionStateSearch.ReactionCoordinate.Distance.append(
-            f'{a} {b} {f}')
-    except BaseException:
-        sett.input.ams.TransitionStateSearch.ReactionCoordinate.Distance = [
-            f'{a} {b} {f}']
+    if a is not None and b is not None:
+        try:
+            sett.input.ams.TransitionStateSearch.ReactionCoordinate.Distance.append(f'{a} {b} {f}')
+        except BaseException:
+            sett.input.ams.TransitionStateSearch.ReactionCoordinate.Distance = [f'{a} {b} {f}']
     return sett
 
 
@@ -256,9 +265,9 @@ def solvent(name=None, eps=None, rad=None, sett=None, use_klamt=False, preset='B
 
 
 if __name__ == '__main__':
-    s = default('BLYP-D3(BJ)/TZ2P/VeryGood')
-    s = solvent('AceticAcid', sett=s, use_klamt=True)
-    print(s)
+    s = default('r2SCAN-3c/TZ2P/VeryGood')
+    # s = solvent('AceticAcid', sett=s, use_klamt=True)
+    # print(s)
     # optimization(s)
     # print(s)
     # vibrations(s)
