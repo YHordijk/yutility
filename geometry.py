@@ -256,19 +256,6 @@ def RMSD_combinatorial(X: Matrix(..., 3),
     return min([RMSD_func(X, y) for y in itertools.permutations(Y)])
 
 
-# def RMSD_iterative_kabsch(X: Matrix(..., 3), 
-#                    Y: Matrix(..., 3),
-#                    iterations: int = 100) -> float:
-#     '''
-#     '''
-#     def pick_closest():
-        
-        
-#     for i in range(iterations):
-
-
-
-
 @plams.add_to_class(plams.Molecule)
 def apply_transform(self, transform: Transform):
     for atom in self.atoms:
@@ -314,15 +301,17 @@ def center(mol, atom):
     mol.translate(-center_coords)
 
 
-def random_point_on_sphere(radius, dim=3):
-    x = np.random.randn(dim)
-    x = x/np.linalg.norm(x) * radius
-    return x
+def random_point_on_sphere(radius, N=1, dim=3):
+    x = np.random.randn(dim, N)
+    x = x/np.linalg.norm(x, axis=0) * radius
+    return x.T
 
 
-def random_point_in_sphere(max_radius, min_radius=0, dim=3):
-    radius = np.random.rand() * (max_radius - min_radius) + min_radius
-    return random_point_on_sphere(radius, dim=dim)
+def random_point_in_sphere(max_radius, N=1, min_radius=0, dim=3):
+    radii = np.random.rand(N) * (max_radius - min_radius) + min_radius
+    x = np.random.randn(dim, N)
+    x = x/np.linalg.norm(x, axis=0) * radii
+    return random_point_on_sphere(radii, dim=dim, N=N)
 
 
 def get_rotation_matrix(x=None, y=None, z=None):
