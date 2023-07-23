@@ -396,6 +396,13 @@ def center_mol(coords):
 #                 origin=origin)[0])
 
 
+def cartesian_to_spherical(coords):
+    x, y, z = coords[:, 0], coords[:, 1], coords[:, 2]
+    r = np.linalg.norm(coords)
+    theta = np.arccos(z/r)
+    phi = y/np.abs(y) * np.arccos(x/np.sqrt(x**2 + y**2))
+    return np.vstack([x, y, z]).T
+
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
     
