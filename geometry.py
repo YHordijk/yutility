@@ -326,6 +326,10 @@ def random_point_in_sphere(max_radius, min_radius=0, dim=3):
 
 
 def get_rotation_matrix(x=None, y=None, z=None):
+    # create a rotation matrix based on Tait-Bryant angles
+    # in this system, x, y, and z are angles of rotation around
+    # the corresponding axes. This function uses right-handed 
+    # convention
     R = np.eye(3)
 
     if x is not None:
