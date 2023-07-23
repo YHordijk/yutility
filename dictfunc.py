@@ -1,6 +1,9 @@
 
 class DotDict(dict):
     def __getattr__(self, key):
+        if key not in self:
+            return None
+            
         val = self.__getitem__(key)
         if isinstance(val, dict):
             val = DotDict(val)
