@@ -1,6 +1,7 @@
 import scm.plams as plams
 from yutility import log
 
+
 def default(preset='BLYP-D3(BJ)/TZ2P/Good'):
     '''
     Settings are given in the form:
@@ -58,7 +59,7 @@ def default(preset='BLYP-D3(BJ)/TZ2P/Good'):
         functional = functional[:-2]
 
     # LDA functionals
-    if  functional in ['VWN', 'PW92']:
+    if functional in ['VWN', 'PW92']:
         sett.input.adf.XC.LDA = functional
 
     # GGA functionals
@@ -71,9 +72,9 @@ def default(preset='BLYP-D3(BJ)/TZ2P/Good'):
         sett.input.adf.XC.Hybrid = functional
 
     # MetaGGA
-    elif functional in ['M06L', 'MN15-L', 'MVS', 'SCAN', 'revTPSS', 'SSB', 'TASKxc', 'TPSS']:
+    elif functional in ['M06L', 'MN15-L', 'MVS', 'SCAN', 'revTPSS', 'SSB', 'TASKxc', 'TPSS', 'r2SCAN-3c']:
         sett.input.adf.XC.MetaGGA = functional
-    elif functional in ['rSCAN', 'revSCAN', 'r2SCAN', 'r2SCAN-3c']:
+    elif functional in ['rSCAN', 'revSCAN', 'r2SCAN']:
         sett.input.adf.XC.LibXC = functional
 
     # range separated
@@ -203,6 +204,7 @@ def spin_polarization(sp=0., sett=None):
     if sp != 0.:
         sett.input.adf.Unrestricted = 'Yes'
     return sett
+
 
 def unrestricted(unr='Yes', sett=None):
     sett = sett or plams.Settings()
