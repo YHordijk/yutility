@@ -19,8 +19,11 @@ def workdir():
     return plams.config.default_jobmanager.workdir
 
 
-def run(mol, sett, name='calc', folder=None, path=DEFAULT_RUN_PATH, do_init=True, run_kwargs={}):
+def run(mol, sett, name='calc', folder=None, path=DEFAULT_RUN_PATH, do_init=True, skip_already_run=False, run_kwargs={}):
     with log.NoPrint():
+        if skip_already_run and os.path.exists(j(path, folder)):
+            log.warn(f'Calculation in\n{j(path, folder)}\nalready run, skipping ...')
+            return
         os.makedirs(path, exist_ok=True)
         if do_init:
             init(path, folder)
