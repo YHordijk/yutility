@@ -9,7 +9,7 @@ def get_alpha(sfos, mos):
 
     alphas = []
     for mo in mos:
-        coeffs = np.array(sfos @ mo)/sum(abs(mo.coeffs**2))
+        coeffs = np.array(mo.get_coeff(sfo))/sum(abs(mo.coeffs**2))
         alphas.append(sum(coeffs**2))
     return np.array(alphas)
 

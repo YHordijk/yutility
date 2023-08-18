@@ -293,5 +293,4 @@ def read_MO_data(reader):  # noqa: N802
     # get index of MO in symmetry label
     ret['symmidx'] = {}
 
-
     return ret
