@@ -2,7 +2,9 @@
 class DotDict(dict):
     def __getattr__(self, key):
         if key not in self:
-            return None
+            val = DotDict()
+            self.__setitem__(key, val)
+            return val
             
         val = self.__getitem__(key)
         if isinstance(val, dict):
@@ -11,8 +13,6 @@ class DotDict(dict):
         return val
 
     def __setattr__(self, key, val):
-        if isinstance(val, dict):
-            val = DotDict(val)
         self.__setitem__(key, val)
 
 
