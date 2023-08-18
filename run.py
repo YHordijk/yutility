@@ -143,7 +143,7 @@ def check_success(job):
             return True
         else:
             return [l for l in lines if l.startswith('ERROR: ')]
-        
+
 
 def get_job_status(path):
     direc, name = os.path.split(path)
