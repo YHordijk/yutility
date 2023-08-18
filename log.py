@@ -8,7 +8,7 @@ from math import floor, ceil
 
 logfile = sys.stdout
 tab_level = 0
-max_width = 200
+max_width = 0
 print_date = True
 
 
@@ -66,7 +66,7 @@ def time_stamp():
 
 
 def log(message='', end='\n', print_time_stamp=True):
-    if type(message) is dict:
+    if isinstance(message, dict):
         message = json.dumps(message, indent=4, sort_keys=True)
     message = str(message)
     message = message.split('\n')
