@@ -65,11 +65,18 @@ def time_stamp():
     return f'[{now.year}/{str(now.month).zfill(2)}/{str(now.day).zfill(2)} {str(now.hour).zfill(2)}:{str(now.minute).zfill(2)}:{str(now.second).zfill(2)}] '
 
 
-def log(message='', end='\n', print_time_stamp=True):
-    if isinstance(message, dict):
-        message = json.dumps(message, indent=4, sort_keys=True)
-    message = str(message)
+def log(*messages, end='\n', print_time_stamp=True):
+    messages_ = []
+    for message in messages:
+        if isinstance(message, dict):
+            message = json.dumps(message, indent=4, sort_keys=True)
+
+        message = str(message)
+        messages_.append(message)
+
+    message = ' '.join(messages_)
     message = message.split('\n')
+
     for m in message:
         if max_width > 0 and len(m) > max_width:
             m = m[:max_width - 4] + ' ...' 
