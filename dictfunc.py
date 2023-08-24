@@ -176,6 +176,9 @@ if __name__ == '__main__':
     print(d)
     print(list_to_dict(lst))
 
+    lst = dict_to_list({'a': [1, 2, 3, 4], 'b': [4, 3, 1]})
+    print(lst)
+
     a = {'test1': 1, 'test2': 2}
     b = {'test1': 1, 'test3': 3}
     c = {'test1': 1, 'test2': 2, 'test3': 3}
