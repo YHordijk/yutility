@@ -12,6 +12,13 @@ class DotDict(dict):
             self.__setattr__(key, val)
         return val
 
+    def __getitem__(self, key):
+        if key not in self:
+            val = DotDict()
+            self.__setitem__(key, val)
+            return val
+        return super().__getitem__(key)
+
     def __setattr__(self, key, val):
         self.__setitem__(key, val)
 
