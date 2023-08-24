@@ -5,6 +5,7 @@ import numpy as np
 import itertools
 import json
 from math import floor, ceil
+from yutility import dictfunc
 
 logfile = sys.stdout
 tab_level = 0
@@ -67,6 +68,18 @@ def time_stamp():
 
 def log(message='', end='\n', print_time_stamp=True):
     if isinstance(message, dict):
+        lst = dictfunc.dict_to_list(message)
+        lst_ = []
+        for line in lst:
+            lst_.append([])
+            for item in line:
+                if isinstance(item, (str, int, float, bool)):
+                    lst_[-1].append(item)
+                elif isinstance(item, list):
+                    lst_[-1].append([element if isinstance(item, (str, int, float, bool)) else repr(element) for element in item])
+                else:
+                    lst_[-1].append(repr(item))
+        message = dictfunc.list_to_dict(lst_)
         message = json.dumps(message, indent=4, sort_keys=True)
     message = str(message)
     message = message.split('\n')
