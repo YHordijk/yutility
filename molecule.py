@@ -16,7 +16,7 @@ def get_xyz(mol):
     return s
 
 
-def save(mol, path):
+def save(mol, path, comment=''):
     ''' Method used to save generated molecules
 
     Parameters
@@ -24,10 +24,11 @@ def save(mol, path):
     save_string: bash-style string used to determine the name to save the file as. 
     '''
     with open(path, 'w+') as f:
-        f.write(f'{len(mol.atoms)}\n\n')
+        f.write(f'{len(mol.atoms)}\n{comment}\n')
         for atom in mol.atoms:
             identifier = ''
-            for key, value in atom.identifier_data.items():
+            identifier_data = atom.identifier_data if hasattr(atom, 'identifier_data') else {}
+            for key, value in identifier_data.items():
                 if key == 'labels':
                     if len(value) > 0:
                         identifier += ' '.join(value) + ' '
@@ -39,7 +40,9 @@ def save(mol, path):
             f.write(f'{atom.symbol}\t{atom.coords[0]: .10f}\t{atom.coords[1]: .10f}\t{atom.coords[2]: .10f}\t{identifier}\n')
 
         f.write('\n')
-        for key, value in mol.identifier_data.items():
+        
+        identifier_data = mol.identifier_data if hasattr(mol, 'identifier_data') else {}
+        for key, value in identifier_data.items():
             if key == 'reaction_specific':
                 continue
             if any(key.startswith(k) for k in ['default_', 'filter_whitelist_', 'filter_blacklist_']):
