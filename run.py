@@ -22,7 +22,7 @@ def workdir():
 def run(mol, sett, name='calc', folder=None, path=DEFAULT_RUN_PATH, do_init=True, skip_already_run=False, run_kwargs={}):
     with log.NoPrint():
         if skip_already_run and os.path.exists(j(path, folder)):
-            log.warn(f'Calculation in\n{j(path, folder)}\nalready run, skipping ...')
+            log.warn(f'Calculation in\n{j(path, folder)}\nalready ran, skipping ...')
             return
         os.makedirs(path, exist_ok=True)
         if do_init:
@@ -387,8 +387,13 @@ class ADFFragmentJob(plams.MultiJob):
         self.children = [self.f1, self.f2, self.full]
 
 
-def EDA(mol1, mol2, settings=None, full_settings=None, frag1_settings=None, frag2_settings=None, fragment_names=None, folder=None, path=DEFAULT_RUN_PATH, do_init=True):
+
+def EDA(mol1, mol2, settings=None, full_settings=None, frag1_settings=None, frag2_settings=None, fragment_names=None, folder=None, path=DEFAULT_RUN_PATH, do_init=True, skip_already_run=False):
     with log.NoPrint():
+        if skip_already_run and os.path.exists(j(path, folder)):
+            log.warn(f'EDA Calculation in\n{j(path, folder)}\nalready ran, skipping ...')
+            return
+
         os.makedirs(path, exist_ok=True)
         if do_init:
             init(path, folder)
@@ -397,6 +402,9 @@ def EDA(mol1, mol2, settings=None, full_settings=None, frag1_settings=None, frag
                              full_settings=full_settings, frag1_settings=frag1_settings, 
                              frag2_settings=frag2_settings, name='EDA', fragment_names=fragment_names)
         result = job.run()
+
+        if do_init:
+            plams.finish()
 
         return result
 
