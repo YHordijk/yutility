@@ -50,6 +50,10 @@ class CubeFile:
         self.yn = yn
         self.zn = zn
 
+    @property
+    def volume(self):
+        return np.linalg.norm(np.cross(self.xvec*self.xn, self.yvec*self.yn) @ (self.zvec*self.zn))
+
     def get_molecule(self):
         mol = plams.Molecule()
         for atnum, atcoord in zip(self.atomnumbers, self.atomcoords):
