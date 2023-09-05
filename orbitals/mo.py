@@ -234,7 +234,7 @@ class MO:
         return self.occupation > 0
 
     def generate_orbital(self):
-        return run.orbital_cub(self.rkf_path, self.index, orbtype='SCF', symlabel=self.symmetry)
+        return run.orbital_cub(self.kfpath, self.index, orbtype='SCF', symlabel=self.symmetry)
 
 
 if __name__ == '__main__':
