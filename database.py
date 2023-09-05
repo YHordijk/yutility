@@ -28,13 +28,17 @@ class DBSelectResult:
         self.data = data
         self.columns = columns
         self.types = types
-        # self.__iter_counter = 0
+
+    def __str__(self):
+        ret = f'DBSelectResult({len(self.data)}x{len(self.columns)}, [{", ".join(self.columns)}])'
+        return ret
 
     def __getitem__(self, key):
         if isinstance(key, int):
             return self.data[key]
         if isinstance(key, (list, tuple, np.ndarray)):
-            return np.array(self.data)[key]
+            indices = [self.columns.index(key_) for key_ in key]
+            return np.array(self.data, dtype='O')[:, indices]
         
         if key not in self.columns:
             closest = edit_distance.get_closest(key, self.columns)
