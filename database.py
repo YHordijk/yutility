@@ -91,13 +91,16 @@ class DBSelectResult:
         idx = listfunc.argsort(x, sortfunc)
         return DBSelectResult(self[idx], self.columns, self.types)
 
-    def remove_empty(self, keys='*'):
+    def remove_empty(self, keys='*', mode='all'):
         if keys == '*':
             keys = self.columns
         keys = ensure_list(keys)
 
         key_idxs = [self.columns.index(key) for key in keys]
-        return DBSelectResult([x for i, x in enumerate(self) if all(x[kidx] is not None for kidx in key_idxs)], self.columns, self.types)
+        if mode == 'all':
+            return DBSelectResult([x for x in self if all(x[kidx] is not None for kidx in key_idxs)], self.columns, self.types)
+        if mode == 'any':
+            return DBSelectResult([x for x in self if any(x[kidx] is not None for kidx in key_idxs)], self.columns, self.types)
 
     def __iter__(self):
         return iter(self.data)
@@ -265,7 +268,7 @@ class DataBase:
         self.execute(command)
 
     def insert(self, table_name, values):
-        vals = ', '.join([repr(x) for x in values])
+        vals = ', '.join([repr(x) if x is not None else 'null' for x in values])
         command = f'INSERT INTO {table_name}\nVALUES ({vals})'
         self.execute(command)
 
