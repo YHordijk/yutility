@@ -2,7 +2,7 @@ import scm.plams as plams
 from yutility import log
 
 
-def default(preset='BLYP-D3(BJ)/TZ2P/Good'):
+def default(preset=None):
     '''
     Settings are given in the form:
         Functional[-Dispersion]/Basisset/Numquality
@@ -10,6 +10,9 @@ def default(preset='BLYP-D3(BJ)/TZ2P/Good'):
     '''
     sett = plams.Settings()
     sett.input.ams.task = 'SinglePoint'
+
+    if preset is None:
+        return sett
 
     if preset == 'Cheap':
         sett.input.adf.Relativity.Level = 'Scalar'
@@ -206,10 +209,17 @@ def spin_polarization(sp=0., sett=None):
     return sett
 
 
-def unrestricted(unr='Yes', sett=None):
+def unrestricted(unr=True, sett=None):
     sett = sett or plams.Settings()
     
-    sett.input.adf.Unrestricted = 'Yes'
+    sett.input.adf.Unrestricted = 'yes' if unr else 'no'
+    return sett
+
+
+def unrestricted_fragments(unr=True, sett=None):
+    sett = sett or plams.Settings()
+    
+    sett.input.adf.UnrestrictedFragments = 'yes' if unr else 'no'
     return sett
 
 
