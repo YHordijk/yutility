@@ -4,7 +4,6 @@ from time import perf_counter
 import numpy as np
 import itertools
 import json
-from math import floor, ceil
 from yutility import dictfunc
 
 logfile = sys.stdout
