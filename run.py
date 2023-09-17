@@ -1,5 +1,6 @@
 import scm.plams as plams
 from yutility import units, log, settings, pathfunc, plotfunc
+from TCutility import results
 import os
 import numpy as np
 import subprocess
@@ -12,6 +13,7 @@ DEFAULT_RUN_PATH = './tmp'
 
 
 def init(path, folder):
+    os.makedirs(path, exist_ok=True)
     plams.init(path=path, folder=folder)
 
 
@@ -19,9 +21,36 @@ def workdir():
     return plams.config.default_jobmanager.workdir
 
 
+def quick_SP_check(mol, dft_settings, low_settings=None, **kwargs):
+    ''' 
+    This function calculates what kind of stationary point the given molecule is
+    '''
+    do_init = kwargs.pop('do_init', True)
+    if do_init:
+        init(kwargs.get('path'), kwargs.get('folder'))
+    # perform low level frequency analysis
+    if low_settings is None:
+        low_settings = settings.default('DFTB')
+
+    low_settings = settings.vibrations(low_settings, 0)
+    run(mol, low_settings, name='low_freq', do_init=False, **kwargs)
+    low_results = results.read(j(kwargs.get('path'), kwargs.get('folder'), 'low_freq'))
+    # rescan the lowest frequencies using the dft level
+    dft_settings = settings.vibrations(dft_settings)
+    dft_settings.input.ams.task = 'VibrationalAnalysis'
+    dft_settings.input.ams.vibrationalanalysis.type = 'ModeRefinement'
+    dft_settings.input.ams.vibrationalanalysis.NormalModes.ModeFile = low_results.files['dftb.rkf']
+    dft_settings.input.ams.vibrationalanalysis.NormalModes.ModeSelect.LowFreq = 3
+
+    run(mol, dft_settings, name='refine', do_init=False, **kwargs)
+    if do_init:
+        plams.finish()
+
+
+
 def run(mol, sett, name='calc', folder=None, path=DEFAULT_RUN_PATH, do_init=True, skip_already_run=False, run_kwargs={}):
     with log.NoPrint():
-        if skip_already_run and os.path.exists(j(path, folder)):
+        if skip_already_run and os.path.exists(j(path, folder, name)):
             log.warn(f'Calculation in\n{j(path, folder)}\nalready ran, skipping ...')
             return
         os.makedirs(path, exist_ok=True)
@@ -42,7 +71,6 @@ def run(mol, sett, name='calc', folder=None, path=DEFAULT_RUN_PATH, do_init=True
 
 def optimize(mol, sett, name='optimize', folder=None, path=DEFAULT_RUN_PATH, do_init=True):
     with log.NoPrint():
-        os.makedirs(path, exist_ok=True)
         if do_init:
             init(path, folder)
 
@@ -59,7 +87,6 @@ def optimize(mol, sett, name='optimize', folder=None, path=DEFAULT_RUN_PATH, do_
 
 def pes_scan(mol, sett, name='pes_scan', folder=None, path=DEFAULT_RUN_PATH, do_init=True):
     with log.NoPrint():
-        os.makedirs(path, exist_ok=True)
         if do_init:
             init(path, folder)
         job = plams.AMSJob(molecule=mol, settings=sett, name=name)
@@ -410,6 +437,7 @@ def EDA(mol1, mol2, settings=None, full_settings=None, frag1_settings=None, frag
 
 
 if __name__ == '__main__':
+
     from ychem.results import reaction2
     from ReactionRunner import generators
 
