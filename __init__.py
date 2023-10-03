@@ -26,8 +26,12 @@ def download_from_github(file, out, repo=None, token=None):
 
 def make_gif(outf, frames, fps=14):
     import moviepy.editor as mvp
-    clip = mvp.ImageSequenceClip(frames, fps=fps)
-    clip.write_gif(outf, fps=fps)
+    # clip = mvp.ImageSequenceClip(frames, fps=fps)
+    # clip.write_gif(outf, fps=fps)
+
+    clips = [mvp.ImageClip(frame).set_duration(1/fps) for frame in frames]
+    concat_clip = mvp.concatenate_videoclips(clips, method="compose")
+    concat_clip.write_videofile(outf, fps=fps)
 
 
 def dowhile(main_func, condition_func):
