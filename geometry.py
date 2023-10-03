@@ -151,14 +151,17 @@ class Transform:
         new.M = self.M @ other.M
         return new
 
+    def get_rotation_matrix(self):
+        return self.M[:3, :3]
+
 
 class KabschTransform(Transform):
     def __init__(self, 
                  X: Matrix(..., 3), 
                  Y: Matrix(..., 3)):
         '''
-        Use Kabsch-Umeyama algorithm to calculate the optimal rotation matrix, translation
-        and scaling to superimpose X onto Y. 
+        Use Kabsch-Umeyama algorithm to calculate the optimal rotation matrix and translation
+        to superimpose X onto Y. 
 
         It is numerically stable and works when the covariance matrix is singular.
         Both sets of points must be the same size for this algorithm to work.
@@ -180,41 +183,28 @@ class KabschTransform(Transform):
         Xc = X - centroid_x
         Yc = Y - centroid_y
 
-        # # get RMSD from points to centroid, this will act as the size
-        # # of the body made up by the points
-        # s_x = RMSD(Xc, axis=0)
-        # s_y = RMSD(Yc, axis=0)
-
-        # # scale points such that they have the same size
-        # Xc = Xc / s_x
-        # Yc = Yc / s_y
-
         # calculate covariance matrix
         H = Xc.T @ Yc
 
         # first do single value decomposition on covariance matrix
         # this step ensures that the algorithm is numerically stable
         # and removes problems with singular covariance matrices
-        # U, _, V = np.linalg.svd(H)
         U, _, V = scipy.linalg.svd(H)
 
         # get the sign of the determinant of V.T @ U.T
         sign = np.sign(np.linalg.det(V.T@U.T))
-        # build matrix for 
         # then build the optimal rotation matrix
         d = np.diag([1, 1, sign])
         R = V.T @ d @ U.T
 
         # build the transformation:
         # for a sequence of transformation operations we have to invert their order
-        # We have that Y ~= (R @ (X - centroid_x).T).T * s_y / s_x + centroid(y)
+        # We have that Y ~= (R @ (X - centroid_x).T).T + centroid_y
         # the normal order is to first translate X by -centroid_x
         # then rotate with R
-        # scale by s_y / s_x
         # finally translate by +centroid_y
         self.M = self.build_matrix()
         self.translate(centroid_y)
-        # self.scale(s_y / s_x)
         self.rotate(R)
         self.translate(-centroid_x)
 
