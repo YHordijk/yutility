@@ -29,7 +29,7 @@ def run_quick(xyzfile, k=3):
     if 'solvent' in mol['flags']:
         sett = settings.solvation(mol['flags']['solvent'], sett)
 
-    run.quick_SP_check(mol['molecule'], sett, path=j('calculations', xyzfile.removesuffix('.xyz')), folder=f'quick_freq_{k}', skip_already_run=True)
+    run.quick_SP_check(mol['molecule'], sett, k=k, path=j('calculations', xyzfile.removesuffix('.xyz')), folder=f'quick_freq_{k}', skip_already_run=True)
 
 
 def run_ppc(xyzfile):
@@ -38,7 +38,6 @@ def run_ppc(xyzfile):
     sett = settings.default(preset)
     sett = settings.charge(mol['flags']['charge'], sett)
     sett = settings.spin_polarization(mol['flags']['spinpol'], sett)
-    sett = settings.vibrations(sett)
     if 'solvent' in mol['flags']:
         sett = settings.solvation(mol['flags']['solvent'], sett)
     sett.input.ams.properties.PESPointCharacter = 'Yes'
@@ -51,8 +50,8 @@ for xyzfile in os.listdir(xyzdir):
     if xyzfile == '.DS_Store':
         continue
 
-    if xyzfile != '1C.xyz':
-        continue
+    # if xyzfile != '1C.xyz':
+    #     continue
         
     if os.path.exists(j('calculations', xyzfile.removesuffix('.xyz'))):
         continue
