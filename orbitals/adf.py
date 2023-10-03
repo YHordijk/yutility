@@ -129,6 +129,7 @@ def read_SFO_data(reader):  # noqa: N802
     def get_rel_indices(spin):
         relindices = []
         newidx = 0
+        homoidx = 0
         for i in range(len(ret['ifo'])-1):
             occ = ret['occupations'][spin][i]
             occ2 = ret['occupations'][spin][i+1]
