@@ -43,7 +43,6 @@ for xyzfile in os.listdir(xyzdir):
         data.frequencies[method][molname] = res.properties.vibrations.frequencies
         data.character[method][molname] = res.properties.vibrations.character
 
-print(data.frequencies['quick_freq_3'])
 # now we distill some information from the raw data
 methods = set(data.timing.keys())
 molnames = list(set([key for method in methods for key in data.timing[method].keys()]))
@@ -88,8 +87,13 @@ plt.figure()
 plt.title('Total Calculation Time\n' + r'Fitted to $t(N_{atom}) = a(N_{atom}+c)^n$')
 for method in methods:
     print(natoms, data.timing_sorted[method])
-    popt = curve_fit(curve, natoms, data.timing_sorted[method], p0=[2, 0, 7e-4])[0]
-    plt.plot(np.linspace(min(natoms), max(natoms), 100), curve(np.linspace(min(natoms), max(natoms), 100), *popt), linestyle='dashed')
+    try:
+        popt = [2, -3, 1e-2]
+        popt = curve_fit(curve, natoms, data.timing_sorted[method], p0=popt, maxfev=10000)[0]
+        # print(popt)
+        plt.plot(np.linspace(min(natoms), max(natoms), 100), curve(np.linspace(min(natoms), max(natoms), 100), *popt), linestyle='dashed')
+    except:
+        pass
     plt.scatter(natoms, data.timing_sorted[method], label=rf'$t_{{{methods_fancy.get(method)}}} = {popt[2]:.1E}(N_{{atom}}{popt[1]:+.1f})^{{{popt[0]:.1f}}}$', s=10)
 plt.xlabel('Number of atoms')
 plt.ylabel(r'$t [min]$')
