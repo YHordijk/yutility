@@ -40,7 +40,7 @@ def quick_SP_check(mol, dft_settings, low_settings=None, **kwargs):
     dft_settings.input.ams.task = 'VibrationalAnalysis'
     dft_settings.input.ams.vibrationalanalysis.type = 'ModeRefinement'
     dft_settings.input.ams.vibrationalanalysis.NormalModes.ModeFile = low_results.files['dftb.rkf']
-    dft_settings.input.ams.vibrationalanalysis.NormalModes.ModeSelect.LowFreq = kwargs.get('k', 3)
+    dft_settings.input.ams.vibrationalanalysis.NormalModes.ModeSelect.LowFreq = kwargs.pop('k', 3)
 
     run(mol, dft_settings, name='refine', do_init=False, **kwargs)
     if do_init:
