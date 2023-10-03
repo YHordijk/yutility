@@ -43,155 +43,76 @@ for xyzfile in os.listdir(xyzdir):
         data.frequencies[method][molname] = res.properties.vibrations.frequencies
         data.character[method][molname] = res.properties.vibrations.character
 
-
+print(data.frequencies['quick_freq_3'])
 # now we distill some information from the raw data
 methods = set(data.timing.keys())
 molnames = list(set([key for method in methods for key in data.timing[method].keys()]))
-natoms = [data.natoms[molname] for molname in molnames]
+natoms = np.array([data.natoms[molname] for molname in molnames], dtype=float)
 
 # first get the timing_ratios
 for method in methods:
     data.timing_ratios[method] = []
+    data.timing_sorted[method] = []
+
     for molname in molnames:
-        try:
-            full_method_timing = data.timing['dft_freq'][molname]
-            timing = data.timing[method][molname]
-            data.timing_ratios[method].append(full_method_timing/timing)
-        except:
-            data.timing_ratios[method].append(None)
+        full_method_timing = data.timing['dft_freq'][molname]
+        timing = data.timing[method][molname]
+        data.timing_ratios[method].append(full_method_timing/timing)
+        data.timing_sorted[method].append(timing)
+
+
+methods_fancy = {
+    'dft_freq': r'Full',
+    'quick_freq_1': r'Quick(1)',
+    'quick_freq_2': r'Quick(2)',
+    'quick_freq_3': r'Quick(3)',
+    'PPC': r'PPC',
+}
 
 # get the accuracies
 for method in methods:
     nsuccess = 0
     nfailed = 0
     for molname in molnames:
-        try:
-            full_method_character = data.character['dft_freq'][molname]
-            character = data.character[method][molname]
-            if character == full_method_character:
-                nsuccess += 1
-            else:
-                nfailed += 1
-        except:
-            raise
+        full_method_character = data.character['dft_freq'][molname]
+        character = data.character[method][molname]
+        if character == full_method_character:
+            nsuccess += 1
+        else:
+            nfailed += 1
     data.accuracy[method] = nsuccess / (nsuccess + nfailed)
 
-print(data.timing_ratios)
-print(data.accuracy)
-
-    # if not os.path.exists(j('calculations', xyzfile.removesuffix('.xyz'))):
-    #     continue
-    # if not os.path.exists(j('calculations', xyzfile.removesuffix('.xyz') + '_PPC')):
-    #     continue
-
-
-    # fullfreq_res = results.read(j('calculations', xyzfile.removesuffix('.xyz'), 'dft_freq'))
-    # DFTB_res = results.read(j('calculations', xyzfile.removesuffix('.xyz'), 'low_freq'))
-    # PPC_res = results.read(j('calculations', xyzfile.removesuffix('.xyz') + '_PPC', 'calc'))
-    # refine_res = results.read(j('calculations', xyzfile.removesuffix('.xyz'), 'refine'))
-    # # refine_res = results.read(j('calculations', xyzfile.removesuffix('.xyz') + '_2', 'refine'))
-
-
-    # if not refine_res.properties.vibrations.frequencies:
-    #     nfailed += 1
-    # #     continue
-
-    # if fullfreq_res.properties.vibrations.character == refine_res.properties.vibrations.character:
-    #     nsuccess += 1
-    # else:
-    #     nfailed += 1
-
-
-    # if fullfreq_res.properties.vibrations.character == DFTB_res.properties.vibrations.character:
-    #     nsuccess_DFTB += 1
-    # else:
-    #     nfailed_DFTB += 1
-
-
-    # if fullfreq_res.properties.vibrations.character == PPC_res.properties.vibrations.character:
-    #     nsuccess_PPC += 1
-    # else:
-    #     nfailed_PPC += 1
-
-    # character.append(fullfreq_res.properties.vibrations.character)
-    # character_pred.append(refine_res.properties.vibrations.character)
-
-    # # analyse the performance boost and errors
-    # timing_ratio = fullfreq_res.timing.total/refine_res.timing.total
-    # timing_full.append(fullfreq_res.timing.total/60)
-    # timing_refine.append(refine_res.timing.total/60)
-    # timing_PPC.append(PPC_res.timing.total/60)
-    # timing_DFTB.append(DFTB_res.timing.total/60)
-    # timing_ratios.append(timing_ratio)
-    # timing_ratios_DFTB.append(fullfreq_res.timing.total/DFTB_res.timing.total)
-    # timing_ratios_PPC.append(fullfreq_res.timing.total/PPC_res.timing.total)
-
-
-    # freqs_ref.extend(fullfreq_res.properties.vibrations.frequencies[:nfreqs])
-    # if PPC_res.properties.vibrations.frequencies:
-    #     nfreqs_PPC = min(len(PPC_res.properties.vibrations.frequencies), nfreqs)
-    #     freqs_PPC.extend(PPC_res.properties.vibrations.frequencies[:nfreqs_PPC])
-    #     freqs_PPC_ref.extend(fullfreq_res.properties.vibrations.frequencies[:nfreqs_PPC])
-
-    # freqs_DFTB.extend(DFTB_res.properties.vibrations.frequencies[:3])
-    # freqs_DFTB_ref.extend(fullfreq_res.properties.vibrations.frequencies[:3])
-    # freqs.extend(refine_res.properties.vibrations.frequencies[:nfreqs])
-    # modes_ref.extend(fullfreq_res.properties.vibrations.modes[:nfreqs])
-    # modes.extend(refine_res.properties.vibrations.modes[:nfreqs])
-    # natoms.append(len(mol['molecule']))
-    # errors.append(abs((fullfreq_res.properties.vibrations.frequencies[0] - refine_res.properties.vibrations.frequencies[0])/fullfreq_res.properties.vibrations.frequencies[0] * 100))
-
-print(max(timing_ratios))
-print(max(timing_ratios_DFTB))
-# print(max(timing_ratios_PPC))
-print([tim for tim, nat in zip(timing_ratios_PPC, natoms) if nat == 47])
-timing_ratios = np.array(timing_ratios)
-natoms = np.array(natoms)
-errors = np.array(errors)
-success_rate = nsuccess/(nsuccess + nfailed)
-success_rate_DFTB = nsuccess_DFTB/(nsuccess_DFTB + nfailed_DFTB)
-success_rate_PPC = nsuccess_PPC/(nsuccess_PPC + nfailed_PPC)
-print(f'Success rate: {nsuccess/(nsuccess + nfailed):.0%}')
-print(f'Success rate: {nsuccess/(nsuccess + nfailed):.0%}')
 
 curve = lambda x, n, c, a: a*(x+c)**n
 plt.figure()
-plt.title('Total Calculation Time for Both Methods\n' + r'Fitted to $t(N_{atom}) = a(N_{atom}+c)^n$')
-popt = curve_fit(curve, natoms, timing_refine, p0=[2, 0, 7e-4])[0]
-plt.plot(np.linspace(min(natoms), max(natoms), 100), curve(np.linspace(min(natoms), max(natoms), 100), *popt), linestyle='dashed')
-plt.scatter(natoms, timing_refine, label=rf'$t_{{Quick}} = {popt[2]:.1E}(N_{{atom}}{popt[1]:+.1f})^{{{popt[0]:.1f}}}$')
-
-popt = curve_fit(curve, natoms, timing_full, p0=[3, 0, 5e-6])[0]
-plt.plot(np.linspace(min(natoms), max(natoms), 100), curve(np.linspace(min(natoms), max(natoms), 100), *popt), linestyle='dashed')
-plt.scatter(natoms, timing_full, label=rf'$t_{{Full}} = {popt[2]:.1E}(N_{{atom}}{popt[1]:+.1f})^{{{popt[0]:.1f}}}$')
-
-popt = curve_fit(curve, natoms, timing_PPC, p0=[3, 0, 5e-6])[0]
-plt.plot(np.linspace(min(natoms), max(natoms), 100), curve(np.linspace(min(natoms), max(natoms), 100), *popt), linestyle='dashed')
-plt.scatter(natoms, timing_PPC, label=rf'$t_{{PPC}} = {popt[2]:.1E}(N_{{atom}}{popt[1]:+.1f})^{{{popt[0]:.1f}}}$')
-
+plt.title('Total Calculation Time\n' + r'Fitted to $t(N_{atom}) = a(N_{atom}+c)^n$')
+for method in methods:
+    print(natoms, data.timing_sorted[method])
+    popt = curve_fit(curve, natoms, data.timing_sorted[method], p0=[2, 0, 7e-4])[0]
+    plt.plot(np.linspace(min(natoms), max(natoms), 100), curve(np.linspace(min(natoms), max(natoms), 100), *popt), linestyle='dashed')
+    plt.scatter(natoms, data.timing_sorted[method], label=rf'$t_{{{methods_fancy.get(method)}}} = {popt[2]:.1E}(N_{{atom}}{popt[1]:+.1f})^{{{popt[0]:.1f}}}$', s=10)
 plt.xlabel('Number of atoms')
 plt.ylabel(r'$t [min]$')
 plt.legend()
+plt.savefig('figures/timings.png')
+plt.close()
+
 
 plt.figure()
 plt.title(r'Time Gain Ratio ($\gamma$)')
-popt = curve_fit(lambda x, a, b: a*x + b, natoms, timing_ratios, p0=[1, 0])[0]
-plt.plot(np.linspace(min(natoms), max(natoms), 2), popt[0] * np.linspace(min(natoms), max(natoms), 2) + popt[1], 
-         linestyle='dashed', label=rf'$\gamma = {popt[0]:.1f}N_{{atom}} + {popt[1]:.1f}$')
-plt.scatter(natoms, timing_ratios)
-plt.xlabel('Number of atoms')
-plt.ylabel(r'$\gamma$')
-plt.legend()
+for method in methods:
+    if method == 'dft_freq':
+        continue
 
-plt.figure()
-plt.title(r'Time Gain Ratio ($\gamma_{DFTB}$)')
-popt = curve_fit(curve, natoms, np.array(timing_full)/np.array(timing_DFTB), p0=[2, 0, 7e-4])[0]
-plt.plot(np.linspace(min(natoms), max(natoms), 100), curve(np.linspace(min(natoms), max(natoms), 100), *popt), 
-         linestyle='dashed', label=rf'$\gamma_{{DFTB}} = {popt[2]:.1f}(N_{{atom}}{popt[1]:+.1f})^{{{popt[0]:.1f}}}$')
-plt.scatter(natoms, np.array(timing_full)/np.array(timing_DFTB))
+    popt = curve_fit(lambda x, a, b: a*x + b, natoms, data.timing_ratios[method], p0=[1, 0])[0]
+    plt.plot(np.linspace(min(natoms), max(natoms), 2), popt[0] * np.linspace(min(natoms), max(natoms), 2) + popt[1], 
+             linestyle='dashed', label=rf'$\gamma_{{{methods_fancy.get(method)}}} = {popt[0]:.1f}N_{{atom}} + {popt[1]:.1f}$')
+    plt.scatter(natoms, data.timing_ratios[method])
 plt.xlabel('Number of atoms')
 plt.ylabel(r'$\gamma$')
 plt.legend()
+plt.savefig('figures/timing_ratios.png')
+plt.close()
 
 
 plt.figure()
