@@ -94,7 +94,7 @@ def sort_orb_pairs(orbs1, orbs2, prop=None):
     return ret
 
 
-def plot_property(orbs1, orbs2, prop=None, cmap='Greens', title=None, unit=None, use_relname=False, use_indexname=False, scale=None):
+def plot_property(orbs1, orbs2, prop=None, propargs={}, propkwargs={}, cmap='Greens', title=None, unit=None, use_relname=False, use_indexname=False, scale=None):
     if cmap is None:
         cmap = 'Greens'
         if hasattr(prop, 'cmap'):
@@ -124,7 +124,7 @@ def plot_property(orbs1, orbs2, prop=None, cmap='Greens', title=None, unit=None,
         unit = ''
  
     if callable(prop):
-        M = prop(orbs1, orbs2)
+        M = prop(orbs1, orbs2, *propargs, **propkwargs)
     else:
         M = prop
 
