@@ -26,6 +26,8 @@ def quick_SP_check(mol, dft_settings, low_settings=None, **kwargs):
     This function calculates what kind of stationary point the given molecule is
     '''
     do_init = kwargs.pop('do_init', True)
+    k = kwargs.pop('k', 3)
+
     if do_init:
         init(kwargs.get('path'), kwargs.get('folder'))
     # perform low level frequency analysis
@@ -40,12 +42,11 @@ def quick_SP_check(mol, dft_settings, low_settings=None, **kwargs):
     dft_settings.input.ams.task = 'VibrationalAnalysis'
     dft_settings.input.ams.vibrationalanalysis.type = 'ModeRefinement'
     dft_settings.input.ams.vibrationalanalysis.NormalModes.ModeFile = low_results.files['dftb.rkf']
-    dft_settings.input.ams.vibrationalanalysis.NormalModes.ModeSelect.LowFreq = kwargs.pop('k', 3)
+    dft_settings.input.ams.vibrationalanalysis.NormalModes.ModeSelect.LowFreq = k
 
     run(mol, dft_settings, name='refine', do_init=False, **kwargs)
     if do_init:
         plams.finish()
-
 
 
 def run(mol, sett, name='calc', folder=None, path=DEFAULT_RUN_PATH, do_init=True, skip_already_run=False, run_kwargs={}):
