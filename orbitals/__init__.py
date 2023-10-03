@@ -63,6 +63,10 @@ class Orbitals:
     def fragments(self):
         return self.sfos.fragments
 
+    @property
+    def spins(self):
+        return self.sfos.spins
+
 
 def load(path):
     return Orbitals(path)
