@@ -423,7 +423,7 @@ def sort_sfo_pairs(sfos1, sfos2, prop=orbint):
     return ret
 
 
-def plot_sfos_prop(sfos1, sfos2, prop=orbint, cmap='Greens', title=None, use_relname=False, use_indexname=False, scale=None):
+def plot_sfos_prop(sfos1, sfos2, prop=orbint, propargs=None, propkwargs=None, cmap='Greens', title=None, use_relname=False, use_indexname=False, scale=None):
     if cmap is None:
         cmap = 'Greens'
         if hasattr(prop, 'cmap'):
@@ -444,7 +444,7 @@ def plot_sfos_prop(sfos1, sfos2, prop=orbint, cmap='Greens', title=None, use_rel
             title = prop.title
 
     if callable(prop):
-        M = prop(sfos1, sfos2)
+        M = prop(sfos1, sfos2, *propargs, **propkwargs)
     else:
         M = prop
 
