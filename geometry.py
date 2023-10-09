@@ -106,9 +106,10 @@ class Transform:
         Note: This matrix is an element of the special SE(3) Lie group.
         '''
 
-        R = R if R is not None else get_rotation_matrix()
-        T = T if T is not None else np.array([0, 0, 0])
-        S = S if S is not None else np.array([1, 1, 1])
+        # set the default matrix and vectors
+        R = R or get_rotation_matrix()
+        T = T or np.array([0, 0, 0])
+        S = S or np.array([1, 1, 1])
 
         return np.array([
             [R[0, 0]*S[0], R[0, 1],      R[0, 2],      T[0]],
