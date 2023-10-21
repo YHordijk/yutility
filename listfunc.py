@@ -64,7 +64,20 @@ def common_list(lst1, lst2):
             break
     return common
 
+
+def startswith(mainlst, testlst):
+    if len(testlst) > len(mainlst):
+        return False
+
+    for i, x in enumerate(testlst):
+        if mainlst[i] != x:
+            return False
+    return True
+
+
 if __name__ == '__main__':
     print(split([0, 1, 2, 3, 4, 5, 6], 3))
 
     print(indices([0, 1, 2, 1, 1, 4, 5], 1))
+
+    print(startswith(['A', 'B', 'C'], ['A', 'B']))
