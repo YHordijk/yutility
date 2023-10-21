@@ -105,6 +105,9 @@ class DBSelectResult:
     def __iter__(self):
         return iter(self.data)
 
+    def iter_dict(self):
+        return iter([{key: self[key][i] for key in self.columns} for i in range(len(self))])
+
     def __add__(self, other):
         assert isinstance(other, DBSelectResult), f'Added object must be of type DBSelectResult, not {type(other)}'
         self.data.extend(other.data)
