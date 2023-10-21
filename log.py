@@ -129,7 +129,7 @@ def print_list(items, sep='   ', header=None, return_str=False, hline=[]):
         else:
             sep_lens = [len(sep) for _ in range(len(items[0]))]
 
-        hline = [h % len(items[0]) - 1 for h in hline]
+        hline = [h+len(items) for h in hline if h < 0]
 
         if header is not None:
             header_lens = [len(head) - head.count('⠀')//2 for head in header]
