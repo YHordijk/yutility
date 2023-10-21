@@ -55,6 +55,14 @@ def replace(lst, old, new):
     return lst
 
 
+def common_list(lst1, lst2):
+    common = []
+    for p1, p2 in zip(lst1, lst2):
+        if p1 == p2:
+            common.append(p1)
+        else:
+            break
+    return common
 
 if __name__ == '__main__':
     print(split([0, 1, 2, 3, 4, 5, 6], 3))
