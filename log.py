@@ -204,6 +204,41 @@ def loading_bar(i, N, Nsegments=50, Nsteps=10, start_char='├', end_char='│',
             loading_bar_start_time = 0
 
 
+def loading_bar2(sequence, comment='', Nsegments=50, Nsteps=10, start_char='├', end_char='│', fill_char='─', empty_char=' ', center_char='>'):
+    N = len(sequence)
+    Nsteps = N if logfile.isatty() else Nsteps
+    Ndigits = int(np.log10(N))+1
+    max_length = 0
+
+    loading_bar_start_time = perf_counter()
+    for i, val in enumerate(sequence):
+        if i % (N//min(N, Nsteps)) == 0 or i == N:
+            segment = int(i/N*Nsegments)
+            fill_seg = fill_char*segment
+            if segment == Nsegments:
+                center_seg = fill_char
+            elif i == 0:
+                center_seg = empty_char
+            else:
+                center_seg = center_char
+            empty_seg = empty_char*(Nsegments-segment)
+
+            if i == 0:
+                eta = '???'
+            else:
+                eta = f'{(perf_counter() - loading_bar_start_time)/max(i,1) * (N-i):.1f}'
+
+            s = f'{i:{Ndigits}}/{N} {start_char if i > 0 else "|"}{fill_seg + center_seg + empty_seg}{end_char} {i/N:6.1%} ETA: {eta}s {comment}'.ljust(max_length)
+            print(len(s))
+            max_length = max(len(s), max_length)
+            log(s, end='\r')
+        
+        yield val
+    s = bcolors.OKGREEN + f'{i+1:{Ndigits}}/{N} {start_char}{fill_char*(Nsegments+1)}┤ 100.0% {comment}'.ljust(max_length) + bcolors.ENDC
+    log(s, end='\r')
+    log()
+
+
 def print_image(a, draw_edge=True, round_edge=True):
     dither_chars = [' ', '░', '▒', '▓', '█']
     a = (a - a.min())/(a.max() - a.min()) * (len(dither_chars)-1)
@@ -389,3 +424,7 @@ if __name__ == '__main__':
 
     info('This is important info')
     warn('This is an important warning!')
+
+    import time
+    for x in loading_bar2(range(100), 'Sleeping test'):
+        time.sleep(.01)
