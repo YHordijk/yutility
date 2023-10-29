@@ -37,14 +37,18 @@ for xyzfile in os.listdir(xyzdir):
         else:
             calcdir = j('calculations', molname, method, 'calc')
 
+        if method == 'PPC':
+            continue
+
         # we save timing, frequencies and character
+        # print(calcdir)
         res = results.read(calcdir)
         data.timing[method][molname] = res.timing.total/60  # in minutes
         data.frequencies[method][molname] = res.properties.vibrations.frequencies
         data.character[method][molname] = res.properties.vibrations.character
 
 # now we distill some information from the raw data
-methods = set(data.timing.keys())
+methods = set(key for key in data.timing.keys() if key != 'PPC')
 molnames = list(set([key for method in methods for key in data.timing[method].keys()]))
 natoms = np.array([data.natoms[molname] for molname in molnames], dtype=float)
 
@@ -81,12 +85,15 @@ for method in methods:
             nfailed += 1
     data.accuracy[method] = nsuccess / (nsuccess + nfailed)
 
+print(data.timing.dft_freq['azomethine_ylide'])
+print(data.timing.quick_freq_3['azomethine_ylide'])
+print(data.accuracy)
 
 curve = lambda x, n, c, a: a*(x+c)**n
 plt.figure()
 plt.title('Total Calculation Time\n' + r'Fitted to $t(N_{atom}) = a(N_{atom}+c)^n$')
 for method in methods:
-    print(natoms, data.timing_sorted[method])
+    # print(natoms, data.timing_sorted[method])
     try:
         popt = [2, -3, 1e-2]
         popt = curve_fit(curve, natoms, data.timing_sorted[method], p0=popt, maxfev=10000)[0]

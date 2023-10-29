@@ -14,7 +14,7 @@ def run_full(xyzfile):
     sett = settings.spin_polarization(mol['flags']['spinpol'], sett)
     sett = settings.vibrations(sett)
     if 'solvent' in mol['flags']:
-        sett = settings.solvent(mol['flags']['solvent'], sett)
+        sett = settings.solvent(mol['flags']['solvent'], sett=sett)
 
     run.run(mol['molecule'], sett, path=j('calculations', xyzfile.removesuffix('.xyz')), folder='dft_freq', skip_already_run=True)
 
@@ -27,7 +27,7 @@ def run_quick(xyzfile, k=3):
     sett = settings.spin_polarization(mol['flags']['spinpol'], sett)
     sett = settings.vibrations(sett)
     if 'solvent' in mol['flags']:
-        sett = settings.solvent(mol['flags']['solvent'], sett)
+        sett = settings.solvent(mol['flags']['solvent'], sett=sett)
 
     run.quick_SP_check(mol['molecule'], sett, k=k, path=j('calculations', xyzfile.removesuffix('.xyz')), folder=f'quick_freq_{k}', skip_already_run=True)
 
