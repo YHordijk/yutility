@@ -5,11 +5,13 @@ import numpy as np
 import itertools
 import json
 from yutility import dictfunc
+from strip_ansi import strip_ansi
 
 logfile = sys.stdout
 tab_level = 0
 max_width = 0
 print_date = True
+use_colors = False
 
 
 class Emojis:
@@ -81,6 +83,8 @@ def log(message='', end='\n', print_time_stamp=True):
         message = dictfunc.list_to_dict(lst_)
         message = json.dumps(message, indent=4, sort_keys=True)
     message = str(message)
+    if not use_colors:
+        message = strip_ansi(message)
     message = message.split('\n')
     for m in message:
         if max_width > 0 and len(m) > max_width:
@@ -229,7 +233,6 @@ def loading_bar2(sequence, comment='', Nsegments=50, Nsteps=10, start_char='├'
                 eta = f'{(perf_counter() - loading_bar_start_time)/max(i,1) * (N-i):.1f}'
 
             s = f'{i:{Ndigits}}/{N} {start_char if i > 0 else "|"}{fill_seg + center_seg + empty_seg}{end_char} {i/N:6.1%} ETA: {eta}s {comment}'.ljust(max_length)
-            print(len(s))
             max_length = max(len(s), max_length)
             log(s, end='\r')
         
@@ -335,7 +338,9 @@ def print_matrix(a, xlabels=[], ylabels=[], round_edge=True, dither=False, empty
             log(' ' + ''.join([f' {l} '.center(cell_widths[j]+3) for j, l in enumerate(yl)]))
 
 
-def boxed_text(txt, round_edge=True, align='left', double_edge=False, title=None, title_align='left'):
+def boxed_text(txt, round_edge=True, align='left', double_edge=False, title=None, title_align='left', color=''):
+    endc = bcolors.ENDC if color else ''
+
     straights = ['│', '─']
     if round_edge and not double_edge:
         corners = ['╭', '╮', '╯', '╰']
@@ -361,11 +366,11 @@ def boxed_text(txt, round_edge=True, align='left', double_edge=False, title=None
     # build main body of box
     for txt in txts:
         if align == 'left':
-            s += f'{straights[0]} ' + txt.ljust(maxlen) + f' {straights[0]}\n'
+            s += f'{straights[0]} ' + color + txt.ljust(maxlen) + endc + f' {straights[0]}\n'
         if align == 'right':
-            s += f'{straights[0]} ' + txt.rjust(maxlen) + f' {straights[0]}\n'
+            s += f'{straights[0]} ' + color + txt.rjust(maxlen) + endc + f' {straights[0]}\n'
         if align == 'center':
-            s += f'{straights[0]} ' + txt.center(maxlen) + f' {straights[0]}\n'
+            s += f'{straights[0]} ' + color + txt.center(maxlen) + endc + f' {straights[0]}\n'
     # build final row
     s += corners[3] + straights[1]*(maxlen+2) + corners[2] + '\n'
 
@@ -385,11 +390,11 @@ class BoxedText:
 
 
 def info(txt):
-    boxed_text(txt, round_edge=True, double_edge=False, title='Info')
+    boxed_text(txt, round_edge=True, double_edge=False, title='Info', color=bcolors.OKBLUE)
 
 
 def warn(txt):
-    boxed_text(txt, double_edge=True, title='Warning', title_align='center')
+    boxed_text(txt, double_edge=True, title='Warning', title_align='center', color=bcolors.WARNING)
 
 
 class bcolors:
