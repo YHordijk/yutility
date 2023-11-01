@@ -50,6 +50,9 @@ class DBSelectResult:
         col_idx = self.columns.index(key)
         return np.array([datum[col_idx] for datum in self.data])
 
+    def __getattr__(self, key):
+        return self.__getitem__(key)
+
     def __setitem__(self, key, values):
         if isinstance(key, int):
             # assert len(self.data[key]) == len(values), f'Cannot set values with length {len(self.data[key])} at index {key} with length {len(values)}'
