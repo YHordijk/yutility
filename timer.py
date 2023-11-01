@@ -112,9 +112,12 @@ def print_timings2():
             line.append(f'{mean:.3f}')
 
         line.append(f'{total:.3f}')
-
-        rel = sum(times_[name]["timings"])/sum(parent_times[parent]["timings"])*100
-        rel_total = sum(times_[name]["timings"])/sum(parent_times["TOTAL"]["timings"])*100
+        try:
+            rel = sum(times_[name]["timings"])/sum(parent_times[parent]["timings"])*100
+            rel_total = sum(times_[name]["timings"])/sum(parent_times["TOTAL"]["timings"])*100
+        except ZeroDivisionError:
+            rel = 0
+            rel_total = 0
         if parent != 'TOTAL':
             line.append(f'{rel_total: >3.0f}% ({rel: >3.0f}%)')
         else:
