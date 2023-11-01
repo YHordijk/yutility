@@ -5,11 +5,13 @@ import numpy as np
 import itertools
 import json
 from yutility import dictfunc
+from strip_ansi import strip_ansi
 
 logfile = sys.stdout
 tab_level = 0
 max_width = 0
 print_date = True
+use_colors = False
 
 
 class Emojis:
@@ -81,6 +83,8 @@ def log(message='', end='\n', print_time_stamp=True):
         message = dictfunc.list_to_dict(lst_)
         message = json.dumps(message, indent=4, sort_keys=True)
     message = str(message)
+    if not use_colors:
+        message = strip_ansi(message)
     message = message.split('\n')
     for m in message:
         if max_width > 0 and len(m) > max_width:
@@ -204,6 +208,40 @@ def loading_bar(i, N, Nsegments=50, Nsteps=10, start_char='├', end_char='│',
             loading_bar_start_time = 0
 
 
+def loading_bar2(sequence, comment='', Nsegments=50, Nsteps=10, start_char='├', end_char='│', fill_char='─', empty_char=' ', center_char='>'):
+    N = len(sequence)
+    Nsteps = N if logfile.isatty() else Nsteps
+    Ndigits = int(np.log10(N))+1
+    max_length = 0
+
+    loading_bar_start_time = perf_counter()
+    for i, val in enumerate(sequence):
+        if i % (N//min(N, Nsteps)) == 0 or i == N:
+            segment = int(i/N*Nsegments)
+            fill_seg = fill_char*segment
+            if segment == Nsegments:
+                center_seg = fill_char
+            elif i == 0:
+                center_seg = empty_char
+            else:
+                center_seg = center_char
+            empty_seg = empty_char*(Nsegments-segment)
+
+            if i == 0:
+                eta = '???'
+            else:
+                eta = f'{(perf_counter() - loading_bar_start_time)/max(i,1) * (N-i):.1f}'
+
+            s = f'{i:{Ndigits}}/{N} {start_char if i > 0 else "|"}{fill_seg + center_seg + empty_seg}{end_char} {i/N:6.1%} ETA: {eta}s {comment}'.ljust(max_length)
+            max_length = max(len(s), max_length)
+            log(s, end='\r')
+        
+        yield val
+    s = bcolors.OKGREEN + f'{i+1:{Ndigits}}/{N} {start_char}{fill_char*(Nsegments+1)}┤ 100.0% {comment}'.ljust(max_length) + bcolors.ENDC
+    log(s, end='\r')
+    log()
+
+
 def print_image(a, draw_edge=True, round_edge=True):
     dither_chars = [' ', '░', '▒', '▓', '█']
     a = (a - a.min())/(a.max() - a.min()) * (len(dither_chars)-1)
@@ -300,7 +338,9 @@ def print_matrix(a, xlabels=[], ylabels=[], round_edge=True, dither=False, empty
             log(' ' + ''.join([f' {l} '.center(cell_widths[j]+3) for j, l in enumerate(yl)]))
 
 
-def boxed_text(txt, round_edge=True, align='left', double_edge=False, title=None, title_align='left'):
+def boxed_text(txt, round_edge=True, align='left', double_edge=False, title=None, title_align='left', color=''):
+    endc = bcolors.ENDC if color else ''
+
     straights = ['│', '─']
     if round_edge and not double_edge:
         corners = ['╭', '╮', '╯', '╰']
@@ -326,11 +366,11 @@ def boxed_text(txt, round_edge=True, align='left', double_edge=False, title=None
     # build main body of box
     for txt in txts:
         if align == 'left':
-            s += f'{straights[0]} ' + txt.ljust(maxlen) + f' {straights[0]}\n'
+            s += f'{straights[0]} ' + color + txt.ljust(maxlen) + endc + f' {straights[0]}\n'
         if align == 'right':
-            s += f'{straights[0]} ' + txt.rjust(maxlen) + f' {straights[0]}\n'
+            s += f'{straights[0]} ' + color + txt.rjust(maxlen) + endc + f' {straights[0]}\n'
         if align == 'center':
-            s += f'{straights[0]} ' + txt.center(maxlen) + f' {straights[0]}\n'
+            s += f'{straights[0]} ' + color + txt.center(maxlen) + endc + f' {straights[0]}\n'
     # build final row
     s += corners[3] + straights[1]*(maxlen+2) + corners[2] + '\n'
 
@@ -350,11 +390,23 @@ class BoxedText:
 
 
 def info(txt):
-    boxed_text(txt, round_edge=True, double_edge=False, title='Info')
+    boxed_text(txt, round_edge=True, double_edge=False, title='Info', color=bcolors.OKBLUE)
 
 
 def warn(txt):
-    boxed_text(txt, double_edge=True, title='Warning', title_align='center')
+    boxed_text(txt, double_edge=True, title='Warning', title_align='center', color=bcolors.WARNING)
+
+
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
 
 
 if __name__ == '__main__':
@@ -389,3 +441,7 @@ if __name__ == '__main__':
 
     info('This is important info')
     warn('This is an important warning!')
+
+    import time
+    for x in loading_bar2(range(100), 'Sleeping test'):
+        time.sleep(.01)

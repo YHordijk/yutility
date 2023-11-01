@@ -1,3 +1,5 @@
+print('[WARN]: yutility.dictfunc will be deprecated')
+
 
 class DotDict(dict):
     def __getattr__(self, key):
