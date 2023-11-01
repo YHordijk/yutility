@@ -259,6 +259,8 @@ class DataBase:
         columns = columns or ['id']
         types = types or [str]
 
+        assert len(columns) == len(types), f'Lengths of columns ({len(columns)}) and types ({len(types)}) have to be the same'
+
         tolist = []
         for colname, coltype in zip(columns, types):
             s = f'{colname} {self.parse_type(coltype)}'
@@ -278,21 +280,29 @@ class DataBase:
         command = f'INSERT INTO {table_name}\nVALUES ({vals})'
         self.execute(command)
 
-    def insert_dict(self, table_name, d, ensure_columns=False):
-        d = dictfunc.remove_empty(d)
-        column_names = d.keys()
-        values = d.values()
+    def insert_dict(self, table_name, inp_dict, ensure_columns=False, raise_on_unknown_columns=True):
+        inp_dict = dictfunc.remove_empty(inp_dict)
+        column_names = inp_dict.keys()
+        values = inp_dict.values()
 
-        for column, value in zip(column_names, values):
-            if ensure_columns:
-                if isinstance(value, np.generic):
-                    typ = type(value.item())
+        # handle unknown columns. If we are not ensuring columns we can raise if there are missing columns
+        unknown_columns = [column for column in column_names if column not in self.get_column_names(table_name)]
+        if raise_on_unknown_columns and not ensure_columns:
+            if len(unknown_columns) > 0:
+                raise KeyError(f"Columns [{', '.join(unknown_columns)}] not present in table '{table_name}'. Consider calling with 'ensure_columns=True'.")
+
+        if ensure_columns:
+            for col in unknown_columns:
+                vals = ensure_list(inp_dict[col])
+                if isinstance(vals[0], np.generic):
+                    typ = type(vals[0].item())
                 else:
-                    typ = type(value)
-                self.ensure_column(table_name, column, typ)
-            if column not in self.get_column_names(table_name):
-                raise KeyError(f"Column '{column}' not present in table '{table_name}'. Consider calling with 'ensure_columns=True'.")
+                    typ = type(vals[0])
+                self.ensure_column(table_name, col, typ)
 
+        column_names = [column for column in column_names if column in self.get_column_names(table_name)]
+        values = [inp_dict[column] for column in column_names]
+        
         cols = ', '.join([repr(x) for x in column_names])
         vals = ', '.join([repr(x) for x in values])
 
