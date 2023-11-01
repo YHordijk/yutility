@@ -2,7 +2,7 @@ import scm.plams as plams
 from yutility import log
 
 
-def default(preset=None):
+def default(preset=None, use_libxc=False):
     '''
     Settings are given in the form:
         Functional[-Dispersion]/Basisset/Numquality
@@ -107,7 +107,11 @@ def default(preset=None):
         sett.input.adf.XC.model = 'SAOP'
 
     else:
-        raise ValueError(f'XC-functional {functional} not defined')
+        if not use_libxc:
+            raise ValueError(f'XC-functional {functional} not defined, if you meant to use a libXC name, please set "use_libxc=True"')
+        else:
+            sett.input.adf.XC.LibXC = functional
+
 
     if functional == 'r2SCAN-3c' and basis_size != 'mTZ2P' and numerical_quality != 'good':
         log.warn(f'Use of r2SCAN-3c/{basis_size}/{numerical_quality} is not recommended.\nUse r2SCAN-3c/mTZ2P/good instead')
