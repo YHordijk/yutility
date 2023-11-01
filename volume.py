@@ -49,10 +49,13 @@ class CubeFile:
         self.xn = xn
         self.yn = yn
         self.zn = zn
+        self.cell_volume = np.linalg.norm(np.cross(self.xvec*self.xn, self.yvec*self.yn) @ (self.zvec*self.zn))  # volume of a trapezoid
+
+        self.set_cutoff(0)  # by default include all points
 
     @property
     def volume(self):
-        return np.linalg.norm(np.cross(self.xvec*self.xn, self.yvec*self.yn) @ (self.zvec*self.zn))
+        return self.cutoffindices.size / self.positions.size * self.cell_volume
 
     def get_molecule(self):
         mol = plams.Molecule()
