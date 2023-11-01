@@ -94,7 +94,7 @@ def sort_orb_pairs(orbs1, orbs2, prop=None):
     return ret
 
 
-def plot_property(orbs1, orbs2, prop=None, propargs={}, propkwargs={}, cmap='Greens', title=None, unit=None, use_relname=False, use_indexname=False, scale=None):
+def plot_property(orbs1, orbs2, prop=None, propargs={}, propkwargs={}, cmap='Greens', title=None, unit=None, use_relname=False, use_indexname=False, scale=None, **kwargs):
     if cmap is None:
         cmap = 'Greens'
         if hasattr(prop, 'cmap'):
@@ -129,7 +129,7 @@ def plot_property(orbs1, orbs2, prop=None, propargs={}, propkwargs={}, cmap='Gre
         M = prop
 
     plotname = orbs1[0].spin + ' ' + orbs1[0].kfpath
-    plt.figure(figsize=(10, 8), label=f'{prop_name} {plotname}')
+    plt.figure(figsize=kwargs.get('figsize', (10, 8)), label=f'{prop_name} {plotname}')
     occ_virt_border1 = [i for i in range(1, len(orbs1)) if orbs1[i-1].occupation != orbs1[i].occupation]
     occ_virt_border1 = 0 if len(occ_virt_border1) == 0 else occ_virt_border1[0]
     occ_virt_border2 = [i for i in range(1, len(orbs2)) if orbs2[i-1].occupation != orbs2[i].occupation]
