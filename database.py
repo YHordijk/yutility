@@ -83,7 +83,7 @@ class DBSelectResult:
 
         return DBSelectResult([x for i, x in enumerate(self) if all(mask[i] for mask in masks)], self.columns, self.types)
 
-    def sortby(self, key, sortfunc=None, reference=None):
+    def sortby(self, key, reference=None, sortfunc=None):
         sortval = []
         if sortfunc is None:
             sortfunc = lambda x: x
@@ -92,7 +92,7 @@ class DBSelectResult:
 
         x = self[key]
         idx = listfunc.argsort(x, sortfunc)
-        return DBSelectResult(self[idx], self.columns, self.types)
+        return DBSelectResult([self.data[i] for i in idx], self.columns, self.types)
 
     def remove_empty(self, keys='*', mode='all'):
         if keys == '*':
