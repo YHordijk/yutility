@@ -65,6 +65,7 @@ class CubeFile:
         return mol
 
     def set_cutoff(self, cutoff=.03):
+        self.cutoff = cutoff
         self.cutoffindices = np.arange(len(self.values))[np.abs(self.values) >= cutoff]
         return self.cutoffindices
 
@@ -79,7 +80,7 @@ class CubeFile:
         return self.colors
 
     def show(self, **kwargs):
-        self.set_cutoff(kwargs.get('cutoff', .03))
+        self.set_cutoff(kwargs.pop('cutoff', self.cutoff))
         self.set_colors(**kwargs)
         idx = self.cutoffindices
         viewer.show(self.get_molecule(), molinfo=[{'cub': [self.positions[idx], self.colors[idx]]}])
