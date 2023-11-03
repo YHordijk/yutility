@@ -85,7 +85,7 @@ def density(points, lim=None, resolution=1000, s2=.002, normalize=True):
     return x, dens
 
 
-def plot(x, y, xlabel=None, ylabel=None, plot_marginals=True, s=3, alpha=.5, groups=None, groupsname=None, linewidth=1, marker='o', legendloc='outside right upper'):
+def plot(x, y, xlabel=None, ylabel=None, plot_marginals=True, s=3, alpha=.5, groups=None, groupsname=None, linewidth=1, marker='o', legendloc='outside right upper', color=None):
     # Create Fig and gridspec
     if plot_marginals:
         grid = plt.GridSpec(4, 4, hspace=0, wspace=0)
@@ -106,11 +106,11 @@ def plot(x, y, xlabel=None, ylabel=None, plot_marginals=True, s=3, alpha=.5, gro
     # else:
     #     ax_main = plt.gcf().add_subplot(grid[0, 0])
         for group_label, group_index in zip(group_labels, group_indices):
-            ax_main.plot(x[group_index], y[group_index], alpha=alpha, label=group_label, linewidth=linewidth, marker=marker, markersize=s)
+            ax_main.plot(x[group_index], y[group_index], alpha=alpha, label=group_label, linewidth=linewidth, marker=marker, markersize=s, color=color)
 
     else:
         for group_label, group_index in zip(group_labels, group_indices):
-            plt.plot(x[group_index], y[group_index], alpha=alpha, label=group_label, linewidth=linewidth, marker=marker, markersize=s)
+            plt.plot(x[group_index], y[group_index], alpha=alpha, label=group_label, linewidth=linewidth, marker=marker, markersize=s, color=color)
 
     if plot_marginals:
         for group_label, group_index in zip(group_labels, group_indices):
