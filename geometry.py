@@ -349,6 +349,29 @@ def center_mol(coords):
     return coords - c
 
 
+def vector_align_rotmat(a, b):
+    # normalize the vecs
+    a = np.array(a) / np.linalg.norm(a)
+    b = np.array(b) / np.linalg.norm(b)
+
+    v = np.cross(a, b)
+    skew = np.array([
+        [0, -v[2], v[1]],
+        [v[2], 0, -v[0]],
+        [-v[1], v[0], 0]
+    ])
+
+    c = a @ b
+
+    R = np.eye(3) + skew + skew @ skew / (1 + c)
+    return R
+
+
+
+
+
+
+
 # def align_molecule(molecule, origin=None):
 #     if len(yu_molecule.get_labeled_atoms(
 #             molecule, 'plane', origin=origin)) > 0:
