@@ -4,6 +4,7 @@ from yviewer import viewer
 import scipy.spatial
 import scipy.cluster
 import math
+from tcintegral import grid
 
 
 class CubeFile:
@@ -84,6 +85,13 @@ class CubeFile:
         self.set_colors(**kwargs)
         idx = self.cutoffindices
         viewer.show(self.get_molecule(), molinfo=[{'cub': [self.positions[idx], self.colors[idx]]}])
+
+    def to_grid(self):
+        gridd = grid.Grid(sum([self.xvec, self.yvec, self.zvec]).tolist())
+        gridd += grid.Cube(self.origin.tolist(), sum([self.xvec*self.xn, self.yvec*self.yn, self.zvec*self.zn]).tolist())
+        gridd.values = self.values
+        return gridd
+
 
     # def set_clusters(self, maxdist=0.4):
     #     def select_cluster(idx, cluster_list):
