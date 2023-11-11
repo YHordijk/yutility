@@ -347,7 +347,7 @@ def nmr(mol, dft_settings=None, folder=None, path=DEFAULT_RUN_PATH, do_init=True
 
 
 def orbital_cub(rkf_path, name, orbtype='SCF', symlabel='All', overwrite=False, grid='medium'):
-    from yutility import volume
+    from tcintegral import grid
     
     def get_cub_file():
         for file in os.listdir(workdir):
@@ -360,7 +360,7 @@ def orbital_cub(rkf_path, name, orbtype='SCF', symlabel='All', overwrite=False, 
     # first check if the job is already done
     if not overwrite:
         if get_cub_file():
-            return volume.CubeFile(get_cub_file())
+            return grid.from_cub_file(get_cub_file())
 
     with open(j(os.path.split(rkf_path)[0], 'densf.in'), 'w+') as infile:
         infile.write(f'cd {os.path.split(rkf_path)[0]}\n')
@@ -376,7 +376,7 @@ def orbital_cub(rkf_path, name, orbtype='SCF', symlabel='All', overwrite=False, 
     with open(j(os.path.split(rkf_path)[0], 'densf.out'), 'w+', newline='') as outfile:
         subprocess.call(['bash', f'{j(os.path.split(rkf_path)[0], "densf.in")}'], stdout=outfile)
 
-    return volume.CubeFile(get_cub_file())
+    return grid.from_cub_file(get_cub_file())
 
 
 # class ADFFragmentResults(plams.ADFFragmentResults):
