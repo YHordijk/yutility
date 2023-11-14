@@ -46,16 +46,26 @@ def molecule(molstring, mode='latex'):
 
 	if mode == 'html':
 		ret = molstring
+		# to take care of plus-signs used to denote reactions we have to first split 
+		# the molstring into its parts.
 		for part in ret.split():
-			if part in '+-':
+			# if part is only a plus-sign we skip this part. This is only true when the plus-sign
+			# is used to denote a reaction
+			if part == '+':
 				continue
 
+			# parse the part
 			partret = part
+			# numbers should be subscript
 			for num in '0123456789':
 				partret = partret.replace(num, f'<sub>{num}</sub>')
+
+			# signs should be superscript
 			for sign in '+-':
-				# if sign == '-'
+				# negative charges should be denoted by em dash and not a normal dash
 				partret = partret.replace(sign, f'<sup>{sign.replace("-", "—")}</sup>')
+
+			# replace the part in the original string
 			ret = ret.replace(part, partret)
 		return ret
 
