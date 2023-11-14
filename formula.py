@@ -35,7 +35,33 @@ def polynomial(coeffs, variables, unity_var='', mult_sign='*', latex_mode=False,
 	return formula.strip()
 
 
+def molecule(molstring, mode='latex'):
+	if mode == 'latex':
+		ret = molstring
+		for num in '0123456789':
+			ret = ret.replace(num, f'_{num}')
+		for sign in '+-':
+			ret = ret.replace(sign, f'^{sign}')
+		return ret
+
+	if mode == 'html':
+		ret = molstring
+		for part in ret.split():
+			if part in '+-':
+				continue
+
+			partret = part
+			for num in '0123456789':
+				partret = partret.replace(num, f'<sub>{num}</sub>')
+			for sign in '+-':
+				# if sign == '-'
+				partret = partret.replace(sign, f'<sup>{sign.replace("-", "—")}</sup>')
+			ret = ret.replace(part, partret)
+		return ret
+
 
 if __name__ == '__main__':
 	form = polynomial([-1, 2, 3.1], ['', 'a', ('b', 'c', 'c')], latex_mode=True)
 	print(form)
+
+	print(molecule('F- + CH3Cl', 'html'))
