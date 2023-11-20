@@ -5,7 +5,7 @@ import numpy as np
 import itertools
 import json
 from yutility import dictfunc
-from strip_ansi import strip_ansi
+# from strip_ansi import strip_ansi
 
 logfile = sys.stdout
 tab_level = 0
@@ -83,8 +83,8 @@ def log(message='', end='\n', print_time_stamp=True):
         message = dictfunc.list_to_dict(lst_)
         message = json.dumps(message, indent=4, sort_keys=True)
     message = str(message)
-    if not use_colors:
-        message = strip_ansi(message)
+    # if not use_colors:
+    #     message = strip_ansi(message)
     message = message.split('\n')
     for m in message:
         if max_width > 0 and len(m) > max_width:
