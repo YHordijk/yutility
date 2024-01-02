@@ -1,5 +1,6 @@
 from scm import plams
-from TCutility import formula, log, results
+from TCutility import log, results
+import os
 
 
 class Job:
@@ -7,10 +8,10 @@ class Job:
     The base class contains an empty DotDict object that holds the settings. It also provides __enter__ and __exit__ methods to make use of context manager syntax.'''
     def __init__(self):
         self.settings = results.Result()
-        self.sbatch = results.Result()
+        self._sbatch = None
         self._molecule = None
-        self.name = None
-        self.rundir = None
+        self.name = 'calc'
+        self.rundir = 'tmp'
 
     def __enter__(self):
         return self
@@ -19,17 +20,20 @@ class Job:
         self.run()
 
     def __repr__(self):
-        s = '#! /bin/bash\n\n'
-        if self.sbatch:
-            for key, val in self.sbatch.items():
-                key.replace('_', '-')
+        s = '#!/bin/bash\n'
+        self._sbatch.prune()
+        if self._sbatch:
+            for key, val in self._sbatch.items():
+                key = key.replace('_', '-')
                 if len(key) > 1:
                     s += f'#SBATCH --{key}={val}\n'
                 else:
                     s += f'#SBATCH -{key} {val}\n'
             s += '\n'
-
         return s
+
+    def sbatch(self, **kwargs):
+        self._sbatch = results.Result(kwargs)
 
     def run(self):
         NotImplemented
@@ -40,7 +44,7 @@ class Job:
 
     @molecule.setter
     def molecule(self, mol):
-        assert isinstance(mol, (str, plams.Molecule)), f'Argument should be a plams.Molecule object or a path'
+        assert isinstance(mol, (str, plams.Molecule)), f'Argument should be a plams.Molecule object or a path, not {type(mol)}'
         
         if isinstance(mol, plams.Molecule):
             self._molecule = mol
@@ -52,49 +56,67 @@ class Job:
 class ADFJob(Job):
     def __init__(self):
         super().__init__()
-        self._functional = None
-        self._basis_set = None
+        self.functional('LDA')
+        self.basis_set('DZ')
+        self.single_point()
 
-    def __setattr__(self, key, val):
-        if key.lower() == 'basis_set':
-            self.settings.input.adf.basis.type = val
-            self.settings.input.adf.basis.core = 'None'
-            return
+    def __str__(self):
+        return f'{self._task}({self._functional}/{self._basis_set}), running in {os.path.join(os.path.abspath(self.rundir), self.name)}'
 
-        if key.lower() == 'task':
-            self.settings.input.ams.task = val
-            return
+    def basis_set(self, typ, core='None'):
+        self._basis_set = typ
+        self.settings.input.adf.basis.type = typ
+        self.settings.input.adf.basis.core = core
 
-        if key.lower() == 'vibrations':
-            if val is True:
-                self.settings.input.ams.Properties.NormalModes = 'Yes'
-                self.settings.input.ams.Properties.PESPointCharacter = 'Yes'
-                self.settings.input.ams.PESPointCharacter.NegativeFrequenciesTolerance = tolerance
-                self.settings.input.ams.NormalModes.ReScanFreqRange = '-10000000.0 10.0'
-            return
+    def single_point(self):
+        self._task = 'SP'
+        self.settings.input.ams.pop('TransitionStateSearch', None)
+        self.settings.input.ams.task = 'SinglePoint'
 
-        if key.lower() == 'charge':
-            self.settings.input.ams.System.Charge = val
-            return
+    def transition_state(self, distances=None, angles=None, coordinates=None, dihedrals=None, ModeToFollow=1):
+        self._task = 'TS'
+        self.settings.input.ams.task = 'TransitionStateSearch'
+        self.settings.input.ams.TransitionStateSearch.ReactionCoordinate.ModeToFollow = ModeToFollow
 
-        if key.lower() == 'spin_polarization':
-            self.settings.input.adf.SpinPolarization = val
-            if val != 0:
-                self.settings.input.adf.Unrestricted = 'Yes'
-            return
+        if distances is not None:
+            self.settings.input.ams.TransitionStateSearch.ReactionCoordinate.Distance = [" ".join([str(x) for x in dist]) for dist in distances]
+        if angles is not None:
+            self.settings.input.ams.TransitionStateSearch.ReactionCoordinate.Angle = [" ".join([str(x) for x in ang]) for ang in angles]
+        if coordinates is not None:
+            self.settings.input.ams.TransitionStateSearch.ReactionCoordinate.Coordinate = [" ".join([str(x) for x in coord]) for coord in coordinates]
+        if dihedrals is not None:
+            self.settings.input.ams.TransitionStateSearch.ReactionCoordinate.Dihedral = [" ".join([str(x) for x in dihedral]) for dihedral in dihedrals]
 
-        super().__setattr__(key, val)
+    def optimization(self):
+        self._task = 'GO'
+        self.settings.input.ams.pop('TransitionStateSearch', None)
+        self.settings.input.ams.task = 'GeometryOptimization'
 
-    @property
-    def functional(self):
-        return self._functional
+    def vibrations(self, enable=True, PESPointCharacter=True, NegativeFrequenciesTolerance=-5, ReScanFreqRange='-10000000.0 10.0'):
+        self.settings.input.ams.Properties.NormalModes = 'Yes' if enable else 'No'
+        self.settings.input.ams.Properties.PESPointCharacter = 'Yes' if enable else 'No'
+        self.settings.input.ams.PESPointCharacter.NegativeFrequenciesTolerance = NegativeFrequenciesTolerance
+        self.settings.input.ams.NormalModes.ReScanFreqRange = ReScanFreqRange
 
-    @functional.setter
-    def functional(self, functional):
+    def charge(self, val):
+        self.settings.input.ams.System.Charge = val
+
+    def spin_polarization(self, val):
+        self.settings.input.adf.SpinPolarization = val
+        if val != 0:
+            self.settings.input.adf.Unrestricted = 'Yes'
+
+    def unrestricted(self, val):
+        self.settings.input.adf.Unrestricted = 'Yes' if val else 'No'
+
+    def quality(self, val='Normal'):
+        self.settings.input.adf.NumericalQuality = val
+
+    def functional(self, val):
         # before adding the new functional we should clear any previous functional settings
         self.settings.input.adf.pop('XC', None)
 
-        functional = functional.strip()
+        functional = val.strip()
         self._functional = functional
 
         # first handle dispersion corrections
@@ -148,19 +170,126 @@ class ADFJob(Job):
         log.warn(f'XC-functional {functional} not defined. Defaulting to using LibXC.')
         self.settings.input.adf.XC.LibXC = functional
 
+    def solvent(self, name=None, eps=None, rad=None, use_klamt=False):
+        self.settings.input.adf.Solvation.Surf = 'Delley'
+        solv_string = ''
+        if name:
+            solv_string += f'name={name} '
+        else:
+            self.settings.input.adf.Solvation.Solv = f'eps={eps} rad={rad} '
+        if use_klamt:
+            solv_string += 'cav0=0.0 cav1=0.0'
+        else:
+            solv_string += 'cav0=0.0 cav1=0.0067639'
+        self.settings.input.adf.Solvation.Solv = solv_string
+
+        self.settings.input.adf.Solvation.Charged = 'method=CONJ corr'
+        self.settings.input.adf.Solvation['C-Mat'] = 'POT'
+        self.settings.input.adf.Solvation.SCF = 'VAR ALL'
+        self.settings.input.adf.Solvation.CSMRSP = None
+
+        if use_klamt:
+            radii = {
+                'H': 1.30,
+                'C': 2.00,
+                'N': 1.83,
+                'O': 1.72,
+                'F': 1.72,
+                'Si': 2.48,
+                'P': 2.13,
+                'S': 2.16,
+                'Cl': 2.05,
+                'Br': 2.16,
+                'I': 2.32
+            }
+            self.settings.input.adf.solvation.radii = radii
+
+
+class OrcaJob(Job):
+    def __init__(self):
+        super().__init__()
+        self.settings.main = ['LARGEPRINT']
+        self.charge = 0
+        self.multiplicity = 1
+        self.memory = None
+        self.processes = None
+
+    def get_memory_usage(self):
+        mem = self.memory or self._sbatch.mem
+
+        ntasks = self.processes
+        if ntasks is None:
+            if self._sbatch.n:
+                ntasks = self._sbatch.n
+            if self._sbatch.ntasks:
+                ntasks = self._sbatch.ntasks
+            if self._sbatch.ntasks_per_node:
+                ntasks = self._sbatch.ntasks_per_node * self._sbatch.get('N', 1) * self._sbatch.get('nodes', 1)
+        
+        return mem, ntasks
+
+    def write(self):
+        os.makedirs(os.path.join(self.rundir, self.name), exist_ok=True)
+        with open(os.path.join(self.rundir, self.name, 'ORCA.inp'), 'w+') as inp:
+            # set the correct memory usage and processes
+            natoms = len(self.molecule)
+            mem, ntasks = self.get_memory_usage()
+            ntasks = min(ntasks, (natoms - 1) * 3)
+            self.settings.PAL.nprocs = ntasks
+            self.settings.maxcore = int(mem / ntasks * 0.75)
+
+            for key in self.settings.main:
+                inp.write(f'!{key}\n')
+            inp.write('\n')
+
+            for option, block in self.settings.items():
+                if option == 'main':
+                    continue
+
+                if isinstance(block, results.Result):
+                    inp.write(f'%{option}\n')
+
+                    for key, val in block.items():
+                        inp.write(f'    {key} {val}\n')
+
+                    inp.write('END\n\n')
+                else:
+                    inp.write(f'%{option} {block}\n')
+
+            inp.write('\n')
+
+            inp.write(f'* xyz {self.charge} {self.multiplicity}\n')
+            for atom in self.molecule:
+                inp.write(f'    {atom.symbol:2} {atom.x: >13f} {atom.y: >13f} {atom.z: >13f}\n')
+            inp.write('*\n')
+
+        with open(os.path.join(self.rundir, self.name, f'{self.name}.sh'), 'w+') as run:
+            run.write(repr(self))
+
 
 if __name__ == '__main__':
     from pprint import pprint
 
     with ADFJob() as job:
-        job.molecule = '/Users/yumanhordijk/PhD/ychem/calculations/00f8a789a08ae1a976ebd9eb09652290720e60a029bc13b84dc573b2e19a8a94/input_mol.xyz'
-        job.sbatch.p = 'tc'
-        job.sbatch.ntasks_per_node = 15
+        job.molecule = r"D:\Users\Yuman\Desktop\PhD\TCutility\test\fixtures\chloromethane_sn2_ts\ts sn2.results\output.xyz"
+        job.sbatch(p='tc', ntasks_per_node=15)
 
-        job.functional = 'BMK'
-        job.functional = 'PW92'
+        job.functional('BMK')
+        job.charge(10)
+        job.spin_polarization(1)
+        job.transition_state()
+        job.optimization()
+        job.solvent('Ethanol')
 
-        job.charge = 10
-        job.spin_polarization = 1
+    print(job)
+    pprint(job.settings)
 
-    pprint(job)
+    with OrcaJob() as job:
+        job.sbatch(p='tc', n=128, mem=224_000)
+        job.molecule = r"D:\Users\Yuman\Desktop\PhD\TCutility\test\fixtures\chloromethane_sn2_ts\ts sn2.results\output.xyz"
+        job.settings.main.append('SP')
+        job.settings.main.append('CCSD(T)')
+        job.settings.main.append('cc-pVDZ')
+        job.settings.SCF.MaxIter = 500
+
+        job.write()
