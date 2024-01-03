@@ -6,6 +6,7 @@ import itertools
 import json
 from yutility import dictfunc
 # from strip_ansi import strip_ansi
+import inspect
 
 logfile = sys.stdout
 tab_level = 0
@@ -60,6 +61,28 @@ class NoPrint:
     def __exit__(self, *args, **kwargs):
         sys.stdout = self.stdout
         sys.stderr = self.stderr
+
+
+def __get_caller():
+    # returns the full caller name
+    def fullname(o):
+        klass = o.__class__
+        module = klass.__module__
+        if module == 'builtins':
+            return klass.__qualname__  # avoid outputs like 'builtins.str'
+        return module + '.' + klass.__qualname__
+
+    stack = inspect.stack()
+    names = [stack[2][3]]  # add the original function, this should be two levels higher, since this function is called by warn or info or error
+    for frame in stack[2:]:
+        if frame.function == '<module>':
+            continue
+        if hasattr(frame[0], 'f_locals') and 'self' in frame[0].f_locals:
+            names.append(fullname(frame[0].f_locals["self"]))
+        elif hasattr(frame[0], 'f_code'):
+            names.append(frame[0].f_code.co_name)
+        
+    return '.'.join(names[::-1])
 
 
 def time_stamp():
