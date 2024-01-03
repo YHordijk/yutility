@@ -215,7 +215,7 @@ class OrcaJob(Job):
         self.processes = None
 
     def get_memory_usage(self):
-        mem = self.memory or self._sbatch.mem
+        mem = self.memory or self._sbatch.mem or None
 
         ntasks = self.processes
         if ntasks is None:
@@ -225,7 +225,7 @@ class OrcaJob(Job):
                 ntasks = self._sbatch.ntasks
             if self._sbatch.ntasks_per_node:
                 ntasks = self._sbatch.ntasks_per_node * self._sbatch.get('N', 1) * self._sbatch.get('nodes', 1)
-        
+
         return mem, ntasks
 
     def write(self):
@@ -234,9 +234,12 @@ class OrcaJob(Job):
             # set the correct memory usage and processes
             natoms = len(self.molecule)
             mem, ntasks = self.get_memory_usage()
-            ntasks = min(ntasks, (natoms - 1) * 3)
-            self.settings.PAL.nprocs = ntasks
-            self.settings.maxcore = int(mem / ntasks * 0.75)
+            if ntasks and mem:
+                ntasks = min(ntasks, (natoms - 1) * 3)
+                self.settings.PAL.nprocs = ntasks
+                self.settings.maxcore = int(mem / ntasks * 0.75)
+            else:
+                log.warn('MaxCore and nprocs not specified. Please use SBATCH settings or set job.processes and job.memory.')
 
             for key in self.settings.main:
                 inp.write(f'!{key}\n')
@@ -274,18 +277,18 @@ if __name__ == '__main__':
         job.molecule = r"D:\Users\Yuman\Desktop\PhD\TCutility\test\fixtures\chloromethane_sn2_ts\ts sn2.results\output.xyz"
         job.sbatch(p='tc', ntasks_per_node=15)
 
-        job.functional('BMK')
+        job.functional('BM12K')
         job.charge(10)
         job.spin_polarization(1)
         job.transition_state()
         job.optimization()
         job.solvent('Ethanol')
 
-    print(job)
-    pprint(job.settings)
+    # print(job)
+    # pprint(job.settings)
 
     with OrcaJob() as job:
-        job.sbatch(p='tc', n=128, mem=224_000)
+        job.sbatch(p='tc', mem=224_000)
         job.molecule = r"D:\Users\Yuman\Desktop\PhD\TCutility\test\fixtures\chloromethane_sn2_ts\ts sn2.results\output.xyz"
         job.settings.main.append('SP')
         job.settings.main.append('CCSD(T)')
