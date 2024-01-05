@@ -1,5 +1,5 @@
 from scm import plams
-from TCutility import log, results
+from TCutility import log, results, formula
 import os
 
 
@@ -51,6 +51,7 @@ class Job:
 
         elif isinstance(mol, str):
             self._molecule = plams.Molecule(mol)
+            log.info(f'Succesfully loaded molecule {formula.molecule(self._molecule)} from path.')
 
 
 class ADFJob(Job):
