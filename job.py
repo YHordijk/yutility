@@ -214,9 +214,12 @@ class ADFJob(Job):
             self.settings.input.adf.solvation.radii = radii
 
     def run(self):
+        plams.init()
         sett = self.settings.as_plams_settings()
+        sett.keep = ['-', 't21.*', 'CreateAtoms.out', '*.dill']
         job = plams.AMSJob(name=self.name, molecule=self.molecule, settings=sett)
         job.run(jobrunner=gr, queue='tc', n=32, J=self.name)
+        plams.finish()
 
 
 class OrcaJob(Job):
