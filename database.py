@@ -257,7 +257,7 @@ class DataBase:
 
     def make_table(self, table_name, columns=None, types=None, primary_key=None):
         columns = columns or ['id']
-        types = types or [str]
+        types = types or [str] * len(columns)
 
         assert len(columns) == len(types), f'Lengths of columns ({len(columns)}) and types ({len(types)}) have to be the same'
 
