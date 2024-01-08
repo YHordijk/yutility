@@ -214,9 +214,9 @@ class ADFJob(Job):
             self.settings.input.adf.solvation.radii = radii
 
     def run(self):
-        plams.init()
+        plams.init(path=self.rundir, folder=self.name, use_existing_folder=True)
         sett = self.settings.as_plams_settings()
-        sett.keep = ['-', 't21.*', 'CreateAtoms.out', '*.dill']
+        sett.keep = ['-', 't21.*', 't12.*', 'CreateAtoms.out', '$JN.dill']
         job = plams.AMSJob(name=self.name, molecule=self.molecule, settings=sett)
         job.run(jobrunner=gr, queue='tc', n=32, J=self.name)
         plams.finish()
@@ -342,6 +342,7 @@ class OrcaJob(Job):
 if __name__ == '__main__':
     with ADFJob() as job:
         job.molecule = r"D:\Users\Yuman\Desktop\PhD\TCutility\test\fixtures\chloromethane_sn2_ts\ts sn2.results\output.xyz"
+        job.name = 'test1'
         job.sbatch(p='tc', ntasks_per_node=15)
 
         job.functional('BM12K')
