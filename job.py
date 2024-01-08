@@ -3,6 +3,9 @@ from TCutility import log, results, formula
 import os
 
 
+gr = plams.GridRunner(parallel=True, maxjobs=0, grid='auto')
+
+
 class Job:
     '''This is the base Job class used to build more advanced classes such as AMSJob and ORCAJob.
     The base class contains an empty DotDict object that holds the settings. It also provides __enter__ and __exit__ methods to make use of context manager syntax.'''
@@ -210,6 +213,11 @@ class ADFJob(Job):
             }
             self.settings.input.adf.solvation.radii = radii
 
+    def run(self):
+        sett = self.settings.as_plams_settings()
+        job = plams.AMSJob(name=self.name, molecule=self.molecule, settings=sett)
+        job.run(jobrunner=gr, queue='tc', n=32, J=self.name)
+
 
 class OrcaJob(Job):
     def __init__(self):
@@ -329,28 +337,13 @@ class OrcaJob(Job):
 
 
 if __name__ == '__main__':
-    from pprint import pprint
-
     with ADFJob() as job:
         job.molecule = r"D:\Users\Yuman\Desktop\PhD\TCutility\test\fixtures\chloromethane_sn2_ts\ts sn2.results\output.xyz"
         job.sbatch(p='tc', ntasks_per_node=15)
 
         job.functional('BM12K')
-        job.charge(10)
+        job.charge(0)
         job.spin_polarization(1)
         job.transition_state()
         job.optimization()
         job.solvent('Ethanol')
-
-    # print(job)
-    # pprint(job.settings)
-
-    with OrcaJob() as job:
-        job.sbatch(p='tc', mem=224_000)
-        job.molecule = r"D:\Users\Yuman\Desktop\PhD\TCutility\test\fixtures\chloromethane_sn2_ts\ts sn2.results\output.xyz"
-        job.settings.main.append('SP')
-        job.settings.main.append('CCSD(T)')
-        job.settings.main.append('cc-pVDZ')
-        job.settings.SCF.MaxIter = 500
-
-        job.write()
