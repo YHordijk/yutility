@@ -24,10 +24,11 @@ sql_to_python_types = {
 
 
 class DBSelectResult:
-    def __init__(self, data, columns, types):
+    def __init__(self, data, columns, types, db_path):
         self.data = data
         self.columns = columns
         self.types = types
+        self.db_path = db_path
 
     def __str__(self):
         ret = f'DBSelectResult({len(self.data)}x{len(self.columns)}, [{", ".join(self.columns)}])'
@@ -72,7 +73,7 @@ class DBSelectResult:
         unqs = set(mask_data)
         dbs = {}
         for unq in unqs:
-            dbs[unq] = DBSelectResult([x for i, x in enumerate(self) if mask_data[i] == unq], self.columns, self.types)
+            dbs[unq] = DBSelectResult([x for i, x in enumerate(self) if mask_data[i] == unq], self.columns, self.types, self.db_path)
         return dbs
 
     def uniques(self, key: str):
@@ -81,7 +82,7 @@ class DBSelectResult:
     def where(self, *masks):
         masks = ensure_list(masks)
 
-        return DBSelectResult([x for i, x in enumerate(self) if all(mask[i] for mask in masks)], self.columns, self.types)
+        return DBSelectResult([x for i, x in enumerate(self) if all(mask[i] for mask in masks)], self.columns, self.types, self.db_path)
 
     def sortby(self, key, reference=None, sortfunc=None):
         sortval = []
@@ -92,7 +93,7 @@ class DBSelectResult:
 
         x = self[key]
         idx = listfunc.argsort(x, sortfunc)
-        return DBSelectResult([self.data[i] for i in idx], self.columns, self.types)
+        return DBSelectResult([self.data[i] for i in idx], self.columns, self.types, self.db_path)
 
     def remove_empty(self, keys='*', mode='all'):
         if keys == '*':
@@ -101,9 +102,9 @@ class DBSelectResult:
 
         key_idxs = [self.columns.index(key) for key in keys]
         if mode == 'all':
-            return DBSelectResult([x for x in self if all(x[kidx] is not None for kidx in key_idxs)], self.columns, self.types)
+            return DBSelectResult([x for x in self if all(x[kidx] is not None for kidx in key_idxs)], self.columns, self.types, self.db_path)
         if mode == 'any':
-            return DBSelectResult([x for x in self if any(x[kidx] is not None for kidx in key_idxs)], self.columns, self.types)
+            return DBSelectResult([x for x in self if any(x[kidx] is not None for kidx in key_idxs)], self.columns, self.types, self.db_path)
 
     def __iter__(self):
         return iter(self.data)
@@ -127,7 +128,7 @@ class DBSelectResult:
     def remove_column(self, keys):
         keys = ensure_list(keys)
         key_idxs = [self.columns.index(key) for key in keys]
-        return DBSelectResult([x for i, x in enumerate(self) if all(x[kidx] is not None for kidx in key_idxs)], self.columns, self.types)
+        return DBSelectResult([x for i, x in enumerate(self) if all(x[kidx] is not None for kidx in key_idxs)], self.columns, self.types, self.db_path)
 
     def pair_plot(self, keys=None, groupkey=None, **kwargs):
         if keys is None:
@@ -190,6 +191,47 @@ class DBSelectResult:
     @property
     def numeric_columns(self):
         return self.column_of_type((int, float))
+
+    def write_excel(self, out_file: str = None):
+        '''
+        Write the data stored in this DBSelectResult object to an Excel file.
+        '''
+        import openpyxl as xl
+        try:
+            from openpyxl.cell import get_column_letter
+        except ImportError:
+            from openpyxl.utils import get_column_letter
+
+        out_file = out_file or self.db_path.replace('.db', '.xlsx')
+        # open a new notebook
+        wb = xl.Workbook()
+
+        sheet = wb.create_sheet('Data')
+
+        # dim_holder will be used to auto-format the columns
+        dim_holder = xl.worksheet.dimensions.DimensionHolder(worksheet=sheet)
+
+        # first write the data
+        for j, data in enumerate(self.data):
+            for k, x in enumerate(data):
+                sheet.cell(row=j+2, column=k+1, value=x)
+
+        # write column headers
+        for i, column in enumerate(self.columns):
+            col_cell = sheet.cell(row=1, column=i+1, value=column)
+            col_cell.font = xl.styles.Font(b=True)
+            col_cell.alignment = xl.styles.Alignment(horizontal="center", vertical="center")
+            col_cell.border = xl.styles.Border(bottom=xl.styles.Side(border_style="thick"))
+            dim_holder.setdefault(get_column_letter(i+1), xl.worksheet.dimensions.ColumnDimension(sheet, min=i+1, max=i+1, bestFit=True))
+
+        # fixing the column widths
+        sheet.column_dimensions = dim_holder
+        sheet.freeze_panes = sheet['A2']
+
+        if 'Sheet' in wb.sheetnames:
+            wb.remove(wb['Sheet'])
+
+        wb.save(out_file)
 
 
 class DataBase:
@@ -357,7 +399,7 @@ class DataBase:
         command = f'SELECT {cols}\n\tFROM {table_name}\n\t{where}'
         self.execute(command)
         result = self.fetchall()
-        return DBSelectResult(result, columns, types)
+        return DBSelectResult(result, columns, types, self.db_path)
 
     def delete_duplicates(self, table_name, columns=None):
         cols = '*'
