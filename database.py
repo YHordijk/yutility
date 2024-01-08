@@ -332,7 +332,7 @@ class DataBase:
         return [name[0] for name in self.fetchall()]
 
     def add_column(self, table_name, column, typ):
-        command = f'ALTER TABLE {table_name} ADD COLUMN {column} {self.parse_type(typ)}'
+        command = f'ALTER TABLE {table_name} ADD COLUMN "{column}" {self.parse_type(typ)}'
         self.execute(command)
 
     def delete_column(self, table_name, column):
