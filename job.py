@@ -236,7 +236,11 @@ class ADFJob(Job):
         job.run(jobrunner=gr, queue='tc', n=32, J=self.name)
         jobdir = plams.config.default_jobmanager.workdir
         plams.finish()
-        os.system(self.get_sbatch_command() + f'-D {jobdir}/{self.name} {self.name}.run')
+        cmd = self.get_sbatch_command() + f'-D {jobdir}/{self.name} {self.name}.run'
+        with open(f'{jobdir}/{self.name}/sbatch_cmd', 'w+') as cmd_file:
+            cmd_file.write('To rerun the calculation, call:\n')
+            cmd_file.write(cmd)
+        os.system(cmd)
 
 
 class OrcaJob(Job):
