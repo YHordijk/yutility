@@ -9,12 +9,13 @@ gr = plams.GridRunner(parallel=True, maxjobs=0, grid='auto')
 class Job:
     '''This is the base Job class used to build more advanced classes such as AMSJob and ORCAJob.
     The base class contains an empty DotDict object that holds the settings. It also provides __enter__ and __exit__ methods to make use of context manager syntax.'''
-    def __init__(self):
+    def __init__(self, test_mode=False):
         self.settings = results.Result()
         self._sbatch = None
         self._molecule = None
         self.name = 'calc'
         self.rundir = 'tmp'
+        self.test_mode = test_mode
 
     def __enter__(self):
         return self
@@ -69,8 +70,8 @@ class Job:
 
 
 class ADFJob(Job):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.functional('LDA')
         self.basis_set('DZ')
         self.single_point()
@@ -245,12 +246,14 @@ class ADFJob(Job):
         with open(f'{jobdir}/{self.name}/sbatch_cmd', 'w+') as cmd_file:
             cmd_file.write('To rerun the calculation, call:\n')
             cmd_file.write(cmd)
-        os.system(cmd)
+
+        if not self.test_mode:
+            os.system(cmd)
 
 
 class OrcaJob(Job):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.settings.main = {'LARGEPRINT'}
         self._charge = 0
         self._multiplicity = 1
