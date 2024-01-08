@@ -215,7 +215,7 @@ class ADFJob(Job):
 
     def run(self):
         os.makedirs(self.rundir, exist_ok=True)
-        plams.init(path=self.rundir, folder=self.name, use_existing_folder=True)
+        plams.init(path=os.path.split(self.rundir)[0], folder=os.path.split(self.rundir)[1], use_existing_folder=True)
         sett = self.settings.as_plams_settings()
         sett.keep = ['-', 't21.*', 't12.*', 'CreateAtoms.out', '$JN.dill']
         job = plams.AMSJob(name=self.name, molecule=self.molecule, settings=sett)
