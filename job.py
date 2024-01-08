@@ -38,6 +38,17 @@ class Job:
     def sbatch(self, **kwargs):
         self._sbatch = results.Result(kwargs)
 
+    def get_sbatch_command(self):
+        self._sbatch.prune()
+        c = 'sbatch '
+        for key, val in self._sbatch.items():
+            key = key.replace('_', '-')
+            if len(key) > 1:
+                c += f'--{key}={val} '
+            else:
+                c += f'-{key} {val} '
+        return c
+
     def run(self):
         NotImplemented
 
