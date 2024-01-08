@@ -229,12 +229,14 @@ class ADFJob(Job):
         self.rundir = os.path.abspath(self.rundir)
         plams.init(path=os.path.split(self.rundir)[0], folder=os.path.split(self.rundir)[1], use_existing_folder=True)
         plams.config.preview = True
-        
+
         sett = self.settings.as_plams_settings()
         sett.keep = ['-', 't21.*', 't12.*', 'CreateAtoms.out', '$JN.dill']
         job = plams.AMSJob(name=self.name, molecule=self.molecule, settings=sett)
         job.run(jobrunner=gr, queue='tc', n=32, J=self.name)
+        jobdir = plams.config.default_jobmanager.workdir
         plams.finish()
+        os.system(self.get_sbatch_command() + f'{jobdir}/{self.name}.run')
 
 
 class OrcaJob(Job):
