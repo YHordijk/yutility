@@ -227,6 +227,11 @@ class ADFJob(Job):
     def run(self):
         os.makedirs(self.rundir, exist_ok=True)
         self.rundir = os.path.abspath(self.rundir)
+
+        if os.path.exists(self.rundir):
+            print(f'Calculation in {self.rundir} already ran.')
+            return
+
         plams.init(path=os.path.split(self.rundir)[0], folder=os.path.split(self.rundir)[1], use_existing_folder=True)
         plams.config.preview = True
 
