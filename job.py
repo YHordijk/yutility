@@ -2,7 +2,7 @@ from scm import plams
 from TCutility import log, results, formula
 import os
 
-
+j = os.path.join
 gr = plams.GridRunner(parallel=True, maxjobs=0, grid='auto')
 
 
@@ -228,8 +228,8 @@ class ADFJob(Job):
         os.makedirs(self.rundir, exist_ok=True)
         self.rundir = os.path.abspath(self.rundir)
 
-        if os.path.exists(self.rundir):
-            print(f'Calculation in {self.rundir} already ran.')
+        if os.path.exists(j(self.rundir, self.name)):
+            print(f'Calculation in {j(self.rundir, self.name)} already ran.')
             return
 
         plams.init(path=os.path.split(self.rundir)[0], folder=os.path.split(self.rundir)[1], use_existing_folder=True)
