@@ -236,7 +236,7 @@ class ADFJob(Job):
         job.run(jobrunner=gr, queue='tc', n=32, J=self.name)
         jobdir = plams.config.default_jobmanager.workdir
         plams.finish()
-        os.system(self.get_sbatch_command() + f'{jobdir}/{self.name}/{self.name}.run')
+        os.system(self.get_sbatch_command() + f'-D {jobdir}/{self.name} {self.name}.run')
 
 
 class OrcaJob(Job):
