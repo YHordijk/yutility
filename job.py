@@ -107,6 +107,11 @@ class ADFJob(Job):
         if val != 0:
             self.settings.input.adf.Unrestricted = 'Yes'
 
+    def multiplicity(self, val):
+        self.settings.input.adf.SpinPolarization = (val - 1)//2
+        if val != 0:
+            self.settings.input.adf.Unrestricted = 'Yes'
+
     def unrestricted(self, val):
         self.settings.input.adf.Unrestricted = 'Yes' if val else 'No'
 
@@ -209,11 +214,56 @@ class ADFJob(Job):
 class OrcaJob(Job):
     def __init__(self):
         super().__init__()
-        self.settings.main = ['LARGEPRINT']
-        self.charge = 0
-        self.multiplicity = 1
+        self.settings.main = {'LARGEPRINT'}
+        self._charge = 0
+        self._multiplicity = 1
         self.memory = None
         self.processes = None
+
+    def __casefold_main(self):
+        self.settings.main = {key.casefold() for key in self.settings.main}
+
+    def __remove_task(self):
+        self.__casefold_main()
+        [self.settings.main.discard(task) for task in ['sp', 'opt', 'tsopt', 'neb-ts']]
+
+    def single_point(self):
+        self.__remove_task()
+        self.settings.main.add('sp')
+
+    def transition_state(self):
+        self.__remove_task()
+        self.settings.main.add('optts')
+
+    def optimization(self):
+        self.__remove_task()
+        self.settings.main.add('opt')
+
+    def vibrations(self, enable=True, numerical=False):
+        self.__casefold_main()
+        self.settings.main.discard('numfreq')
+        self.settings.main.discard('freq')
+        if enable:
+            if numerical:
+                self.settings.main.append('numfreq')
+            else:
+                self.settings.main.append('freq')
+
+    def charge(self, val):
+        self._charge = val
+
+    def spin_polarization(self, val):
+        self._multiplicity = 2 * val + 1
+
+    def multiplicity(self, val):
+        self._multiplicity = val
+
+    # def solvent(self, name=None, eps=None, rad=None, model='COSMO'):
+    #     assert model in ['CPCM', 'SMD', 'COSMO'], f'Solvation model must be one of [CPCM, SMD, COSMO], not {model}.'
+
+    #     self.__casefold_main()
+    #     self.settings.main.discard('cpcm')
+    #     self.settings.main.discard('smd')
 
     def get_memory_usage(self):
         mem = self.memory or self._sbatch.mem or None
@@ -229,43 +279,50 @@ class OrcaJob(Job):
 
         return mem, ntasks
 
+    @property
+    def input(self):
+        # set the correct memory usage and processes
+        natoms = len(self.molecule)
+        mem, ntasks = self.get_memory_usage()
+        if ntasks and mem:
+            ntasks = min(ntasks, (natoms - 1) * 3)
+            self.settings.PAL.nprocs = ntasks
+            self.settings.maxcore = int(mem / ntasks * 0.75)
+        else:
+            log.warn('MaxCore and nprocs not specified. Please use SBATCH settings or set job.processes and job.memory.')
+
+        ret = ''
+        for key in self.settings.main:
+            ret += f'!{key}\n'
+        ret += '\n'
+
+        for option, block in self.settings.items():
+            if option == 'main':
+                continue
+
+            if isinstance(block, results.Result):
+                ret += f'%{option}\n'
+
+                for key, val in block.items():
+                    ret += f'    {key} {val}\n'
+
+                ret += 'END\n\n'
+            else:
+                ret += f'%{option} {block}\n'
+
+        ret += '\n'
+
+        ret += f'* xyz {self._charge} {self._multiplicity}\n'
+        for atom in self.molecule:
+            ret += f'    {atom.symbol:2} {atom.x: >13f} {atom.y: >13f} {atom.z: >13f}\n'
+        ret += '*\n'
+
+        return ret
+
     def write(self):
         os.makedirs(os.path.join(self.rundir, self.name), exist_ok=True)
         with open(os.path.join(self.rundir, self.name, 'ORCA.inp'), 'w+') as inp:
-            # set the correct memory usage and processes
-            natoms = len(self.molecule)
-            mem, ntasks = self.get_memory_usage()
-            if ntasks and mem:
-                ntasks = min(ntasks, (natoms - 1) * 3)
-                self.settings.PAL.nprocs = ntasks
-                self.settings.maxcore = int(mem / ntasks * 0.75)
-            else:
-                log.warn('MaxCore and nprocs not specified. Please use SBATCH settings or set job.processes and job.memory.')
-
-            for key in self.settings.main:
-                inp.write(f'!{key}\n')
-            inp.write('\n')
-
-            for option, block in self.settings.items():
-                if option == 'main':
-                    continue
-
-                if isinstance(block, results.Result):
-                    inp.write(f'%{option}\n')
-
-                    for key, val in block.items():
-                        inp.write(f'    {key} {val}\n')
-
-                    inp.write('END\n\n')
-                else:
-                    inp.write(f'%{option} {block}\n')
-
-            inp.write('\n')
-
-            inp.write(f'* xyz {self.charge} {self.multiplicity}\n')
-            for atom in self.molecule:
-                inp.write(f'    {atom.symbol:2} {atom.x: >13f} {atom.y: >13f} {atom.z: >13f}\n')
-            inp.write('*\n')
+            inp.write(self.input)
 
         with open(os.path.join(self.rundir, self.name, f'{self.name}.sh'), 'w+') as run:
             run.write(repr(self))
