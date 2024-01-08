@@ -214,6 +214,7 @@ class ADFJob(Job):
             self.settings.input.adf.solvation.radii = radii
 
     def run(self):
+        os.makedirs(self.rundir, exist_ok=True)
         plams.init(path=self.rundir, folder=self.name, use_existing_folder=True)
         sett = self.settings.as_plams_settings()
         sett.keep = ['-', 't21.*', 't12.*', 'CreateAtoms.out', '$JN.dill']
