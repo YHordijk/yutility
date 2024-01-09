@@ -191,6 +191,9 @@ class ADFJob(Job):
         log.warn(f'XC-functional {functional} not defined. Defaulting to using LibXC.')
         self.settings.input.adf.XC.LibXC = functional
 
+    def relativity(self, level='Scalar'):
+        self.settings.input.adf.relativity.level = level
+
     def solvent(self, name=None, eps=None, rad=None, use_klamt=False):
         self.settings.input.adf.Solvation.Surf = 'Delley'
         solv_string = ''
