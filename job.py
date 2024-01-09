@@ -253,7 +253,7 @@ class ADFJob(Job):
 
         elif isinstance(mol, str):
             self._molecule = None
-            self.settings.input.system.GeometryFile = mol
+            self.settings.input.ams.system.GeometryFile = mol
             log.info(f'Could not find molecule in file {mol}, will load it from the filename, so it should exist when the job starts.')
 
     def run(self):
