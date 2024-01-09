@@ -288,6 +288,8 @@ class ADFJob(Job):
         sq = {d: i for d, i in zip(*sq)}
         self.slurm_job_id = sq[self.slurm_rundir]
 
+    def dependency(self, otherjob):
+        self.sbatch(dependency=f'afterok:{otherjob.slurm_job_id}')
 
 class OrcaJob(Job):
     def __init__(self, *args, **kwargs):
