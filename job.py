@@ -137,6 +137,11 @@ class ADFJob(Job):
             '-D': 'DEFAULT'
         }
 
+        custom_disp_params = {
+            'OLYP-D3(BJ)': [1, 2, 3, 4],
+        }
+
+        dispersion = None
         # look through all possible dispersion options
         for name, adf_name in disp_map.items():
             # check if the user requests the dispersion correction
@@ -146,6 +151,7 @@ class ADFJob(Job):
                 # remove the correction from the functional name
                 # we would use str.removesuffix, but that is only since python 3.9, so we just use slicing instead
                 functional = functional[:-len(name)]
+                dispersion = name[1:]
 
         # handle the actual functional part
         functional_map = {
@@ -162,19 +168,30 @@ class ADFJob(Job):
         for category, functionals in functional_map.items():
             if functional in functionals:
                 self.settings.input.adf.XC[category] = functional
-                return
+                break
+        else:
+            # define some preset functionals
+            if functional == 'BMK':
+                self.settings.input.adf.XC.LibXC = 'HYB_MGGA_X_BMK GGA_C_BMK'
 
-        # define some preset functionals
-        if functional == 'BMK':
-            self.settings.input.adf.XC.LibXC = 'HYB_MGGA_X_BMK GGA_C_BMK'
-            return
+            # LDA is the standard functional
+            elif functional == 'LDA':
+                pass
 
-        # LDA is the standard functional
-        if functional == 'LDA':
-            return
+            else:
+                log.warn(f'XC-functional {functional} not defined. Defaulting to using LibXC.')
+                self.settings.input.adf.XC.LibXC = functional
 
-        log.warn(f'XC-functional {functional} not defined. Defaulting to using LibXC.')
-        self.settings.input.adf.XC.LibXC = functional
+        # some XC functionals do not have their dispersion parameters defined in ADF, so we have to give the correct parameters manually
+        # if functional == 'OLYP' and dispersion == 'D3(BJ)':
+        #     self.settings.input.adf.XC.Dispersion = 'GRIMME3 BJDAMP PAR1=... PAR2=... PAR3=... PAR4=...' # define the correct parameters here
+        if self._functional in custom_disp_params:
+            if dispersion == 'D3':
+                p1, p2, p3, p4 = custom_disp_params[self._functional]
+                self.settings.input.adf.XC.Dispersion = f'GRIMME3 PAR1={p1} PAR2={p2} PAR3={p3} PAR4={p4}'
+            if dispersion == 'D3(BJ)':
+                p1, p2, p3, p4 = custom_disp_params[self._functional]
+                self.settings.input.adf.XC.Dispersion = f'GRIMME3 BJDAMP PAR1={p1} PAR2={p2} PAR3={p3} PAR4={p4}'
 
     def solvent(self, name=None, eps=None, rad=None, use_klamt=False):
         self.settings.input.adf.Solvation.Surf = 'Delley'
@@ -332,25 +349,27 @@ if __name__ == '__main__':
     from pprint import pprint
 
     with ADFJob() as job:
-        job.molecule = r"D:\Users\Yuman\Desktop\PhD\TCutility\test\fixtures\chloromethane_sn2_ts\ts sn2.results\output.xyz"
+        # job.molecule = r"D:\Users\Yuman\Desktop\PhD\TCutility\test\fixtures\chloromethane_sn2_ts\ts sn2.results\output.xyz"
         job.sbatch(p='tc', ntasks_per_node=15)
 
-        job.functional('BM12K')
+        job.functional('OLYP-D4(EEQ)')
         job.charge(10)
         job.spin_polarization(1)
         job.transition_state()
         job.optimization()
         job.solvent('Ethanol')
 
+        pprint(job.settings)
+
     # print(job)
     # pprint(job.settings)
 
-    with OrcaJob() as job:
-        job.sbatch(p='tc', mem=224_000)
-        job.molecule = r"D:\Users\Yuman\Desktop\PhD\TCutility\test\fixtures\chloromethane_sn2_ts\ts sn2.results\output.xyz"
-        job.settings.main.append('SP')
-        job.settings.main.append('CCSD(T)')
-        job.settings.main.append('cc-pVDZ')
-        job.settings.SCF.MaxIter = 500
+    # with OrcaJob() as job:
+    #     job.sbatch(p='tc', mem=224_000)
+    #     job.molecule = r"D:\Users\Yuman\Desktop\PhD\TCutility\test\fixtures\chloromethane_sn2_ts\ts sn2.results\output.xyz"
+    #     job.settings.main.append('SP')
+    #     job.settings.main.append('CCSD(T)')
+    #     job.settings.main.append('cc-pVDZ')
+    #     job.settings.SCF.MaxIter = 500
 
-        job.write()
+    #     job.write()
