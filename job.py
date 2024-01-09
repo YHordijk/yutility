@@ -252,7 +252,7 @@ class ADFJob(Job):
             log.info(f'Succesfully loaded molecule {formula.molecule(self._molecule)} from path.')
 
         elif isinstance(mol, str):
-            self._molecule = mol
+            self._molecule = None
             self.settings.input.system.GeometryFile = mol
             log.info(f'Could not find molecule in file {mol}, will load it from the filename, so it should exist when the job starts.')
 
@@ -269,11 +269,7 @@ class ADFJob(Job):
 
         sett = self.settings.as_plams_settings()
         sett.keep = ['-', 't21.*', 't12.*', 'CreateAtoms.out', '$JN.dill']
-
-        if isinstance(self._molecule, plams.Molecule):
-            job = plams.AMSJob(name=self.name, molecule=self.molecule, settings=sett)
-        else:
-            job = plams.AMSJob(name=self.name, settings=sett)
+        job = plams.AMSJob(name=self.name, molecule=self._molecule, settings=sett)
         job.run(jobrunner=gr, queue='tc', n=32, J=self.name)
         jobdir = plams.config.default_jobmanager.workdir
         self.slurm_rundir = f'{jobdir}/{self.name}'
