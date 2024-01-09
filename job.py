@@ -260,10 +260,6 @@ class ADFJob(Job):
         jobdir = plams.config.default_jobmanager.workdir
         self.slurm_rundir = f'{jobdir}/{self.name}'
 
-        sq = squeue()
-        sq = {d: i for d, i in zip(*sq)}
-        self.slurm_job_id = sq[self.slurm_rundir]
-
         plams.finish()
         cmd = self.get_sbatch_command() + f'-D {jobdir}/{self.name} {self.name}.run'
         with open(f'{jobdir}/{self.name}/sbatch_cmd', 'w+') as cmd_file:
@@ -273,6 +269,9 @@ class ADFJob(Job):
         if not self.test_mode:
             os.system(cmd)
 
+        sq = squeue()
+        sq = {d: i for d, i in zip(*sq)}
+        self.slurm_job_id = sq[self.slurm_rundir]
 
 
 class OrcaJob(Job):
