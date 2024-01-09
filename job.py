@@ -2,16 +2,20 @@ from scm import plams
 from TCutility import log, results, formula
 import os
 
+j = os.path.join
+gr = plams.GridRunner(parallel=True, maxjobs=0, grid='auto')
+
 
 class Job:
     '''This is the base Job class used to build more advanced classes such as AMSJob and ORCAJob.
     The base class contains an empty DotDict object that holds the settings. It also provides __enter__ and __exit__ methods to make use of context manager syntax.'''
-    def __init__(self):
+    def __init__(self, test_mode=False):
         self.settings = results.Result()
         self._sbatch = None
         self._molecule = None
         self.name = 'calc'
         self.rundir = 'tmp'
+        self.test_mode = test_mode
 
     def __enter__(self):
         return self
@@ -35,6 +39,17 @@ class Job:
     def sbatch(self, **kwargs):
         self._sbatch = results.Result(kwargs)
 
+    def get_sbatch_command(self):
+        self._sbatch.prune()
+        c = 'sbatch '
+        for key, val in self._sbatch.items():
+            key = key.replace('_', '-')
+            if len(key) > 1:
+                c += f'--{key}={val} '
+            else:
+                c += f'-{key} {val} '
+        return c
+
     def run(self):
         NotImplemented
 
@@ -55,8 +70,8 @@ class Job:
 
 
 class ADFJob(Job):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.functional('LDA')
         self.basis_set('DZ')
         self.single_point()
@@ -137,11 +152,6 @@ class ADFJob(Job):
             '-D': 'DEFAULT'
         }
 
-        custom_disp_params = {
-            'OLYP-D3(BJ)': [1, 2, 3, 4],
-        }
-
-        dispersion = None
         # look through all possible dispersion options
         for name, adf_name in disp_map.items():
             # check if the user requests the dispersion correction
@@ -151,7 +161,6 @@ class ADFJob(Job):
                 # remove the correction from the functional name
                 # we would use str.removesuffix, but that is only since python 3.9, so we just use slicing instead
                 functional = functional[:-len(name)]
-                dispersion = name[1:]
 
         # handle the actual functional part
         functional_map = {
@@ -168,30 +177,19 @@ class ADFJob(Job):
         for category, functionals in functional_map.items():
             if functional in functionals:
                 self.settings.input.adf.XC[category] = functional
-                break
-        else:
-            # define some preset functionals
-            if functional == 'BMK':
-                self.settings.input.adf.XC.LibXC = 'HYB_MGGA_X_BMK GGA_C_BMK'
+                return
 
-            # LDA is the standard functional
-            elif functional == 'LDA':
-                pass
+        # define some preset functionals
+        if functional == 'BMK':
+            self.settings.input.adf.XC.LibXC = 'HYB_MGGA_X_BMK GGA_C_BMK'
+            return
 
-            else:
-                log.warn(f'XC-functional {functional} not defined. Defaulting to using LibXC.')
-                self.settings.input.adf.XC.LibXC = functional
+        # LDA is the standard functional
+        if functional == 'LDA':
+            return
 
-        # some XC functionals do not have their dispersion parameters defined in ADF, so we have to give the correct parameters manually
-        # if functional == 'OLYP' and dispersion == 'D3(BJ)':
-        #     self.settings.input.adf.XC.Dispersion = 'GRIMME3 BJDAMP PAR1=... PAR2=... PAR3=... PAR4=...' # define the correct parameters here
-        if self._functional in custom_disp_params:
-            if dispersion == 'D3':
-                p1, p2, p3, p4 = custom_disp_params[self._functional]
-                self.settings.input.adf.XC.Dispersion = f'GRIMME3 PAR1={p1} PAR2={p2} PAR3={p3} PAR4={p4}'
-            if dispersion == 'D3(BJ)':
-                p1, p2, p3, p4 = custom_disp_params[self._functional]
-                self.settings.input.adf.XC.Dispersion = f'GRIMME3 BJDAMP PAR1={p1} PAR2={p2} PAR3={p3} PAR4={p4}'
+        log.warn(f'XC-functional {functional} not defined. Defaulting to using LibXC.')
+        self.settings.input.adf.XC.LibXC = functional
 
     def solvent(self, name=None, eps=None, rad=None, use_klamt=False):
         self.settings.input.adf.Solvation.Surf = 'Delley'
@@ -227,10 +225,35 @@ class ADFJob(Job):
             }
             self.settings.input.adf.solvation.radii = radii
 
+    def run(self):
+        os.makedirs(self.rundir, exist_ok=True)
+        self.rundir = os.path.abspath(self.rundir)
+
+        if os.path.exists(j(self.rundir, self.name)):
+            print(f'Calculation in {j(self.rundir, self.name)} already ran.')
+            return
+
+        plams.init(path=os.path.split(self.rundir)[0], folder=os.path.split(self.rundir)[1], use_existing_folder=True)
+        plams.config.preview = True
+
+        sett = self.settings.as_plams_settings()
+        sett.keep = ['-', 't21.*', 't12.*', 'CreateAtoms.out', '$JN.dill']
+        job = plams.AMSJob(name=self.name, molecule=self.molecule, settings=sett)
+        job.run(jobrunner=gr, queue='tc', n=32, J=self.name)
+        jobdir = plams.config.default_jobmanager.workdir
+        plams.finish()
+        cmd = self.get_sbatch_command() + f'-D {jobdir}/{self.name} {self.name}.run'
+        with open(f'{jobdir}/{self.name}/sbatch_cmd', 'w+') as cmd_file:
+            cmd_file.write('To rerun the calculation, call:\n')
+            cmd_file.write(cmd)
+
+        if not self.test_mode:
+            os.system(cmd)
+
 
 class OrcaJob(Job):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.settings.main = {'LARGEPRINT'}
         self._charge = 0
         self._multiplicity = 1
@@ -346,30 +369,14 @@ class OrcaJob(Job):
 
 
 if __name__ == '__main__':
-    from pprint import pprint
-
     with ADFJob() as job:
-        # job.molecule = r"D:\Users\Yuman\Desktop\PhD\TCutility\test\fixtures\chloromethane_sn2_ts\ts sn2.results\output.xyz"
+        job.molecule = r"D:\Users\Yuman\Desktop\PhD\TCutility\test\fixtures\chloromethane_sn2_ts\ts sn2.results\output.xyz"
+        job.name = 'test1'
         job.sbatch(p='tc', ntasks_per_node=15)
 
-        job.functional('OLYP-D4(EEQ)')
-        job.charge(10)
+        job.functional('BM12K')
+        job.charge(0)
         job.spin_polarization(1)
         job.transition_state()
         job.optimization()
         job.solvent('Ethanol')
-
-        pprint(job.settings)
-
-    # print(job)
-    # pprint(job.settings)
-
-    # with OrcaJob() as job:
-    #     job.sbatch(p='tc', mem=224_000)
-    #     job.molecule = r"D:\Users\Yuman\Desktop\PhD\TCutility\test\fixtures\chloromethane_sn2_ts\ts sn2.results\output.xyz"
-    #     job.settings.main.append('SP')
-    #     job.settings.main.append('CCSD(T)')
-    #     job.settings.main.append('cc-pVDZ')
-    #     job.settings.SCF.MaxIter = 500
-
-    #     job.write()
