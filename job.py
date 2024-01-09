@@ -82,11 +82,6 @@ class Job:
     #         self._molecule = plams.Molecule(mol)
     #         log.info(f'Succesfully loaded molecule {formula.molecule(self._molecule)} from path.')
 
-
-    def molecule(self, mol):
-        self._molecule = mol
-
-
 class ADFJob(Job):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -246,6 +241,21 @@ class ADFJob(Job):
             }
             self.settings.input.adf.solvation.radii = radii
 
+    def molecule(self, mol):
+        assert isinstance(mol, (str, plams.Molecule)), f'Argument should be a plams.Molecule object or a path, not {type(mol)}'
+
+        if isinstance(mol, plams.Molecule):
+            self._molecule = mol
+
+        elif isinstance(mol, str) and os.path.exists(mol):
+            self._molecule = plams.Molecule(mol)
+            log.info(f'Succesfully loaded molecule {formula.molecule(self._molecule)} from path.')
+
+        elif isinstance(mol, str):
+            self._molecule = mol
+            self.settings.input.system.GeometryFile = mol
+            log.info(f'Could not find molecule in file {mol}, will load it from the filename, so it should exist when the job starts.')
+
     def run(self):
         os.makedirs(self.rundir, exist_ok=True)
         self.rundir = os.path.abspath(self.rundir)
@@ -259,7 +269,11 @@ class ADFJob(Job):
 
         sett = self.settings.as_plams_settings()
         sett.keep = ['-', 't21.*', 't12.*', 'CreateAtoms.out', '$JN.dill']
-        job = plams.AMSJob(name=self.name, molecule=self.molecule, settings=sett)
+
+        if isinstance(self._molecule, plams.Molecule):
+            job = plams.AMSJob(name=self.name, molecule=self.molecule, settings=sett)
+        else:
+            job = plams.AMSJob(name=self.name, settings=sett)
         job.run(jobrunner=gr, queue='tc', n=32, J=self.name)
         jobdir = plams.config.default_jobmanager.workdir
         self.slurm_rundir = f'{jobdir}/{self.name}'
