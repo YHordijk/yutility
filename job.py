@@ -67,20 +67,24 @@ class Job:
     def run(self):
         NotImplemented
 
-    @property
-    def molecule(self):
-        return self._molecule
+    # @property
+    # def molecule(self):
+    #     return self._molecule
 
-    @molecule.setter
-    def molecule(self, mol):
-        assert isinstance(mol, (str, plams.Molecule)), f'Argument should be a plams.Molecule object or a path, not {type(mol)}'
+    # @molecule.setter
+    # def molecule(self, mol):
+    #     assert isinstance(mol, (str, plams.Molecule)), f'Argument should be a plams.Molecule object or a path, not {type(mol)}'
         
-        if isinstance(mol, plams.Molecule):
-            self._molecule = mol
+    #     if isinstance(mol, plams.Molecule):
+    #         self._molecule = mol
 
-        elif isinstance(mol, str):
-            self._molecule = plams.Molecule(mol)
-            log.info(f'Succesfully loaded molecule {formula.molecule(self._molecule)} from path.')
+    #     elif isinstance(mol, str):
+    #         self._molecule = plams.Molecule(mol)
+    #         log.info(f'Succesfully loaded molecule {formula.molecule(self._molecule)} from path.')
+
+
+    def molecule(self, mol):
+        self._molecule = mol
 
 
 class ADFJob(Job):
