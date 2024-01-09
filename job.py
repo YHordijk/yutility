@@ -51,7 +51,7 @@ class Job:
         return s
 
     def sbatch(self, **kwargs):
-        self._sbatch = results.Result(kwargs)
+        self._sbatch.update(kwargs)
 
     def get_sbatch_command(self):
         self._sbatch.prune()
