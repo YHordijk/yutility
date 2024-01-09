@@ -1,5 +1,6 @@
 from scm import plams
 from TCutility import log, results, formula
+import subprocess as sp
 import os
 
 j = os.path.join
