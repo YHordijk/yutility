@@ -25,7 +25,7 @@ class Job:
     The base class contains an empty DotDict object that holds the settings. It also provides __enter__ and __exit__ methods to make use of context manager syntax.'''
     def __init__(self, test_mode=False):
         self.settings = results.Result()
-        self._sbatch = None
+        self._sbatch = results.Result()
         self._molecule = None
         self.name = 'calc'
         self.rundir = 'tmp'
