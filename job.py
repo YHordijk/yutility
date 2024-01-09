@@ -6,6 +6,19 @@ j = os.path.join
 gr = plams.GridRunner(parallel=True, maxjobs=0, grid='auto')
 
 
+def squeue():
+    try:
+        output = sp.check_output(['squeue', '--me', '--format', "%Z %A"]).decode()
+        output = [line for line in output.splitlines()[1:] if line.strip()]
+        slurm_dirs, slurm_ids = [line.split()[0] for line in output], [line.split()[1] for line in output]
+    except:
+        raise
+        slurm_dirs = []
+        slurm_ids = []
+
+    return slurm_dirs, slurm_ids
+
+
 class Job:
     '''This is the base Job class used to build more advanced classes such as AMSJob and ORCAJob.
     The base class contains an empty DotDict object that holds the settings. It also provides __enter__ and __exit__ methods to make use of context manager syntax.'''
@@ -244,6 +257,8 @@ class ADFJob(Job):
         job = plams.AMSJob(name=self.name, molecule=self.molecule, settings=sett)
         job.run(jobrunner=gr, queue='tc', n=32, J=self.name)
         jobdir = plams.config.default_jobmanager.workdir
+        self.slurm_rundir = f'{jobdir}/{self.name}'
+        self.slurm_job_id = squeue()[self.slurm_rundir]
         plams.finish()
         cmd = self.get_sbatch_command() + f'-D {jobdir}/{self.name} {self.name}.run'
         with open(f'{jobdir}/{self.name}/sbatch_cmd', 'w+') as cmd_file:
@@ -252,6 +267,7 @@ class ADFJob(Job):
 
         if not self.test_mode:
             os.system(cmd)
+
 
 
 class OrcaJob(Job):
