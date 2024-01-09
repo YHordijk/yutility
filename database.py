@@ -214,7 +214,7 @@ class DBSelectResult:
         # first write the data
         for j, data in enumerate(self.data):
             for k, x in enumerate(data):
-                if '\n' in x:
+                if isinstance(x, str) and '\n' in x:
                     s = ''
                     for line in x.splitlines():
                         s += f"""
