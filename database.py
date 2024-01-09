@@ -214,7 +214,8 @@ class DBSelectResult:
         # first write the data
         for j, data in enumerate(self.data):
             for k, x in enumerate(data):
-                sheet.cell(row=j+2, column=k+1, value=x)
+                cell = sheet.cell(row=j+2, column=k+1, value=x)
+                cell.alignment = xl.styles.Alignment(wrapText=True)
 
         # write column headers
         for i, column in enumerate(self.columns):
