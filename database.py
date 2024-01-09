@@ -214,7 +214,7 @@ class DBSelectResult:
         # first write the data
         for j, data in enumerate(self.data):
             for k, x in enumerate(data):
-                if isinstance(x, str):
+                if isinstance(x, str):  # string valued data are raw strings by default, so we convert them into normal strings here
                     x = x.encode().decode('unicode-escape')
                 cell = sheet.cell(row=j+2, column=k+1, value=x)
 
