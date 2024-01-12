@@ -4,7 +4,7 @@ import subprocess as sp
 import os
 
 j = os.path.join
-gr = plams.GridRunner(parallel=True, maxjobs=0, grid='auto')
+# gr = plams.GridRunner(parallel=True, maxjobs=0, grid='auto')
 
 
 def squeue():
@@ -270,13 +270,15 @@ class ADFJob(Job):
         sett = self.settings.as_plams_settings()
         sett.keep = ['-', 't21.*', 't12.*', 'CreateAtoms.out', '$JN.dill']
         job = plams.AMSJob(name=self.name, molecule=self._molecule, settings=sett)
-        job.run(jobrunner=gr, queue='tc', n=32, J=self.name)
+        job.run()
+
         jobdir = plams.config.default_jobmanager.workdir
         self.slurm_rundir = f'{jobdir}/{self.name}'
         self.output_mol_path = f'{self.slurm_rundir}/output.xyz'
 
         plams.finish()
         cmd = self.get_sbatch_command() + f'-D {jobdir}/{self.name} {self.name}.run'
+        print(cmd)
         with open(f'{jobdir}/{self.name}/sbatch_cmd', 'w+') as cmd_file:
             cmd_file.write('To rerun the calculation, call:\n')
             cmd_file.write(cmd)
@@ -290,6 +292,96 @@ class ADFJob(Job):
 
     def dependency(self, otherjob):
         self.sbatch(dependency=f'afterok:{otherjob.slurm_job_id}')
+
+
+class ADFFragmentJob(ADFJob):
+    def __init__(self, *args, **kwargs):
+        self.childjobs = {}
+        super().__init__(*args, **kwargs)
+
+    def add_fragment(self, mol, name=None):
+        if isinstance(mol, list) and isinstance(mol[0], plams.Atom):
+            mol_ = plams.Molecule()
+            [mol_.add_atom(atom) for atom in mol]
+            mol = mol_
+
+        name = name or f'fragment{len(self.childjobs) + 1}'
+        self.childjobs[name] = ADFJob()
+        self.childjobs[name].molecule(mol)
+        setattr(self, name, self.childjobs[name])
+
+    def run(self):
+        # obtain some system wide properties of the molecules
+        charge = sum([child.settings.input.ams.System.charge or 0 for child in self.childjobs.values()])
+        unrestricted = any([(child.settings.input.adf.Unrestricted or 'no').lower() == 'yes' for child in self.childjobs.values()])
+        spinpol = sum([child.settings.input.adf.SpinPolarization or 0 for child in self.childjobs.values()])
+        [child.unrestricted(unrestricted) for child in self.childjobs.values()]
+
+        # we have to update
+        sett = self.settings.as_plams_settings()
+        child_setts = {name: child.settings.as_plams_settings() for name, child in self.childjobs.items()}
+        [child_sett.update(sett) for child_sett in child_setts.values()]
+        # all children should have the same unrestricted value
+
+        self.charge(charge)
+        self.spin_polarization(spinpol)
+        self.unrestricted(unrestricted)
+
+        sett = self.settings.as_plams_settings()
+
+        print(sett)
+        print(child_setts)
+        for childname, child in self.childjobs.items():
+            child.run()
+            self.dependency(child)
+            self.settings.adf.fragments[childname] = j(child.slurm_rundir, 'adf.rkf')
+
+        super().run()
+# ####
+#         os.makedirs(self.rundir, exist_ok=True)
+#         self.rundir = os.path.abspath(self.rundir)
+
+#         if os.path.exists(j(self.rundir, self.name)):
+#             print(f'Calculation in {j(self.rundir, self.name)} already ran.')
+#             return
+
+#         plams.init(path=os.path.split(self.rundir)[0], folder=os.path.split(self.rundir)[1], use_existing_folder=True)
+#         plams.config.preview = True
+
+#         sett = self.settings.as_plams_settings()
+#         sett.keep = ['-', 't21.*', 't12.*', 'CreateAtoms.out', '$JN.dill']
+#         job = plams.AMSJob(name=self.name, molecule=self._molecule, settings=sett)
+#         job.run(jobrunner=gr, queue='tc', n=32, J=self.name)
+#         jobdir = plams.config.default_jobmanager.workdir
+#         self.slurm_rundir = f'{jobdir}/{self.name}'
+#         self.output_mol_path = f'{self.slurm_rundir}/output.xyz'
+
+#         plams.finish()
+#         cmd = self.get_sbatch_command() + f'-D {jobdir}/{self.name} {self.name}.run'
+#         with open(f'{jobdir}/{self.name}/sbatch_cmd', 'w+') as cmd_file:
+#             cmd_file.write('To rerun the calculation, call:\n')
+#             cmd_file.write(cmd)
+
+#         if not self.test_mode:
+#             os.system(cmd)
+
+#         sq = squeue()
+#         sq = {d: i for d, i in zip(*sq)}
+#         self.slurm_job_id = sq[self.slurm_rundir]
+
+    def functional(self, *args, **kwargs):
+        [child.functional(*args, **kwargs) for child in self.childjobs.values()]
+        super().functional(*args, **kwargs)
+
+    def basis_set(self, *args, **kwargs):
+        [child.basis_set(*args, **kwargs) for child in self.childjobs.values()]
+        super().basis_set(*args, **kwargs)
+
+    def unrestricted(self, val):
+        self.settings.input.adf.Unrestricted = 'Yes' if val else 'No'
+        self.settings.input.adf.UnrestrictedFragments = 'Yes' if val else 'No'
+        [child.unrestricted(val) for child in self.childjobs.values()]
+
 
 class OrcaJob(Job):
     def __init__(self, *args, **kwargs):
@@ -409,14 +501,28 @@ class OrcaJob(Job):
 
 
 if __name__ == '__main__':
-    with ADFJob() as job:
-        job.molecule = r"D:\Users\Yuman\Desktop\PhD\TCutility\test\fixtures\chloromethane_sn2_ts\ts sn2.results\output.xyz"
-        job.name = 'test1'
-        job.sbatch(p='tc', ntasks_per_node=15)
+    # with ADFJob() as job:
+    #     job.molecule = r"D:\Users\Yuman\Desktop\PhD\TCutility\test\fixtures\chloromethane_sn2_ts\ts sn2.results\output.xyz"
+    #     job.name = 'test1'
+    #     job.sbatch(p='tc', ntasks_per_node=15)
 
-        job.functional('BM12K')
-        job.charge(0)
-        job.spin_polarization(1)
-        job.transition_state()
-        job.optimization()
-        job.solvent('Ethanol')
+    #     job.functional('BM12K')
+    #     job.charge(0)
+    #     job.spin_polarization(1)
+    #     job.transition_state()
+    #     job.optimization()
+    #     job.solvent('Ethanol')
+
+    mol = plams.Molecule('./test/xyz/NH3BH3.xyz')
+    with ADFFragmentJob() as job:
+        job.sbatch(p='tc', ntasks_per_node=15)
+        job.functional('BLYP')
+        job.basis_set('TZ2P')
+        job.add_fragment(mol.atoms[:4], 'Donor')
+        job.add_fragment(mol.atoms[4:], 'Acceptor')
+        job.Donor.charge(-1)
+        job.Acceptor.spin_polarization(1)
+        # print(job.settings)
+
+    # print(job.settings.as_plams_settings())
+    # [print(j.settings.as_plams_settings()) for j in job.childjobs.values()]
