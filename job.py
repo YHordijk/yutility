@@ -494,28 +494,48 @@ class OrcaJob(Job):
 
 
 if __name__ == '__main__':
-    # with ADFJob() as job:
-    #     job.molecule = r"D:\Users\Yuman\Desktop\PhD\TCutility\test\fixtures\chloromethane_sn2_ts\ts sn2.results\output.xyz"
-    #     job.name = 'test1'
-    #     job.sbatch(p='tc', ntasks_per_node=15)
-
-    #     job.functional('BM12K')
-    #     job.charge(0)
-    #     job.spin_polarization(1)
-    #     job.transition_state()
-    #     job.optimization()
-    #     job.solvent('Ethanol')
-
-    mol = plams.Molecule('./test/xyz/NH3BH3.xyz')
     with ADFFragmentJob() as job:
+        mol = plams.Molecule('./test/xyz/NH3BH3.xyz')
         job.rundir = 'tmp/NH3BH3'
         job.sbatch(p='tc', ntasks_per_node=15)
-        job.functional('BLYP-D3(BJ)')
+        job.functional('SCAN)')
         job.basis_set('TZ2P')
         job.add_fragment(mol.atoms[:4], 'Donor')
         job.add_fragment(mol.atoms[4:], 'Acceptor')
 
-        # print(job.settings)
 
-    # print(job.settings.as_plams_settings())
-    # [print(j.settings.as_plams_settings()) for j in job.childjobs.values()]
+    with ADFFragmentJob() as job:
+        mol = plams.Molecule('./test/xyz/SN2_TS.xyz')
+        job.add_fragment(mol.atoms[:7], 'EtCl')
+        job.add_fragment(mol.atoms[7:], 'Phenolate')
+        job.Phenolate.charge(-1)
+
+        job.rundir = 'tmp/SN2'
+        job.sbatch(p='tc', ntasks_per_node=15)
+        job.functional('OLYP')
+        job.basis_set('DZP')
+
+
+    with ADFFragmentJob() as job:
+        mol = plams.Molecule('./test/xyz/radadd.xyz')
+        job.add_fragment(mol.atoms[:14], 'Substrate')
+        job.add_fragment(mol.atoms[14:], 'Radical')
+        job.Radical.spin_polarization(1)
+
+        job.rundir = 'tmp/RA'
+        job.sbatch(p='tc', ntasks_per_node=15)
+        job.functional('BLYP-D3(BJ)')
+        job.basis_set('TZ2P')
+
+
+    with ADFFragmentJob() as job:
+        mol = plams.Molecule('./test/xyz/NaCl.xyz')
+        job.add_fragment(mol.atoms[:14], 'Na')
+        job.add_fragment(mol.atoms[14:], 'Cl')
+        job.Na.charge(1)
+        job.Cl.charge(-1)
+
+        job.rundir = 'tmp/NaCl'
+        job.sbatch(p='tc', ntasks_per_node=15)
+        job.functional('M06-2X')
+        job.basis_set('TZ2P')
