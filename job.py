@@ -498,7 +498,7 @@ if __name__ == '__main__':
         mol = plams.Molecule('./test/xyz/NH3BH3.xyz')
         job.rundir = 'tmp/NH3BH3'
         job.sbatch(p='tc', ntasks_per_node=15)
-        job.functional('SCAN)')
+        job.functional('r2SCAN')
         job.basis_set('TZ2P')
         job.add_fragment(mol.atoms[:4], 'Donor')
         job.add_fragment(mol.atoms[4:], 'Acceptor')
