@@ -51,7 +51,11 @@ class Job:
         return s
 
     def sbatch(self, **kwargs):
-        self._sbatch.update(kwargs)
+        for key, value in kwargs.items():
+            if key == 'dependency' and 'dependency' in self._sbatch:
+                value = self._sbatch['dependency'] + ',' + value
+
+            self._sbatch[key] = value
 
     def get_sbatch_command(self):
         self._sbatch.prune()
@@ -310,6 +314,11 @@ class ADFFragmentJob(ADFJob):
         self.childjobs[name].molecule(mol)
         setattr(self, name, self.childjobs[name])
 
+        if self._molecule is None:
+            self._molecule = mol
+        else:
+            self._molecule = self._molecule + mol
+
     def run(self):
         # obtain some system wide properties of the molecules
         charge = sum([child.settings.input.ams.System.charge or 0 for child in self.childjobs.values()])
@@ -321,20 +330,32 @@ class ADFFragmentJob(ADFJob):
         sett = self.settings.as_plams_settings()
         child_setts = {name: child.settings.as_plams_settings() for name, child in self.childjobs.items()}
         [child_sett.update(sett) for child_sett in child_setts.values()]
+        [child.sbatch(**self._sbatch) for child in self.childjobs.values()]
         # all children should have the same unrestricted value
-
+        
         self.charge(charge)
         self.spin_polarization(spinpol)
         self.unrestricted(unrestricted)
 
         sett = self.settings.as_plams_settings()
 
-        print(sett)
-        print(child_setts)
         for childname, child in self.childjobs.items():
+            # child._sbatch = self._sbatch
+            child.name = f'SP_{childname}'
+            child.rundir = self.rundir
+            child.settings = results.Result(child_setts[childname])
             child.run()
             self.dependency(child)
-            self.settings.adf.fragments[childname] = j(child.slurm_rundir, 'adf.rkf')
+            self.settings.input.adf.fragments[childname] = j(child.slurm_rundir, 'adf.rkf')
+        self.settings.input.ams.system.atoms = []
+        depend_atoms = []
+        for atom in self._molecule:
+            for childname, child in self.childjobs.items():
+                for childatom in child._molecule:
+                    if (atom.symbol, atom.x, atom.y, atom.z) == (childatom.symbol, childatom.x, childatom.y, childatom.z):
+                        depend_atoms.append(f'{atom.symbol} {atom.x} {atom.y} {atom.z} region={childname} adf.f={childname}')
+        self.settings.input.ams.system.atoms = '\n' + '\n'.join(depend_atoms) + '\nEnd'
+        self._molecule = None
 
         super().run()
 # ####
@@ -379,7 +400,10 @@ class ADFFragmentJob(ADFJob):
 
     def unrestricted(self, val):
         self.settings.input.adf.Unrestricted = 'Yes' if val else 'No'
-        self.settings.input.adf.UnrestrictedFragments = 'Yes' if val else 'No'
+        if not val:
+            self.settings.input.adf.pop('UnrestrictedFragments', None)
+        else:
+            self.settings.input.adf.UnrestrictedFragments = 'Yes'
         [child.unrestricted(val) for child in self.childjobs.values()]
 
 
@@ -515,13 +539,14 @@ if __name__ == '__main__':
 
     mol = plams.Molecule('./test/xyz/NH3BH3.xyz')
     with ADFFragmentJob() as job:
+        job.rundir = 'tmp/NH3BH3'
+        job.name = 'complex'
         job.sbatch(p='tc', ntasks_per_node=15)
-        job.functional('BLYP')
+        job.functional('BLYP-D3(BJ)')
         job.basis_set('TZ2P')
         job.add_fragment(mol.atoms[:4], 'Donor')
         job.add_fragment(mol.atoms[4:], 'Acceptor')
-        job.Donor.charge(-1)
-        job.Acceptor.spin_polarization(1)
+
         # print(job.settings)
 
     # print(job.settings.as_plams_settings())
