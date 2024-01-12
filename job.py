@@ -248,13 +248,13 @@ class ADFJob(Job):
 
     def run(self):
         os.makedirs(self.rundir, exist_ok=True)
-        self.rundir = os.path.abspath(self.rundir)
+        _rundir = os.path.abspath(self.rundir)
 
-        if os.path.exists(j(self.rundir, self.name)):
-            print(f'Calculation in {j(self.rundir, self.name)} already ran.')
+        if os.path.exists(j(_rundir, self.name)):
+            print(f'Calculation in {j(_rundir, self.name)} already ran.')
             return
 
-        plams.init(path=os.path.split(self.rundir)[0], folder=os.path.split(self.rundir)[1], use_existing_folder=True)
+        plams.init(path=os.path.split(_rundir)[0], folder=os.path.split(_rundir)[1], use_existing_folder=True)
         plams.config.preview = True
 
         sett = self.settings.as_plams_settings()
@@ -267,7 +267,7 @@ class ADFJob(Job):
         self.output_mol_path = f'{self.slurm_rundir}/output.xyz'
 
         plams.finish()
-        cmd = self.get_sbatch_command() + f'-D {jobdir}/{self.name} -J "{jobdir}/{self.name}" {self.name}.run'
+        cmd = self.get_sbatch_command() + f'-D {jobdir}/{self.name} -J "{self.rundir}/{self.name}" {self.name}.run'
         # print(cmd)
         with open(f'{jobdir}/{self.name}/sbatch_cmd', 'w+') as cmd_file:
             cmd_file.write('To rerun the calculation, call:\n')
