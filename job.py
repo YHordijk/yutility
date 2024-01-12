@@ -267,8 +267,8 @@ class ADFJob(Job):
         self.output_mol_path = f'{self.slurm_rundir}/output.xyz'
 
         plams.finish()
-        cmd = self.get_sbatch_command() + f'-D {jobdir}/{self.name} {self.name}.run'
-        print(cmd)
+        cmd = self.get_sbatch_command() + f'-D {jobdir}/{self.name} -J "{jobdir}/{self.name}" {self.name}.run'
+        # print(cmd)
         with open(f'{jobdir}/{self.name}/sbatch_cmd', 'w+') as cmd_file:
             cmd_file.write('To rerun the calculation, call:\n')
             cmd_file.write(cmd)
