@@ -324,71 +324,53 @@ class ADFFragmentJob(ADFJob):
         charge = sum([child.settings.input.ams.System.charge or 0 for child in self.childjobs.values()])
         unrestricted = any([(child.settings.input.adf.Unrestricted or 'no').lower() == 'yes' for child in self.childjobs.values()])
         spinpol = sum([child.settings.input.adf.SpinPolarization or 0 for child in self.childjobs.values()])
+
+        # this job and all its children should have the same value for unrestricted
         [child.unrestricted(unrestricted) for child in self.childjobs.values()]
 
-        # we have to update
-        sett = self.settings.as_plams_settings()
+        # we now update the child settings with the parent settings
+        # this is because we have to propagate settings such as functionals, basis sets etc.
+        sett = self.settings.as_plams_settings()  # first create a plams settings object
+        # same for the children
         child_setts = {name: child.settings.as_plams_settings() for name, child in self.childjobs.items()}
+        # update the children using the parent settings
         [child_sett.update(sett) for child_sett in child_setts.values()]
+        # same for sbatch settings
         [child.sbatch(**self._sbatch) for child in self.childjobs.values()]
-        # all children should have the same unrestricted value
-        
+
+        # now set the charge, spinpol, unrestricted for the parent 
         self.charge(charge)
         self.spin_polarization(spinpol)
         self.unrestricted(unrestricted)
 
-        sett = self.settings.as_plams_settings()
-
+        # now we are going to run each child job
         for childname, child in self.childjobs.items():
-            # child._sbatch = self._sbatch
+            # the child name will be prepended with SP showing that it is the singlepoint calculation
             child.name = f'SP_{childname}'
             child.rundir = self.rundir
+            # recast the plams.Settings object into a Result object as that is what run expects
             child.settings = results.Result(child_setts[childname])
             child.run()
             self.dependency(child)
+            # add the path to the child adf.rkf file as a dependency to the parent job
             self.settings.input.adf.fragments[childname] = j(child.slurm_rundir, 'adf.rkf')
-        self.settings.input.ams.system.atoms = []
+
+        # in the parent job the atoms should have the region and adf.f defined as options
         depend_atoms = []
+        # for each atom we check which child it came from
         for atom in self._molecule:
             for childname, child in self.childjobs.items():
                 for childatom in child._molecule:
+                    # we check by looking at the symbol and coordinates of the atom
                     if (atom.symbol, atom.x, atom.y, atom.z) == (childatom.symbol, childatom.x, childatom.y, childatom.z):
-                        depend_atoms.append(f'{atom.symbol} {atom.x} {atom.y} {atom.z} region={childname} adf.f={childname}')
-        self.settings.input.ams.system.atoms = '\n' + '\n'.join(depend_atoms) + '\nEnd'
+                        # now write the symbol and coords as a string with the correct suffix
+                        depend_atoms.append(f'\t\t{atom.symbol} {atom.x} {atom.y} {atom.z} region={childname} adf.f={childname}')
+        # write the atoms block as a string with new line characters
+        self.settings.input.ams.system.atoms = ('\n' + '\n'.join(depend_atoms) + '\n\tEnd').expandtabs(4)
+        # set the _molecule to None, otherwise it will overwrite the atoms block
         self._molecule = None
-
+        # run this job
         super().run()
-# ####
-#         os.makedirs(self.rundir, exist_ok=True)
-#         self.rundir = os.path.abspath(self.rundir)
-
-#         if os.path.exists(j(self.rundir, self.name)):
-#             print(f'Calculation in {j(self.rundir, self.name)} already ran.')
-#             return
-
-#         plams.init(path=os.path.split(self.rundir)[0], folder=os.path.split(self.rundir)[1], use_existing_folder=True)
-#         plams.config.preview = True
-
-#         sett = self.settings.as_plams_settings()
-#         sett.keep = ['-', 't21.*', 't12.*', 'CreateAtoms.out', '$JN.dill']
-#         job = plams.AMSJob(name=self.name, molecule=self._molecule, settings=sett)
-#         job.run(jobrunner=gr, queue='tc', n=32, J=self.name)
-#         jobdir = plams.config.default_jobmanager.workdir
-#         self.slurm_rundir = f'{jobdir}/{self.name}'
-#         self.output_mol_path = f'{self.slurm_rundir}/output.xyz'
-
-#         plams.finish()
-#         cmd = self.get_sbatch_command() + f'-D {jobdir}/{self.name} {self.name}.run'
-#         with open(f'{jobdir}/{self.name}/sbatch_cmd', 'w+') as cmd_file:
-#             cmd_file.write('To rerun the calculation, call:\n')
-#             cmd_file.write(cmd)
-
-#         if not self.test_mode:
-#             os.system(cmd)
-
-#         sq = squeue()
-#         sq = {d: i for d, i in zip(*sq)}
-#         self.slurm_job_id = sq[self.slurm_rundir]
 
     def functional(self, *args, **kwargs):
         [child.functional(*args, **kwargs) for child in self.childjobs.values()]
