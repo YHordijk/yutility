@@ -530,8 +530,8 @@ if __name__ == '__main__':
 
     with ADFFragmentJob() as job:
         mol = plams.Molecule('./test/xyz/NaCl.xyz')
-        job.add_fragment(mol.atoms[:14], 'Na')
-        job.add_fragment(mol.atoms[14:], 'Cl')
+        job.add_fragment([mol.atoms[0]], 'Na')
+        job.add_fragment([mol.atoms[1]], 'Cl')
         job.Na.charge(1)
         job.Cl.charge(-1)
 
