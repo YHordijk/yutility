@@ -71,20 +71,6 @@ class Job:
     def run(self):
         NotImplemented
 
-    # @property
-    # def molecule(self):
-    #     return self._molecule
-
-    # @molecule.setter
-    # def molecule(self, mol):
-    #     assert isinstance(mol, (str, plams.Molecule)), f'Argument should be a plams.Molecule object or a path, not {type(mol)}'
-        
-    #     if isinstance(mol, plams.Molecule):
-    #         self._molecule = mol
-
-    #     elif isinstance(mol, str):
-    #         self._molecule = plams.Molecule(mol)
-    #         log.info(f'Succesfully loaded molecule {formula.molecule(self._molecule)} from path.')
 
 class ADFJob(Job):
     def __init__(self, *args, **kwargs):
@@ -302,6 +288,7 @@ class ADFFragmentJob(ADFJob):
     def __init__(self, *args, **kwargs):
         self.childjobs = {}
         super().__init__(*args, **kwargs)
+        self.name = 'complex'
 
     def add_fragment(self, mol, name=None):
         if isinstance(mol, list) and isinstance(mol[0], plams.Atom):
@@ -522,7 +509,6 @@ if __name__ == '__main__':
     mol = plams.Molecule('./test/xyz/NH3BH3.xyz')
     with ADFFragmentJob() as job:
         job.rundir = 'tmp/NH3BH3'
-        job.name = 'complex'
         job.sbatch(p='tc', ntasks_per_node=15)
         job.functional('BLYP-D3(BJ)')
         job.basis_set('TZ2P')
