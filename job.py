@@ -506,8 +506,8 @@ if __name__ == '__main__':
 
     with ADFFragmentJob() as job:
         mol = plams.Molecule('./test/xyz/SN2_TS.xyz')
-        job.add_fragment(mol.atoms[:7], 'EtCl')
-        job.add_fragment(mol.atoms[7:], 'Phenolate')
+        job.add_fragment(mol.atoms[:8], 'EtCl')
+        job.add_fragment(mol.atoms[8:], 'Phenolate')
         job.Phenolate.charge(-1)
 
         job.rundir = 'tmp/SN2'
@@ -518,8 +518,8 @@ if __name__ == '__main__':
 
     with ADFFragmentJob() as job:
         mol = plams.Molecule('./test/xyz/radadd.xyz')
-        job.add_fragment(mol.atoms[:14], 'Substrate')
-        job.add_fragment(mol.atoms[14:], 'Radical')
+        job.add_fragment(mol.atoms[:15], 'Substrate')
+        job.add_fragment(mol.atoms[15:], 'Radical')
         job.Radical.spin_polarization(1)
 
         job.rundir = 'tmp/RA'
@@ -530,8 +530,8 @@ if __name__ == '__main__':
 
     with ADFFragmentJob() as job:
         mol = plams.Molecule('./test/xyz/NaCl.xyz')
-        job.add_fragment([mol.atoms[0]], 'Na')
-        job.add_fragment([mol.atoms[1]], 'Cl')
+        job.add_fragment([mol.atoms[0]], 'Cl')
+        job.add_fragment([mol.atoms[1]], 'Na')
         job.Na.charge(1)
         job.Cl.charge(-1)
 
