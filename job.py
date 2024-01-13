@@ -283,7 +283,7 @@ class ADFJob(Job):
             runf.write('#!/bin/sh\n\n')
             runf.write(job.get_runscript())
 
-        cmd = self.get_sbatch_command() + f'-D {self.workdir} -J {self.rundir}/{self.name} {self.name}.run'
+        cmd = self.get_sbatch_command() + f'-D {self.workdir} -J {self.rundir}/{self.name} -o ams.out {self.name}.run'
         with open(j(self.workdir, 'submit'), 'w+') as cmd_file:
             cmd_file.write(cmd)
 
