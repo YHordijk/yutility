@@ -390,6 +390,11 @@ class ADFFragmentJob(ADFJob):
         self._molecule = None
         # run this job
         super().run()
+
+        # also do the calculation with SCF cycles set to 1
+        self.settings.input.adf.SCF.Iterations = 1
+        self.name = self.name + '_SCF1'
+        super().run()
         
 
 class OrcaJob(Job):
