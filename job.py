@@ -35,7 +35,14 @@ class Job:
         return self
 
     def __exit__(self, *args):
+        if self.can_skip():
+            log.info(f'Calculation {j(self.rundir, self.name)} already finished.')
+            return
         self.run()
+
+    def can_skip(self):
+        res = results.read(j(self.rundir, self.name))
+        return not res.status.fatal
 
     def __repr__(self):
         s = '#!/bin/bash\n'
@@ -263,9 +270,9 @@ class ADFJob(Job):
         os.makedirs(self.rundir, exist_ok=True)
         _rundir = os.path.abspath(self.rundir)
 
-        if os.path.exists(j(_rundir, self.name)):
-            print(f'Calculation in {j(_rundir, self.name)} already ran.')
-            return
+        # if os.path.exists(j(_rundir, self.name)):
+        #     print(f'Calculation in {j(_rundir, self.name)} already ran.')
+        #     return
 
         plams.init(path=os.path.split(_rundir)[0], folder=os.path.split(_rundir)[1], use_existing_folder=True)
         plams.config.preview = True
@@ -275,15 +282,10 @@ class ADFJob(Job):
         job = plams.AMSJob(name=self.name, molecule=self._molecule, settings=sett)
         job.run()
 
-        jobdir = plams.config.default_jobmanager.workdir
-        self.workdir = f'{jobdir}/{self.name}'
-        self.output_mol_path = f'{self.workdir}/output.xyz'
-
         plams.finish()
-        cmd = self.get_sbatch_command() + f'-D {jobdir}/{self.name} -J "{self.rundir}/{self.name}" {self.name}.run'
+        cmd = self.get_sbatch_command() + f'-D {self.workdir} -J "{self.rundir}/{self.name}" {self.name}.run'
         # print(cmd)
-        with open(f'{jobdir}/{self.name}/sbatch_cmd', 'w+') as cmd_file:
-            cmd_file.write('To rerun the calculation, call:\n')
+        with open(j(self.workdir, 'submit'), 'w+') as cmd_file:
             cmd_file.write(cmd)
 
         if not self.test_mode:
@@ -294,7 +296,16 @@ class ADFJob(Job):
         self.slurm_job_id = sq[self.workdir]
 
     def dependency(self, otherjob):
-        self.sbatch(dependency=f'afterok:{otherjob.slurm_job_id}')
+        if hasattr(otherjob, 'slurm_job_id'):
+            self.sbatch(dependency=f'afterok:{otherjob.slurm_job_id}')
+
+    @property
+    def workdir(self):
+        return j(os.path.abspath(self.rundir), self.name)
+
+    @property
+    def output_mol_path(self):
+        return j(self.workdir, 'output.xyz')
 
 
 class ADFFragmentJob(ADFJob):
@@ -559,7 +570,7 @@ if __name__ == '__main__':
 
     with ADFJob() as sp_job:
         sp_job.dependency(opt_job)  # this job will only run when opt_job finishes
-        sp_job.molecule(j(opt_job.workdir, 'output.xyz'))  # we can take the output.xyz from the opt_job's workdir
+        sp_job.molecule(opt_job.output_mol_path)  # we can take the output.xyz from the opt_job's workdir
         sp_job.charge(-1)
 
         sp_job.rundir = 'tmp/SN2'
