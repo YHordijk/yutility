@@ -391,11 +391,13 @@ class ADFFragmentJob(ADFJob):
                 continue
 
             log.flow(log.Emojis.good + f' Submitting', ['straight', 'end'])
-            log.flow()
             # recast the plams.Settings object into a Result object as that is what run expects
             child.settings = results.Result(child_setts[childname])
             child.run()
             self.dependency(child)
+
+            log.flow(f'SlurmID: {child.slurm_job_id}', ['straight', 'straight' 'end'])
+            log.flow()
 
         # in the parent job the atoms should have the region and adf.f defined as options
         depend_atoms = []
@@ -414,6 +416,8 @@ class ADFFragmentJob(ADFJob):
         # run this job
         log.flow(log.Emojis.good + f' Submitting parent job', ['split'])
         super().run()
+        log.flow(f'SlurmID: {self.slurm_job_id}', ['straight' 'end'])
+
 
         # also do the calculation with SCF cycles set to 1
         self.settings.input.adf.SCF.Iterations = 1
@@ -424,6 +428,7 @@ class ADFFragmentJob(ADFJob):
         log.flow(log.Emojis.good + f' Submitting extra job with 1 SCF cycle', ['split'])
 
         super().run()
+        log.flow(f'SlurmID: {self.slurm_job_id}', ['straight' 'end'])
         log.flow()
         log.flow(log.Emojis.finish + ' Done, bye!', ['startinv'])
         
