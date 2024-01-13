@@ -1,4 +1,4 @@
-print('[WARN]: yutility.dictfunc will be deprecated')
+# print('[WARN]: yutility.dictfunc will be deprecated')
 
 
 class DotDict(dict):
