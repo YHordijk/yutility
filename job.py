@@ -493,6 +493,15 @@ class OrcaJob(Job):
 
 
 if __name__ == '__main__':
+    with ADFJob() as job:
+        job.molecule('./test/xyz/NH3BH3.xyz')
+        job.rundir = 'tmp/NH3BH3'
+        job.name = 'GeometryOpt'
+        job.sbatch(p='tc', ntasks_per_node=15)
+        job.optimization()
+        job.functional('r2SCAN')
+        job.basis_set('TZ2P')
+
     with ADFFragmentJob() as job:
         mol = plams.Molecule('./test/xyz/NH3BH3.xyz')
         job.rundir = 'tmp/NH3BH3'
@@ -501,7 +510,6 @@ if __name__ == '__main__':
         job.basis_set('TZ2P')
         job.add_fragment(mol.atoms[:4], 'Donor')
         job.add_fragment(mol.atoms[4:], 'Acceptor')
-
 
     with ADFFragmentJob() as job:
         mol = plams.Molecule('./test/xyz/SN2_TS.xyz')
@@ -514,7 +522,6 @@ if __name__ == '__main__':
         job.functional('OLYP')
         job.basis_set('DZP')
 
-
     with ADFFragmentJob() as job:
         mol = plams.Molecule('./test/xyz/radadd.xyz')
         job.add_fragment(mol.atoms[:15], 'Substrate')
@@ -526,11 +533,10 @@ if __name__ == '__main__':
         job.functional('BLYP-D3(BJ)')
         job.basis_set('TZ2P')
 
-
     with ADFFragmentJob() as job:
         mol = plams.Molecule('./test/xyz/NaCl.xyz')
-        job.add_fragment([mol.atoms[0]], 'Cl')
-        job.add_fragment([mol.atoms[1]], 'Na')
+        job.add_fragment(mol.atoms[0], 'Cl')
+        job.add_fragment(mol.atoms[1], 'Na')
         job.Na.charge(1)
         job.Cl.charge(-1)
 
@@ -538,3 +544,27 @@ if __name__ == '__main__':
         job.sbatch(p='tc', ntasks_per_node=15)
         job.functional('M06-2X')
         job.basis_set('TZ2P')
+
+
+    with ADFJob() as opt_job:
+        opt_job.molecule('./test/xyz/SN2_TS.xyz')
+        opt_job.charge(-1)
+
+        opt_job.rundir = 'tmp/SN2'
+        opt_job.name = 'TS_OPT'
+        opt_job.sbatch(p='tc', ntasks_per_node=15)
+        opt_job.functional('OLYP')
+        opt_job.basis_set('DZP')
+        opt_job.optimization()
+
+    with ADFJob() as sp_job:
+        sp_job.dependency(opt_job)  # this job will only run when opt_job finishes
+        sp_job.molecule(j(opt_job.workdir, 'output.xyz'))  # we can take the output.xyz from the opt_job's workdir
+        sp_job.charge(-1)
+
+        sp_job.rundir = 'tmp/SN2'
+        sp_job.name = 'SP_M062X'
+        sp_job.sbatch(p='tc', ntasks_per_node=15)
+        # now we can use a higher level of theory
+        sp_job.functional('M06-2X')
+        sp_job.basis_set('TZ2P')
