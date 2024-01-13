@@ -35,13 +35,12 @@ class Job:
 
     def __exit__(self, *args):
         if self.can_skip():
-            log.info(f'Calculation {j(self.rundir, self.name)} already finished.')
+            log.info(f'Skipping calculation {j(self.rundir, self.name)}, it is already finished or currently pending or running.')
             return
         self.run()
 
     def can_skip(self):
         res = results.read(j(self.rundir, self.name))
-        print(res.status)
         return not res.status.fatal
 
     def __repr__(self):
@@ -363,7 +362,7 @@ class ADFFragmentJob(ADFJob):
 
             # add the path to the child adf.rkf file as a dependency to the parent job
             self.settings.input.adf.fragments[childname] = j(child.workdir, 'adf.rkf')
-            
+
             if child.can_skip():
                 log.info(f'Child calculation {j(child.rundir, child.name)} already finished.')
                 continue
