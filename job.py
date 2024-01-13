@@ -315,7 +315,7 @@ class ADFFragmentJob(ADFJob):
         setattr(self, name, self.childjobs[name])
 
         if self._molecule is None:
-            self._molecule = mol
+            self._molecule = self.childjobs[name]._molecule.copy()
         else:
             self._molecule = self._molecule + mol
 
