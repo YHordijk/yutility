@@ -110,6 +110,7 @@ class ADFJob(Job):
         self._task = 'GO'
         self.settings.input.ams.pop('TransitionStateSearch', None)
         self.settings.input.ams.task = 'GeometryOptimization'
+        self.vibrations(True)
 
     def vibrations(self, enable=True, PESPointCharacter=True, NegativeFrequenciesTolerance=-5, ReScanFreqRange='-10000000.0 10.0'):
         self.settings.input.ams.Properties.NormalModes = 'Yes' if enable else 'No'
