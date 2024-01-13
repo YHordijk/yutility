@@ -266,11 +266,6 @@ class ADFJob(Job):
 
     def run(self):
         os.makedirs(self.rundir, exist_ok=True)
-        # _rundir = os.path.abspath(self.rundir)
-
-        # with log.NoPrint():
-        # plams.init(path=os.path.split(_rundir)[0], quiet=True, folder=os.path.split(_rundir)[1], use_existing_folder=True)
-        # plams.config.preview = True
 
         sett = self.settings.as_plams_settings()
         sett.keep = ['-', 't21.*', 't12.*', 'CreateAtoms.out', '$JN.dill']
@@ -284,15 +279,13 @@ class ADFJob(Job):
             runf.write('#!/bin/sh\n\n')
             runf.write(job.get_runscript())
 
-        # plams.finish()
-
         cmd = self.get_sbatch_command() + f'-D {self.workdir} -J "{self.rundir}/{self.name}" {self.name}.run'
-        # print(cmd)
         with open(j(self.workdir, 'submit'), 'w+') as cmd_file:
             cmd_file.write(cmd)
 
         if not self.test_mode:
-            os.system(cmd)
+            with open(os.devnull, 'wb') as devnull:
+                sp.run([cmd], stdout=devnull, stderr=sp.STDOUT)
 
         sq = squeue()
         sq = {d: i for d, i in zip(*sq)}
