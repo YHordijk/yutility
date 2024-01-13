@@ -566,8 +566,9 @@ if __name__ == '__main__':
 
         job.rundir = 'tmp/NaCl'
         job.sbatch(p='tc', ntasks_per_node=15)
-        job.functional('M06-2X')
+        job.functional('BLYP-D3(BJ)')
         job.basis_set('TZ2P')
+        job.quality('Good')
 
     with ADFJob() as opt_job:
         opt_job.molecule('./test/xyz/SN2_TS.xyz')
