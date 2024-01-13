@@ -95,12 +95,12 @@ class ADFJob(Job):
 
     def single_point(self):
         self._task = 'SP'
-        self.settings.input.ams.pop('TransitionStateSearch', None)
         self.settings.input.ams.task = 'SinglePoint'
 
     def transition_state(self, distances=None, angles=None, coordinates=None, dihedrals=None, ModeToFollow=1):
         self._task = 'TS'
         self.settings.input.ams.task = 'TransitionStateSearch'
+
         self.settings.input.ams.TransitionStateSearch.ReactionCoordinate.ModeToFollow = ModeToFollow
 
         if distances is not None:
@@ -112,9 +112,12 @@ class ADFJob(Job):
         if dihedrals is not None:
             self.settings.input.ams.TransitionStateSearch.ReactionCoordinate.Dihedral = [" ".join([str(x) for x in dihedral]) for dihedral in dihedrals]
 
+        # for TS searches we quickly calculate the hessian with DFTB
+        self.settings.input.ams.GeometryOptimization.InitialHessian.Type = 'CalculateWithFasterEngine'
+        self.vibrations(True)  # also calculate vibrations by default
+
     def optimization(self):
         self._task = 'GO'
-        self.settings.input.ams.pop('TransitionStateSearch', None)
         self.settings.input.ams.task = 'GeometryOptimization'
         self.vibrations(True)
 
