@@ -232,9 +232,13 @@ class ADFJob(Job):
             }
             self.settings.input.adf.solvation.radii = radii
 
-    def molecule(self, mol):
-        assert isinstance(mol, (str, plams.Molecule)), f'Argument should be a plams.Molecule object or a path, not {type(mol)}'
+    def molecule(self, mol: Union[str, plams.Molecule, plams.Atom, list[plams.Atom]]):
+        '''
+        Read a molecule in various formats.
 
+        Args:
+            mol: the molecule to read, can be a path (str). If the path exists already we read it. If it does not exist yet, it will be read in later. mol can also be a plams.Molecule object or a single or a list of plams.Atom objects.
+        '''
         if isinstance(mol, plams.Molecule):
             self._molecule = mol
 
