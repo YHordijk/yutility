@@ -276,8 +276,8 @@ class ADFJob(Job):
         job.run()
 
         jobdir = plams.config.default_jobmanager.workdir
-        self.slurm_rundir = f'{jobdir}/{self.name}'
-        self.output_mol_path = f'{self.slurm_rundir}/output.xyz'
+        self.workdir = f'{jobdir}/{self.name}'
+        self.output_mol_path = f'{self.workdir}/output.xyz'
 
         plams.finish()
         cmd = self.get_sbatch_command() + f'-D {jobdir}/{self.name} -J "{self.rundir}/{self.name}" {self.name}.run'
