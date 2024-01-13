@@ -285,7 +285,7 @@ class ADFJob(Job):
 
         if not self.test_mode:
             with open(os.devnull, 'wb') as devnull:
-                sp.run([cmd], stdout=devnull, stderr=sp.STDOUT)
+                sp.run(cmd.split(), stdout=devnull, stderr=sp.STDOUT)
 
         sq = squeue()
         sq = {d: i for d, i in zip(*sq)}
