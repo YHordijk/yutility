@@ -2,9 +2,9 @@ from scm import plams
 from TCutility import log, results, formula
 import subprocess as sp
 import os
+from typing import Union
 
 j = os.path.join
-# gr = plams.GridRunner(parallel=True, maxjobs=0, grid='auto')
 
 
 def squeue():
