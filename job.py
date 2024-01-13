@@ -83,7 +83,6 @@ class ADFJob(Job):
         self.functional('LDA')
         self.basis_set('DZ')
         self.single_point()
-        self.settings.input.adf.print = 'FMat'  # by default print the fock matrix for each SCF cycle
 
     def __str__(self):
         return f'{self._task}({self._functional}/{self._basis_set}), running in {os.path.join(os.path.abspath(self.rundir), self.name)}'
@@ -393,6 +392,9 @@ class ADFFragmentJob(ADFJob):
 
         # also do the calculation with SCF cycles set to 1
         self.settings.input.adf.SCF.Iterations = 1
+        self.settings.input.adf.print = 'FMatSFO'  # by default print the fock matrix for each SCF cycle
+        self.settings.input.adf.AllPoints = 'Yes'
+        self.settings.input.adf.FullFock = 'Yes'
         self.name = self.name + '_SCF1'
         super().run()
         
