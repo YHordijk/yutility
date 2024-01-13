@@ -317,7 +317,7 @@ class ADFFragmentJob(ADFJob):
         if self._molecule is None:
             self._molecule = self.childjobs[name]._molecule.copy()
         else:
-            self._molecule = self._molecule + mol
+            self._molecule = self._molecule + self.childjobs[name]._molecule.copy()
 
     def run(self):
         # obtain some system wide properties of the molecules
