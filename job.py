@@ -396,7 +396,7 @@ class ADFFragmentJob(ADFJob):
             child.run()
             self.dependency(child)
 
-            log.flow(f'SlurmID: {child.slurm_job_id}', ['straight', 'straight' 'end'])
+            log.flow(f'SlurmID: {child.slurm_job_id}', ['straight', 'straight', 'end'])
             log.flow()
 
         # in the parent job the atoms should have the region and adf.f defined as options
@@ -416,7 +416,7 @@ class ADFFragmentJob(ADFJob):
         # run this job
         log.flow(log.Emojis.good + f' Submitting parent job', ['split'])
         super().run()
-        log.flow(f'SlurmID: {self.slurm_job_id}', ['straight' 'end'])
+        log.flow(f'SlurmID: {self.slurm_job_id}', ['straight', 'end'])
 
 
         # also do the calculation with SCF cycles set to 1
@@ -428,7 +428,7 @@ class ADFFragmentJob(ADFJob):
         log.flow(log.Emojis.good + f' Submitting extra job with 1 SCF cycle', ['split'])
 
         super().run()
-        log.flow(f'SlurmID: {self.slurm_job_id}', ['straight' 'end'])
+        log.flow(f'SlurmID: {self.slurm_job_id}', ['straight', 'end'])
         log.flow()
         log.flow(log.Emojis.finish + ' Done, bye!', ['startinv'])
         
