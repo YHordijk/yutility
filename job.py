@@ -251,6 +251,14 @@ class ADFJob(Job):
             self.settings.input.ams.system.GeometryFile = mol
             log.info(f'Could not find molecule in file {mol}, will load it from the filename, so it should exist when the job starts.')
 
+        elif isinstance(mol, list) and isinstance(mol[0], plams.Atom):
+            self._molecule = plams.Molecule()
+            [self._molecule.add_atom(atom) for atom in mol]
+
+        elif isinstance(mol, plams.Atom):
+            self._molecule = plams.Molecule()
+            self._molecule.add_atom(mol)
+
     def run(self):
         os.makedirs(self.rundir, exist_ok=True)
         _rundir = os.path.abspath(self.rundir)
