@@ -360,6 +360,10 @@ class ADFFragmentJob(ADFJob):
             # the child name will be prepended with SP showing that it is the singlepoint calculation
             child.name = f'SP_{childname}'
             child.rundir = self.rundir
+
+            # add the path to the child adf.rkf file as a dependency to the parent job
+            self.settings.input.adf.fragments[childname] = j(child.workdir, 'adf.rkf')
+            
             if child.can_skip():
                 log.info(f'Child calculation {j(child.rundir, child.name)} already finished.')
                 continue
@@ -368,8 +372,6 @@ class ADFFragmentJob(ADFJob):
             child.settings = results.Result(child_setts[childname])
             child.run()
             self.dependency(child)
-            # add the path to the child adf.rkf file as a dependency to the parent job
-            self.settings.input.adf.fragments[childname] = j(child.workdir, 'adf.rkf')
 
         # in the parent job the atoms should have the region and adf.f defined as options
         depend_atoms = []
