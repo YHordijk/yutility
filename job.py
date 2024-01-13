@@ -329,6 +329,8 @@ class ADFFragmentJob(ADFJob):
         self.charge(charge)
         self.spin_polarization(spinpol)
         self.unrestricted(unrestricted)
+        if unrestricted:
+            self.settings.input.adf.UnrestrictedFragments = 'Yes'
 
         # now we are going to run each child job
         for childname, child in self.childjobs.items():
@@ -358,23 +360,7 @@ class ADFFragmentJob(ADFJob):
         self._molecule = None
         # run this job
         super().run()
-
-    def functional(self, *args, **kwargs):
-        [child.functional(*args, **kwargs) for child in self.childjobs.values()]
-        super().functional(*args, **kwargs)
-
-    def basis_set(self, *args, **kwargs):
-        [child.basis_set(*args, **kwargs) for child in self.childjobs.values()]
-        super().basis_set(*args, **kwargs)
-
-    def unrestricted(self, val):
-        self.settings.input.adf.Unrestricted = 'Yes' if val else 'No'
-        if not val:
-            self.settings.input.adf.pop('UnrestrictedFragments', None)
-        else:
-            self.settings.input.adf.UnrestrictedFragments = 'Yes'
-        [child.unrestricted(val) for child in self.childjobs.values()]
-
+        
 
 class OrcaJob(Job):
     def __init__(self, *args, **kwargs):
