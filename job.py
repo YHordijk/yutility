@@ -83,6 +83,7 @@ class ADFJob(Job):
         self.functional('LDA')
         self.basis_set('DZ')
         self.single_point()
+        self.solvent('vacuum')
 
     def __str__(self):
         return f'{self._task}({self._functional}/{self._basis_set}), running in {os.path.join(os.path.abspath(self.rundir), self.name)}'
@@ -207,6 +208,15 @@ class ADFJob(Job):
         self.settings.input.adf.relativity.level = level
 
     def solvent(self, name=None, eps=None, rad=None, use_klamt=False):
+        if name:
+            self._solvent = name
+        else:
+            self._solvent = f'COSMO(eps={eps} rad={rad})'
+
+        if name == 'vacuum':
+            self.settings.input.adf.pop('Solvation', None)
+            return
+
         self.settings.input.adf.Solvation.Surf = 'Delley'
         solv_string = ''
         if name:
@@ -240,6 +250,7 @@ class ADFJob(Job):
             }
             self.settings.input.adf.solvation.radii = radii
 
+
     def molecule(self, mol: Union[str, plams.Molecule, plams.Atom, list[plams.Atom]]):
         '''
         Read a molecule in various formats.
@@ -252,12 +263,12 @@ class ADFJob(Job):
 
         elif isinstance(mol, str) and os.path.exists(mol):
             self._molecule = plams.Molecule(mol)
-            log.info(f'Succesfully loaded molecule {formula.molecule(self._molecule)} from path.')
+            # log.info(f'Succesfully loaded molecule {formula.molecule(self._molecule)} from path.')
 
         elif isinstance(mol, str):
             self._molecule = None
             self.settings.input.ams.system.GeometryFile = mol
-            log.info(f'Could not find molecule in file {mol}, will load it from the filename, so it should exist when the job starts.')
+            # log.info(f'Could not find molecule in file {mol}, will load it from the filename, so it should exist when the job starts.')
 
         elif isinstance(mol, list) and isinstance(mol[0], plams.Atom):
             self._molecule = plams.Molecule()
@@ -330,11 +341,17 @@ class ADFFragmentJob(ADFJob):
             self._molecule = self._molecule + self.childjobs[name]._molecule.copy()
 
     def run(self):
+        log.flow(f'ADFFragmentJob in {self.workdir}', ['start'])
         # obtain some system wide properties of the molecules
         charge = sum([child.settings.input.ams.System.charge or 0 for child in self.childjobs.values()])
         unrestricted = any([(child.settings.input.adf.Unrestricted or 'no').lower() == 'yes' for child in self.childjobs.values()])
         spinpol = sum([child.settings.input.adf.SpinPolarization or 0 for child in self.childjobs.values()])
-
+        log.flow(f'Level:             {self._functional}/{self._basis_set}')
+        log.flow(f'Solvent:           {self._solvent}')
+        log.flow(f'Charge:            {charge}', ['straight'])
+        log.flow(f'Unrestricted:      {unrestricted}', ['straight'])
+        log.flow(f'Spin-Polarization: {spinpol}', ['straight'])
+        log.flow()
         # this job and all its children should have the same value for unrestricted
         [child.unrestricted(unrestricted) for child in self.childjobs.values()]
 
@@ -356,7 +373,10 @@ class ADFFragmentJob(ADFJob):
             self.settings.input.adf.UnrestrictedFragments = 'Yes'
 
         # now we are going to run each child job
-        for childname, child in self.childjobs.items():
+        for i, (childname, child) in enumerate(self.childjobs.items(), start=1):
+            log.flow(f'Child job ({i}/{len(self.childjobs)}) {childname} [{formula.molecule(child._molecule)}]', ['split'])
+            log.flow(f'Charge:            {child.settings.input.ams.System.charge or 0}', ['straight', 'straight'])
+            log.flow(f'Spin-Polarization: {child.settings.input.adf.SpinPolarization or 0}', ['straight', 'straight'])
             # the child name will be prepended with SP showing that it is the singlepoint calculation
             child.name = f'SP_{childname}'
             child.rundir = self.rundir
@@ -365,9 +385,13 @@ class ADFFragmentJob(ADFJob):
             self.settings.input.adf.fragments[childname] = j(child.workdir, 'adf.rkf')
 
             if child.can_skip():
-                log.info(f'Child calculation {j(child.rundir, child.name)} already finished.')
+                log.flow(log.Emojis.warning + f' Already ran, skipping', ['straight', 'end'])
+                log.flow()
+                # log.info(f'Child calculation {j(child.rundir, child.name)} already finished.')
                 continue
 
+            log.flow(log.Emojis.good + f' Submitting', ['straight', 'end'])
+            log.flow()
             # recast the plams.Settings object into a Result object as that is what run expects
             child.settings = results.Result(child_setts[childname])
             child.run()
@@ -388,6 +412,7 @@ class ADFFragmentJob(ADFJob):
         # set the _molecule to None, otherwise it will overwrite the atoms block
         self._molecule = None
         # run this job
+        log.flow(log.Emojis.good + f' Submitting parent job', ['split'])
         super().run()
 
         # also do the calculation with SCF cycles set to 1
@@ -396,7 +421,11 @@ class ADFFragmentJob(ADFJob):
         self.settings.input.adf.AllPoints = 'Yes'
         self.settings.input.adf.FullFock = 'Yes'
         self.name = self.name + '_SCF1'
+        log.flow(log.Emojis.good + f' Submitting extra job with 1 SCF cycle', ['split'])
+
         super().run()
+        log.flow()
+        log.flow(log.Emojis.finish + ' Done, bye!', ['startinv'])
         
 
 class OrcaJob(Job):
@@ -517,34 +546,34 @@ class OrcaJob(Job):
 
 
 if __name__ == '__main__':
-    with ADFJob() as job:
-        job.molecule('./test/xyz/NH3BH3.xyz')
-        job.rundir = 'tmp/NH3BH3'
-        job.name = 'GeometryOpt'
-        job.sbatch(p='tc', ntasks_per_node=15)
-        job.optimization()
-        job.functional('r2SCAN')
-        job.basis_set('TZ2P')
+    # with ADFJob() as job:
+    #     job.molecule('./test/xyz/NH3BH3.xyz')
+    #     job.rundir = 'tmp/NH3BH3'
+    #     job.name = 'GeometryOpt'
+    #     job.sbatch(p='tc', ntasks_per_node=15)
+    #     job.optimization()
+    #     job.functional('r2SCAN')
+    #     job.basis_set('TZ2P')
 
-    with ADFFragmentJob() as job:
-        mol = plams.Molecule('./test/xyz/NH3BH3.xyz')
-        job.rundir = 'tmp/NH3BH3/EDA'
-        job.sbatch(p='tc', ntasks_per_node=15)
-        job.functional('r2SCAN')
-        job.basis_set('TZ2P')
-        job.add_fragment(mol.atoms[:4], 'Donor')
-        job.add_fragment(mol.atoms[4:], 'Acceptor')
+    # with ADFFragmentJob() as job:
+    #     mol = plams.Molecule('./test/xyz/NH3BH3.xyz')
+    #     job.rundir = 'tmp/NH3BH3/EDA'
+    #     job.sbatch(p='tc', ntasks_per_node=15)
+    #     job.functional('r2SCAN')
+    #     job.basis_set('TZ2P')
+    #     job.add_fragment(mol.atoms[:4], 'Donor')
+    #     job.add_fragment(mol.atoms[4:], 'Acceptor')
 
-    with ADFFragmentJob() as job:
-        mol = plams.Molecule('./test/xyz/SN2_TS.xyz')
-        job.add_fragment(mol.atoms[:8], 'EtCl')
-        job.add_fragment(mol.atoms[8:], 'Phenolate')
-        job.Phenolate.charge(-1)
+    # with ADFFragmentJob() as job:
+    #     mol = plams.Molecule('./test/xyz/SN2_TS.xyz')
+    #     job.add_fragment(mol.atoms[:8], 'EtCl')
+    #     job.add_fragment(mol.atoms[8:], 'Phenolate')
+    #     job.Phenolate.charge(-1)
 
-        job.rundir = 'tmp/SN2/EDA'
-        job.sbatch(p='tc', ntasks_per_node=15)
-        job.functional('OLYP')
-        job.basis_set('DZP')
+    #     job.rundir = 'tmp/SN2/EDA'
+    #     job.sbatch(p='tc', ntasks_per_node=15)
+    #     job.functional('OLYP')
+    #     job.basis_set('DZP')
 
     with ADFFragmentJob() as job:
         mol = plams.Molecule('./test/xyz/radadd.xyz')
@@ -557,38 +586,38 @@ if __name__ == '__main__':
         job.functional('BLYP-D3(BJ)')
         job.basis_set('TZ2P')
 
-    with ADFFragmentJob() as job:
-        mol = plams.Molecule('./test/xyz/NaCl.xyz')
-        job.add_fragment(mol.atoms[0], 'Cl')
-        job.add_fragment(mol.atoms[1], 'Na')
-        job.Na.charge(1)
-        job.Cl.charge(-1)
+    # with ADFFragmentJob() as job:
+    #     mol = plams.Molecule('./test/xyz/NaCl.xyz')
+    #     job.add_fragment(mol.atoms[0], 'Cl')
+    #     job.add_fragment(mol.atoms[1], 'Na')
+    #     job.Na.charge(1)
+    #     job.Cl.charge(-1)
 
-        job.rundir = 'tmp/NaCl'
-        job.sbatch(p='tc', ntasks_per_node=15)
-        job.functional('BLYP-D3(BJ)')
-        job.basis_set('TZ2P')
-        job.quality('Good')
+    #     job.rundir = 'tmp/NaCl'
+    #     job.sbatch(p='tc', ntasks_per_node=15)
+    #     job.functional('BLYP-D3(BJ)')
+    #     job.basis_set('TZ2P')
+    #     job.quality('Good')
 
-    with ADFJob() as opt_job:
-        opt_job.molecule('./test/xyz/SN2_TS.xyz')
-        opt_job.charge(-1)
+    # with ADFJob() as opt_job:
+    #     opt_job.molecule('./test/xyz/SN2_TS.xyz')
+    #     opt_job.charge(-1)
 
-        opt_job.rundir = 'tmp/SN2'
-        opt_job.name = 'TS_OPT'
-        opt_job.sbatch(p='tc', ntasks_per_node=15)
-        opt_job.functional('OLYP')
-        opt_job.basis_set('DZP')
-        opt_job.optimization()
+    #     opt_job.rundir = 'tmp/SN2'
+    #     opt_job.name = 'TS_OPT'
+    #     opt_job.sbatch(p='tc', ntasks_per_node=15)
+    #     opt_job.functional('OLYP')
+    #     opt_job.basis_set('DZP')
+    #     opt_job.optimization()
 
-    with ADFJob() as sp_job:
-        sp_job.dependency(opt_job)  # this job will only run when opt_job finishes
-        sp_job.molecule(opt_job.output_mol_path)  # we can take the output.xyz from the opt_job's workdir
-        sp_job.charge(-1)
+    # with ADFJob() as sp_job:
+    #     sp_job.dependency(opt_job)  # this job will only run when opt_job finishes
+    #     sp_job.molecule(opt_job.output_mol_path)  # we can take the output.xyz from the opt_job's workdir
+    #     sp_job.charge(-1)
 
-        sp_job.rundir = 'tmp/SN2'
-        sp_job.name = 'SP_M062X'
-        sp_job.sbatch(p='tc', ntasks_per_node=15)
-        # now we can use a higher level of theory
-        sp_job.functional('M06-2X')
-        sp_job.basis_set('TZ2P')
+    #     sp_job.rundir = 'tmp/SN2'
+    #     sp_job.name = 'SP_M062X'
+    #     sp_job.sbatch(p='tc', ntasks_per_node=15)
+    #     # now we can use a higher level of theory
+    #     sp_job.functional('M06-2X')
+    #     sp_job.basis_set('TZ2P')
