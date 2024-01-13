@@ -266,21 +266,26 @@ class ADFJob(Job):
 
     def run(self):
         os.makedirs(self.rundir, exist_ok=True)
-        _rundir = os.path.abspath(self.rundir)
+        # _rundir = os.path.abspath(self.rundir)
 
-        # if os.path.exists(j(_rundir, self.name)):
-        #     print(f'Calculation in {j(_rundir, self.name)} already ran.')
-        #     return
-
-        plams.init(path=os.path.split(_rundir)[0], folder=os.path.split(_rundir)[1], use_existing_folder=True)
-        plams.config.preview = True
+        # with log.NoPrint():
+        # plams.init(path=os.path.split(_rundir)[0], quiet=True, folder=os.path.split(_rundir)[1], use_existing_folder=True)
+        # plams.config.preview = True
 
         sett = self.settings.as_plams_settings()
         sett.keep = ['-', 't21.*', 't12.*', 'CreateAtoms.out', '$JN.dill']
         job = plams.AMSJob(name=self.name, molecule=self._molecule, settings=sett)
-        job.run()
 
-        plams.finish()
+        os.makedirs(self.workdir, exist_ok=True)
+        with open(j(self.workdir, f'{self.name}.in'), 'w+') as inpf:
+            inpf.write(job.get_input())
+
+        with open(j(self.workdir, f'{self.name}.run'), 'w+') as runf:
+            runf.write('#!/bin/sh\n\n')
+            runf.write(job.get_runscript())
+
+        # plams.finish()
+
         cmd = self.get_sbatch_command() + f'-D {self.workdir} -J "{self.rundir}/{self.name}" {self.name}.run'
         # print(cmd)
         with open(j(self.workdir, 'submit'), 'w+') as cmd_file:
