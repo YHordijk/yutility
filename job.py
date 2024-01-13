@@ -291,7 +291,7 @@ class ADFJob(Job):
 
         sq = squeue()
         sq = {d: i for d, i in zip(*sq)}
-        self.slurm_job_id = sq[self.slurm_rundir]
+        self.slurm_job_id = sq[self.workdir]
 
     def dependency(self, otherjob):
         self.sbatch(dependency=f'afterok:{otherjob.slurm_job_id}')
@@ -355,7 +355,7 @@ class ADFFragmentJob(ADFJob):
             child.run()
             self.dependency(child)
             # add the path to the child adf.rkf file as a dependency to the parent job
-            self.settings.input.adf.fragments[childname] = j(child.slurm_rundir, 'adf.rkf')
+            self.settings.input.adf.fragments[childname] = j(child.workdir, 'adf.rkf')
 
         # in the parent job the atoms should have the region and adf.f defined as options
         depend_atoms = []
