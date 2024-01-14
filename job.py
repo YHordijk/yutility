@@ -616,8 +616,7 @@ class OrcaJob(Job):
 
 if __name__ == '__main__':
     for i, func in enumerate(ADFJob.available_functionals()):
-        # with ADFJob() as job:
-            job = ADFJob()
+        with ADFJob() as job:
             job.molecule('./test/xyz/H2O.xyz')
             job.rundir = 'tmp/functional_test'
             job.name = f'{i}.{func}'
