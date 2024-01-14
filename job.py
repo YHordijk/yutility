@@ -125,10 +125,10 @@ class ADFJob(Job):
         'LDA': ['VWN', 'PW92'],
         'GGA': ['S12g', 'BLYP', 'BP86', 'GAM', 'HTBS', 'KT1', 'KT2', 'mPW', 'mPBE', 'N12', 'OLYP', 'OPBE', 'PBE', 'PBEsol', 'PW91', 'revPBE', 'RPBE', 'BEE'],
         'Hybrid': ['B3LYP', 'B1LYP', 'B1PW91', 'B3LYP*', 'BHandH', 'BHandHLYP', 'KMLYP', 'MPW1PW', 'MPW1K', 'O3LYP', 'OPBE0', 'PBE0', 'S12h', 'X3LYP', 'HTBS'],
-        'MetaGGA': ['M06L', 'MN15-L', 'MVS', 'SCAN', 'revTPSS', 'SSB', 'TASKxc', 'TASKCC', 'TPSS', 'r2SCAN-3c'],
-        'LibXC': ['rSCAN', 'revSCAN', 'r2SCAN'] + ['LCY-BLYP', 'LCY-BP86', 'LCY-PBE', 'CAM-B3LYP', 'CAMY-B3LYP', 'HSE03', 'HSE06', 'M11', 'MN12-SX', 'N12-SX', 'WB97', 'WB97X'] + ['revSCAN0'],
+        'MetaGGA': ['M06L', 'MVS', 'SCAN', 'revTPSS', 'SSB', 'TASKxc', 'TASKCC', 'TPSS', 'r2SCAN-3c'],
+        'LibXC': ['rSCAN', 'revSCAN', 'r2SCAN'] + ['LCY-BLYP', 'LCY-BP86', 'LCY-PBE', 'CAM-B3LYP', 'CAMY-B3LYP', 'HSE03', 'HSE06', 'M11', 'MN12-SX', 'N12-SX', 'WB97', 'WB97X', 'MN15', 'MN15-L'] + ['revSCAN0'],
         'DoubleHybrid': ['rev-DOD-PBEP86', 'rev-DOD-BLYP', 'rev-DOD-PBE', 'B2PLYP', 'B2GPPLYP'],
-        'MetaHybrid': ['MN15', 'M06', 'M06-2X', 'M06-HF', 'TPSSH'],
+        'MetaHybrid': ['M06', 'M06-2X', 'M06-HF', 'TPSSH'],
         'model': ['SAOP', 'GRAC', 'LB94'],
     }
 
@@ -621,7 +621,7 @@ if __name__ == '__main__':
             job.rundir = 'tmp/functional_test'
             job.name = f'{i}.{func}'
             job.sbatch(p='tc', ntasks_per_node=15)
-            job.optimization()
+            # job.optimization()
             job.functional(func)
             job.basis_set('TZ2P')
 
