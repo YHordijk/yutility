@@ -621,7 +621,7 @@ if __name__ == '__main__':
             job.rundir = 'tmp/functional_test'
             job.name = f'{i}.{func}'
             job.sbatch(p='tc', ntasks_per_node=15)
-            job.optimization()
+            # job.optimization()
             job.functional(func)
             job.basis_set('TZ2P')
 
