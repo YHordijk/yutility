@@ -78,6 +78,60 @@ class Job:
 
 
 class ADFJob(Job):
+    # for some functionals there are no default dispersion parameters in ADF
+    # we will set those here, they will later be used to create the settings
+    custom_disp_params = {
+        # Grimme3 dispersion correction
+        # https://www.chemie.uni-bonn.de/grimme/de/software/dft-d3/zero_damping
+        'OLYP-D3':     'GRIMME3 PAR1=1.0000 PAR2=0.806 PAR3=1.764',
+        'OPBE-D3':     'GRIMME3 PAR1=1.0000 PAR2=0.837 PAR3=2.055',
+        'M06-D3':      'GRIMME3 PAR1=1.0000 PAR2=1.325 PAR3=0.000',
+        'M06L-D3':     'GRIMME3 PAR1=1.0000 PAR2=1.581 PAR3=0.000',
+        'M06-2X-D3':   'GRIMME3 PAR1=1.0000 PAR2=1.619 PAR3=0.000',
+        'M06-HF-D3':   'GRIMME3 PAR1=1.0000 PAR2=1.446 PAR3=0.000',
+        'BMK-D3':      'GRIMME3 PAR1=1.0000 PAR2=1.931 PAR3=2.168',
+
+        # Grimme3 dispersion correction with BJ dampening
+        # https://www.chemie.uni-bonn.de/grimme/de/software/dft-d3/bj_damping
+        'OLYP-D3(BJ)': 'GRIMME3 BJDAMP PAR1=1.0000 PAR2=0.5299 PAR3=2.6205 PAR4=2.8065',
+        'OPBE-D3(BJ)': 'GRIMME3 BJDAMP PAR1=1.0000 PAR2=0.5512 PAR3=3.3816 PAR4=2.9444',
+        'BMK-D3(BJ)':  'GRIMME3 BJDAMP PAR1=1.0000 PAR2=0.1940 PAR3=2.0860 PAR4=5.9197',
+
+        # Grimme4 dispersion correction
+        # Table A4: Caldeweyher, E.; Ehlert, S.; Hansen, A.; Neugebauer, H.; Spicher, S.; Bannwarth, C.; Grimme, S. J. Chem. Phys. 2019, 150 (15).
+        'OLYP-D4':     'GRIMME4 s6=1.0000 s8=2.74836820 a1=0.60184498 a2=2.53292167',
+        'OPBE-D4':     'GRIMME4 s6=1.0000 s8=3.06917417 a1=0.68267534 a2=2.22849018',
+        'M06-D4':      'GRIMME4 s6=1.0000 s8=0.16366729 a1=0.53456413 a2=6.06192174',
+        'M06L-D4':     'GRIMME4 s6=1.0000 s8=0.59493760 a1=0.71422359 a2=6.35314182',
+        'WB97-D4':     'GRIMME4 s6=1.0000 s8=1.12736363 a1=0.75396590 a2=7.31052961',
+        'WB97X-D4':    'GRIMME4 s6=1.0000 s8=0.35040501 a1=0.56974796 a2=6.44327794',   
+    }
+
+    # This dictionary maps human readable to ADF translation of dispersion corrections
+    disp_map = {
+        '-D4': 'GRIMME4',
+        '-D3(BJ)': 'GRIMME3 BJDAMP',
+        '-D3BJ': 'GRIMME3 BJDAMP',
+        '-D3': 'GRIMME3',
+        '-dDsC': 'dDsC',
+        '-dUFF': 'UFF',
+        '-MBD': 'MBD',
+        '-MBD@rsSC': 'MBD',
+        '-D': 'DEFAULT'
+    }
+
+    # This dictionary maps human readable functional names to the XC type ADF uses
+    functional_categories = {
+        'LDA': ['VWN', 'PW92'],
+        'GGA': ['BLYP', 'BP86', 'GAM', 'HTBS', 'KT1', 'KT2', 'mPW', 'mPBE', 'N12', 'OLYP', 'OPBE', 'PBE', 'PBEsol', 'PW91', 'revPBE', 'RPBE', 'BEE'],
+        'Hybrid': ['B3LYP', 'B1LYP', 'B1PW91', 'B3LYP*', 'BHandH', 'BHandHLYP', 'KMLYP', 'MPW1PW', 'MPW1K', 'O3LYP', 'OPBE0', 'PBE0', 'S12h', 'X3LYP', 'HTBS'],
+        'MetaGGA': ['M06L', 'MN15-L', 'MVS', 'SCAN', 'revTPSS', 'SSB', 'TASKxc', 'TPSS', 'r2SCAN-3c'],
+        'LibXC': ['rSCAN', 'revSCAN', 'r2SCAN'] + ['LCY-BLYP', 'LCY-BP86', 'LCY-PBE', 'CAM-B3LYP', 'CAMY-B3LYP', 'HSE03', 'HSE06', 'M11', 'MN12-SX', 'N12-SX', 'WB97', 'WB97X'] + ['revSCAN0'],
+        'DoubleHybrid': ['rev-DOD-PBEP86-D4', 'rev-DOD-BLYP-D4', 'rev-DOD-PBE-D4', 'B2PLYP', 'B2GPPLYP'],
+        'MetaHybrid': ['MN15', 'M06', 'M06-2X', 'M06-HF', 'TPSSH'],
+        'model': ['SAOP'],
+    }
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.functional('LDA')
@@ -146,48 +200,46 @@ class ADFJob(Job):
     def quality(self, val='Normal'):
         self.settings.input.adf.NumericalQuality = val
 
+    @classmethod
+    def available_functionals(cls):
+        '''
+        Returns a list of all functionals that are available for ADF. This assumes you are using version AMS2023.104.
+        Optionally give categories that are to be returned.
+        '''
+        functionals = []
+        with open(j(os.path.split(__file__)[0], 'available_functionals.txt')) as file:
+            [functionals.append(line.strip()) for line in file.readlines()]
+        functionals.extend(cls.custom_disp_params.keys())
+        return functionals
+
     def functional(self, val):
         # before adding the new functional we should clear any previous functional settings
         self.settings.input.adf.pop('XC', None)
 
         functional = val.strip()
+        functional = functional.replace('-D4(EEQ)', '-D4')  # D4(EEQ) and D4 are the same, unlike with D3 and D3(BJ)
         self._functional = functional
 
-        # first handle dispersion corrections
-        disp_map = {
-            '-D4(EEQ)': 'GRIMME4',
-            '-D3(BJ)': 'GRIMME3 BJDAMP',
-            '-D3BJ': 'GRIMME3 BJDAMP',
-            '-D3': 'GRIMME3',
-            '-dDsC': 'dDsC',
-            '-dUFF': 'UFF',
-            '-MBD@rsSC': 'MBD',
-            '-D': 'DEFAULT'
-        }
-
-        # look through all possible dispersion options
-        for name, adf_name in disp_map.items():
+        # split the functional and dispersion term
+        for suffix, disp_name in self.disp_map.items():
             # check if the user requests the dispersion correction
-            if functional.endswith(name):
-                # correctly set the dispersion correction
-                self.settings.input.adf.XC.Dispersion = adf_name
-                # remove the correction from the functional name
-                # we would use str.removesuffix, but that is only since python 3.9, so we just use slicing instead
-                functional = functional[:-len(name)]
+            if not functional.endswith(disp_name):
+                continue
+            
+            # set the correct dispersion settings for ADF
+            # first check if there are custom dispersion parameters we have to load
+            if functional in self.custom_disp_params:
+                self.settings.input.adf.XC.Dispersion = self.custom_disp_params[functional]
+            # else we use the default ADF ones
+            else:
+                self.settings.input.adf.XC.Dispersion = self.disp_map[disp_name]
 
-        # handle the actual functional part
-        functional_map = {
-            'LDA': ['VWN', 'PW92'],
-            'GGA': ['BLYP', 'BP86', 'GAM', 'HTBS', 'KT1', 'KT2', 'mPW', 'mPBE', 'N12', 'OLYP', 'OPBE', 'PBE', 'PBEsol', 'PW91', 'revPBE', 'RPBE', 'BEE'],
-            'Hybrid': ['B3LYP', 'B1LYP', 'B1PW91', 'B3LYP*', 'BHandH', 'BHandHLYP', 'KMLYP', 'MPW1PW', 'MPW1K', 'O3LYP', 'OPBE0', 'PBE0', 'S12h', 'X3LYP', 'HTBS'],
-            'MetaGGA': ['M06L', 'MN15-L', 'MVS', 'SCAN', 'revTPSS', 'SSB', 'TASKxc', 'TPSS', 'r2SCAN-3c'],
-            'LibXC': ['rSCAN', 'revSCAN', 'r2SCAN'] + ['LCY-BLYP', 'LCY-BP86', 'LCY-PBE', 'CAM-B3LYP', 'CAMY-B3LYP', 'HSE03', 'HSE06', 'M11', 'MN12-SX', 'N12-SX', 'WB97', 'WB97X'] + ['revSCAN0'],
-            'DoubleHybrid': ['rev-DOD-PBEP86-D4', 'rev-DOD-BLYP-D4', 'rev-DOD-PBE-D4', 'B2PLYP', 'B2GPPLYP'],
-            'MetaHybrid': ['MN15', 'M06', 'M06-2X', 'M06-HF', 'TPSSH'],
-            'model': ['SAOP'],
-        }
+            # remove the disp correction from the functional name
+            # we would use str.removesuffix, but that is only since python 3.9, so we just use slicing instead
+            functional = functional[:-len(disp_name)]
 
-        for category, functionals in functional_map.items():
+        # handle the XC functional part
+        for category, functionals in self.functional_categories.items():
             if functional in functionals:
                 self.settings.input.adf.XC[category] = functional
                 return
@@ -249,7 +301,6 @@ class ADFJob(Job):
                 'I': 2.32
             }
             self.settings.input.adf.solvation.radii = radii
-
 
     def molecule(self, mol: Union[str, plams.Molecule, plams.Atom, list[plams.Atom]]):
         '''
@@ -419,7 +470,6 @@ class ADFFragmentJob(ADFJob):
         log.flow(f'SlurmID: {self.slurm_job_id}', ['straight', 'end'])
         log.flow()
 
-
         # also do the calculation with SCF cycles set to 1
         self.settings.input.adf.SCF.Iterations = 1
         self.settings.input.adf.print = 'FMatSFO'  # by default print the fock matrix for each SCF cycle
@@ -552,14 +602,15 @@ class OrcaJob(Job):
 
 
 if __name__ == '__main__':
-    # with ADFJob() as job:
-    #     job.molecule('./test/xyz/NH3BH3.xyz')
-    #     job.rundir = 'tmp/NH3BH3'
-    #     job.name = 'GeometryOpt'
-    #     job.sbatch(p='tc', ntasks_per_node=15)
-    #     job.optimization()
-    #     job.functional('r2SCAN')
-    #     job.basis_set('TZ2P')
+    for i, func in enumerate(ADFJob.available_functionals()):
+        with ADFJob() as job:
+            job.molecule('./test/xyz/H2O.xyz')
+            job.rundir = 'tmp/functional_test'
+            job.name = f'{i}.{func}'
+            job.sbatch(p='tc', ntasks_per_node=15)
+            job.optimization()
+            job.functional(func)
+            job.basis_set('TZ2P')
 
     # with ADFFragmentJob() as job:
     #     mol = plams.Molecule('./test/xyz/NH3BH3.xyz')
@@ -581,16 +632,16 @@ if __name__ == '__main__':
     #     job.functional('OLYP')
     #     job.basis_set('DZP')
 
-    with ADFFragmentJob() as job:
-        mol = plams.Molecule('./test/xyz/radadd.xyz')
-        job.add_fragment(mol.atoms[:15], 'Substrate')
-        job.add_fragment(mol.atoms[15:], 'Radical')
-        job.Radical.spin_polarization(1)
+    # with ADFFragmentJob() as job:
+    #     mol = plams.Molecule('./test/xyz/radadd.xyz')
+    #     job.add_fragment(mol.atoms[:15], 'Substrate')
+    #     job.add_fragment(mol.atoms[15:], 'Radical')
+    #     job.Radical.spin_polarization(1)
 
-        job.rundir = 'tmp/RA'
-        job.sbatch(p='tc', ntasks_per_node=15)
-        job.functional('BLYP-D3(BJ)')
-        job.basis_set('TZ2P')
+    #     job.rundir = 'tmp/RA'
+    #     job.sbatch(p='tc', ntasks_per_node=15)
+    #     job.functional('BLYP-D3(BJ)')
+    #     job.basis_set('TZ2P')
 
     # with ADFFragmentJob() as job:
     #     mol = plams.Molecule('./test/xyz/NaCl.xyz')
