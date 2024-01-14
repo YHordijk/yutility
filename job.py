@@ -143,6 +143,8 @@ class ADFJob(Job):
         return f'{self._task}({self._functional}/{self._basis_set}), running in {os.path.join(os.path.abspath(self.rundir), self.name)}'
 
     def basis_set(self, typ, core='None'):
+        if self._functional == 'r2SCAN-3c' and typ != 'mTZ2P':
+            log.warning(f'Basis set {typ} is not allowed with r2SCAN-3c, switching to mTZ2P.')
         self._basis_set = typ
         self.settings.input.adf.basis.type = typ
         self.settings.input.adf.basis.core = core
@@ -219,6 +221,10 @@ class ADFJob(Job):
         functional = val.strip()
         functional = functional.replace('-D4(EEQ)', '-D4')  # D4(EEQ) and D4 are the same, unlike with D3 and D3(BJ)
         self._functional = functional
+
+        if functional == 'r2SCAN-3c' and self._basis_set != 'mTZ2P':
+            log.warning(f'Switching basis set from {self._basis_set} to mTZ2P for r2SCAN-3c.')
+            self.basis_set('mTZ2P')
 
         # split the functional and dispersion term
         for suffix, disp_name in self.disp_map.items():
