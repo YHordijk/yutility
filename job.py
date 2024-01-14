@@ -626,14 +626,18 @@ class OrcaJob(Job):
 
 if __name__ == '__main__':
     for i, func in enumerate(ADFJob.available_functionals()):
-        with ADFJob() as job:
-            job.molecule('./test/xyz/H2O.xyz')
-            job.rundir = 'tmp/functional_test'
-            job.name = f'{i}.{func}'
-            job.sbatch(p='tc', ntasks_per_node=15)
-            # job.optimization()
-            job.functional(func)
-            job.basis_set('TZ2P')
+        try:
+            with ADFJob() as job:
+                job.molecule('./test/xyz/H2O.xyz')
+                job.rundir = 'tmp/functional_test'
+                job.name = f'{i}.{func}'
+                job.sbatch(p='tc', ntasks_per_node=15)
+                # job.optimization()
+                job.functional(func)
+                job.basis_set('TZ2P')
+        except Exception as e:
+            print(e)
+
 
     # with ADFFragmentJob() as job:
     #     mol = plams.Molecule('./test/xyz/NH3BH3.xyz')
