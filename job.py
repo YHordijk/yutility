@@ -123,13 +123,13 @@ class ADFJob(Job):
     # This dictionary maps human readable functional names to the XC type ADF uses
     functional_categories = {
         'LDA': ['VWN', 'PW92'],
-        'GGA': ['BLYP', 'BP86', 'GAM', 'HTBS', 'KT1', 'KT2', 'mPW', 'mPBE', 'N12', 'OLYP', 'OPBE', 'PBE', 'PBEsol', 'PW91', 'revPBE', 'RPBE', 'BEE'],
+        'GGA': ['S12g', 'BLYP', 'BP86', 'GAM', 'HTBS', 'KT1', 'KT2', 'mPW', 'mPBE', 'N12', 'OLYP', 'OPBE', 'PBE', 'PBEsol', 'PW91', 'revPBE', 'RPBE', 'BEE'],
         'Hybrid': ['B3LYP', 'B1LYP', 'B1PW91', 'B3LYP*', 'BHandH', 'BHandHLYP', 'KMLYP', 'MPW1PW', 'MPW1K', 'O3LYP', 'OPBE0', 'PBE0', 'S12h', 'X3LYP', 'HTBS'],
-        'MetaGGA': ['M06L', 'MN15-L', 'MVS', 'SCAN', 'revTPSS', 'SSB', 'TASKxc', 'TPSS', 'r2SCAN-3c'],
+        'MetaGGA': ['M06L', 'MN15-L', 'MVS', 'SCAN', 'revTPSS', 'SSB', 'TASKxc', 'TASKCC', 'TPSS', 'r2SCAN-3c'],
         'LibXC': ['rSCAN', 'revSCAN', 'r2SCAN'] + ['LCY-BLYP', 'LCY-BP86', 'LCY-PBE', 'CAM-B3LYP', 'CAMY-B3LYP', 'HSE03', 'HSE06', 'M11', 'MN12-SX', 'N12-SX', 'WB97', 'WB97X'] + ['revSCAN0'],
-        'DoubleHybrid': ['rev-DOD-PBEP86-D4', 'rev-DOD-BLYP-D4', 'rev-DOD-PBE-D4', 'B2PLYP', 'B2GPPLYP'],
+        'DoubleHybrid': ['rev-DOD-PBEP86', 'rev-DOD-BLYP', 'rev-DOD-PBE', 'B2PLYP', 'B2GPPLYP'],
         'MetaHybrid': ['MN15', 'M06', 'M06-2X', 'M06-HF', 'TPSSH'],
-        'model': ['SAOP'],
+        'model': ['SAOP', 'GRAC', 'LB94'],
     }
 
     def __init__(self, *args, **kwargs):
@@ -223,20 +223,20 @@ class ADFJob(Job):
         # split the functional and dispersion term
         for suffix, disp_name in self.disp_map.items():
             # check if the user requests the dispersion correction
-            if not functional.endswith(disp_name):
+            if not functional.endswith(suffix):
                 continue
-            
+
             # set the correct dispersion settings for ADF
             # first check if there are custom dispersion parameters we have to load
             if functional in self.custom_disp_params:
                 self.settings.input.adf.XC.Dispersion = self.custom_disp_params[functional]
             # else we use the default ADF ones
             else:
-                self.settings.input.adf.XC.Dispersion = self.disp_map[disp_name]
+                self.settings.input.adf.XC.Dispersion = disp_name
 
             # remove the disp correction from the functional name
             # we would use str.removesuffix, but that is only since python 3.9, so we just use slicing instead
-            functional = functional[:-len(disp_name)]
+            functional = functional[:-len(suffix)]
 
         # handle the XC functional part
         for category, functionals in self.functional_categories.items():
@@ -251,6 +251,19 @@ class ADFJob(Job):
 
         # LDA is the standard functional
         if functional == 'LDA':
+            return
+
+        if functional == 'MP2':
+            self.settings.input.adf.XC.MP2 = ''
+            return
+
+        if functional == 'SOS-MP2':
+            self.settings.input.adf.XC.MP2 = ''
+            self.settings.input.adf.XC.EmpiricalScaling = 'SOS'
+            return
+
+        if functional == 'Hartree-Fock':
+            self.settings.input.adf.XC.HartreeFock = ''
             return
 
         log.warn(f'XC-functional {functional} not defined. Defaulting to using LibXC.')
@@ -603,7 +616,8 @@ class OrcaJob(Job):
 
 if __name__ == '__main__':
     for i, func in enumerate(ADFJob.available_functionals()):
-        with ADFJob() as job:
+        # with ADFJob() as job:
+            job = ADFJob()
             job.molecule('./test/xyz/H2O.xyz')
             job.rundir = 'tmp/functional_test'
             job.name = f'{i}.{func}'
