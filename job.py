@@ -125,7 +125,7 @@ class ADFJob(Job):
         'LDA': ['VWN', 'PW92'],
         'GGA': ['S12g', 'BLYP', 'BP86', 'GAM', 'HTBS', 'KT1', 'KT2', 'mPW', 'mPBE', 'N12', 'OLYP', 'OPBE', 'PBE', 'PBEsol', 'PW91', 'revPBE', 'RPBE', 'BEE'],
         'Hybrid': ['B3LYP', 'B1LYP', 'B1PW91', 'B3LYP*', 'BHandH', 'BHandHLYP', 'KMLYP', 'MPW1PW', 'MPW1K', 'O3LYP', 'OPBE0', 'PBE0', 'S12h', 'X3LYP', 'HTBS'],
-        'MetaGGA': ['M06L', 'MVS', 'SCAN', 'revTPSS', 'SSB', 'TASKxc', 'TASKCC', 'TPSS', 'r2SCAN-3c'],
+        'MetaGGA': ['M06L', 'MVS', 'SCAN', 'revTPSS', 'TASKxc', 'TASKCC', 'TPSS', 'r2SCAN-3c'],
         'LibXC': ['rSCAN', 'revSCAN', 'r2SCAN'] + ['LCY-BLYP', 'LCY-BP86', 'LCY-PBE', 'CAM-B3LYP', 'CAMY-B3LYP', 'HSE03', 'HSE06', 'M11', 'MN12-SX', 'N12-SX', 'WB97', 'WB97X', 'MN15', 'MN15-L'] + ['revSCAN0'],
         'DoubleHybrid': ['rev-DOD-PBEP86', 'rev-DOD-BLYP', 'rev-DOD-PBE', 'B2PLYP', 'B2GPPLYP'],
         'MetaHybrid': ['M06', 'M06-2X', 'M06-HF', 'TPSSH'],
@@ -264,6 +264,16 @@ class ADFJob(Job):
 
         if functional == 'Hartree-Fock':
             self.settings.input.adf.XC.HartreeFock = ''
+            return
+
+        if functional in ['LCY-BP86', 'LCY-PBE', 'LCY-BLYP']:
+            self.settings.input.adf.XC.GGA = functional.split('-')[1]
+            self.settings.input.adf.XC.xcfun = ''
+            self.settings.input.adf.XC.RANGESEP = ''
+            return
+
+        if functional == 'SSB':
+            self.settings.input.adf.XC.GGA = 'SSB-D'
             return
 
         log.warn(f'XC-functional {functional} not defined. Defaulting to using LibXC.')
