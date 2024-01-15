@@ -543,7 +543,7 @@ class ADFFragmentJob(ADFJob):
             log.flow(f'Charge:            {child.settings.input.ams.System.charge or 0}', ['straight', 'straight'])
             log.flow(f'Spin-Polarization: {child.settings.input.adf.SpinPolarization or 0}', ['straight', 'straight'])
             # the child name will be prepended with SP showing that it is the singlepoint calculation
-            child.name = f'SP_{childname}'
+            child.name = f'frag_{childname}'
             child.rundir = self.rundir
 
             # add the path to the child adf.rkf file as a dependency to the parent job
