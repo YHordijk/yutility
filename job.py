@@ -376,9 +376,7 @@ class ADFJob(Job):
                 sp.run(cmd.split(), stdout=devnull, stderr=sp.STDOUT)
 
         # set the slurm job id for this calculation
-        sq = slurm.squeue()
-        slurm_idx = sq.directory.index(self.workdir)
-        self.slurm_job_id = sq.id[slurm_idx]
+        self.slurm_job_id = sq.workdir_info(self.workdir).id
 
     def dependency(self, otherjob):
         if hasattr(otherjob, 'slurm_job_id'):
@@ -416,7 +414,8 @@ class ADFFragmentJob(ADFJob):
             self._molecule = self._molecule + self.childjobs[name]._molecule.copy()
 
     def run(self):
-        log.flow(f'ADFFragmentJob in {self.workdir}', ['start'])
+        mol_str = " + ".join([formula.molecule(child._molecule) for child in self.childjobs.values()])
+        log.flow(f'ADFFragmentJob [{mol_str}]', ['start'])
         # obtain some system wide properties of the molecules
         charge = sum([child.settings.input.ams.System.charge or 0 for child in self.childjobs.values()])
         unrestricted = any([(child.settings.input.adf.Unrestricted or 'no').lower() == 'yes' for child in self.childjobs.values()])
@@ -471,7 +470,8 @@ class ADFFragmentJob(ADFJob):
             child.run()
             self.dependency(child)
 
-            log.flow(f'SlurmID: {child.slurm_job_id}', ['straight', 'skip', 'end'])
+            log.flow(f'SlurmID:  {child.slurm_job_id}', ['straight', 'skip', 'end'])
+            log.flow(f'Work dir: {child.workdir}', ['straight', 'skip', 'end'])
             log.flow()
 
         # in the parent job the atoms should have the region and adf.f defined as options
@@ -626,18 +626,18 @@ class OrcaJob(Job):
 
 
 if __name__ == '__main__':
-    # for i, func in enumerate(ADFJob.available_functionals()):
-    #     try:
-    #         with ADFJob() as job:
-    #             job.molecule('./test/xyz/H2O.xyz')
-    #             job.rundir = 'tmp/functional_test'
-    #             job.name = f'{i}.{func}'
-    #             job.sbatch(p='tc', ntasks_per_node=15)
-    #             # job.optimization()
-    #             job.functional(func)
-    #             job.basis_set('TZ2P')
-    #     except Exception as e:
-    #         print(e)
+    for i, func in enumerate(ADFJob.available_functionals()):
+        try:
+            with ADFJob() as job:
+                job.molecule('./test/xyz/H2O.xyz')
+                job.rundir = 'tmp/functional_test'
+                job.name = f'{i}.{func}'
+                job.sbatch(p='tc', ntasks_per_node=15)
+                # job.optimization()
+                job.functional(func)
+                job.basis_set('TZ2P')
+        except Exception as e:
+            print(e)
 
     # with ADFFragmentJob() as job:
     #     mol = plams.Molecule('./test/xyz/NH3BH3.xyz')
@@ -648,17 +648,17 @@ if __name__ == '__main__':
     #     job.add_fragment(mol.atoms[:4], 'Donor')
     #     job.add_fragment(mol.atoms[4:], 'Acceptor')
 
-    with ADFFragmentJob() as job:
-        mol = plams.Molecule('./test/xyz/propyne.xyz')
-        job.rundir = 'tmp/propyne/EDA'
-        job.sbatch(p='tc', ntasks_per_node=15)
-        job.functional('BP86')
-        job.basis_set('TZ2P')
-        job.quality('VeryGood')
-        job.add_fragment(mol.atoms[:-1], 'Alkyne')
-        job.add_fragment(mol.atoms[-1], 'Hydrogen')
-        job.Alkyne.spin_polarization(-1)
-        job.Hydrogen.spin_polarization(1)
+    # with ADFFragmentJob() as job:
+    #     mol = plams.Molecule('./test/xyz/propyne.xyz')
+    #     job.rundir = 'tmp/propyne/EDA'
+    #     job.sbatch(p='tc', ntasks_per_node=15)
+    #     job.functional('BP86')
+    #     job.basis_set('TZ2P')
+    #     job.quality('VeryGood')
+    #     job.add_fragment(mol.atoms[:-1], 'Alkyne')
+    #     job.add_fragment(mol.atoms[-1], 'Hydrogen')
+    #     job.Alkyne.spin_polarization(-1)
+    #     job.Hydrogen.spin_polarization(1)
 
     # with ADFFragmentJob() as job:
     #     mol = plams.Molecule('./test/xyz/SN2_TS.xyz')
