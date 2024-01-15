@@ -1,5 +1,5 @@
 from scm import plams
-from tcutility import log, results, formula
+from tcutility import log, results, formula, slurm
 import subprocess as sp
 import os
 from typing import Union
@@ -7,16 +7,16 @@ from typing import Union
 j = os.path.join
 
 
-def squeue():
-    try:
-        output = sp.check_output(['squeue', '--me', '--format', "%Z %A"]).decode()
-        output = [line for line in output.splitlines()[1:] if line.strip()]
-        slurm_dirs, slurm_ids = [line.split()[0] for line in output], [line.split()[1] for line in output]
-    except:
-        slurm_dirs = []
-        slurm_ids = []
+# def squeue():
+#     try:
+#         output = sp.check_output(['squeue', '--me', '--format', "%Z %A"]).decode()
+#         output = [line for line in output.splitlines()[1:] if line.strip()]
+#         slurm_dirs, slurm_ids = [line.split()[0] for line in output], [line.split()[1] for line in output]
+#     except:
+#         slurm_dirs = []
+#         slurm_ids = []
 
-    return slurm_dirs, slurm_ids
+#     return slurm_dirs, slurm_ids
 
 
 class Job:
@@ -383,9 +383,9 @@ class ADFJob(Job):
             with open(os.devnull, 'wb') as devnull:
                 sp.run(cmd.split(), stdout=devnull, stderr=sp.STDOUT)
 
-        sq = squeue()
-        sq = {d: i for d, i in zip(*sq)}
-        self.slurm_job_id = sq[self.workdir]
+        sq = slurm.squeue()
+        slurm_idx = sq.directory.index(self.workdir)
+        self.slurm_job_id = sq.id[slurm_idx]
 
     def dependency(self, otherjob):
         if hasattr(otherjob, 'slurm_job_id'):
@@ -633,27 +633,27 @@ class OrcaJob(Job):
 
 
 if __name__ == '__main__':
-    for i, func in enumerate(ADFJob.available_functionals()):
-        try:
-            with ADFJob() as job:
-                job.molecule('./test/xyz/H2O.xyz')
-                job.rundir = 'tmp/functional_test'
-                job.name = f'{i}.{func}'
-                job.sbatch(p='tc', ntasks_per_node=15)
-                # job.optimization()
-                job.functional(func)
-                job.basis_set('TZ2P')
-        except Exception as e:
-            print(e)
+    # for i, func in enumerate(ADFJob.available_functionals()):
+    #     try:
+    #         with ADFJob() as job:
+    #             job.molecule('./test/xyz/H2O.xyz')
+    #             job.rundir = 'tmp/functional_test'
+    #             job.name = f'{i}.{func}'
+    #             job.sbatch(p='tc', ntasks_per_node=15)
+    #             # job.optimization()
+    #             job.functional(func)
+    #             job.basis_set('TZ2P')
+    #     except Exception as e:
+    #         print(e)
 
-    with ADFFragmentJob() as job:
-        mol = plams.Molecule('./test/xyz/NH3BH3.xyz')
-        job.rundir = 'tmp/NH3BH3/EDA'
-        job.sbatch(p='tc', ntasks_per_node=15)
-        job.functional('r2SCAN')
-        job.basis_set('TZ2P')
-        job.add_fragment(mol.atoms[:4], 'Donor')
-        job.add_fragment(mol.atoms[4:], 'Acceptor')
+    # with ADFFragmentJob() as job:
+    #     mol = plams.Molecule('./test/xyz/NH3BH3.xyz')
+    #     job.rundir = 'tmp/NH3BH3/EDA'
+    #     job.sbatch(p='tc', ntasks_per_node=15)
+    #     job.functional('r2SCAN')
+    #     job.basis_set('TZ2P')
+    #     job.add_fragment(mol.atoms[:4], 'Donor')
+    #     job.add_fragment(mol.atoms[4:], 'Acceptor')
 
     with ADFFragmentJob() as job:
         mol = plams.Molecule('./test/xyz/propyne.xyz')
