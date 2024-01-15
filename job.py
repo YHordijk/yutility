@@ -513,7 +513,7 @@ class ADFFragmentJob(ADFJob):
         log.flow(f'SlurmID: {self.slurm_job_id}', ['straight', 'end'])
         log.flow()
         log.flow(log.Emojis.finish + ' Done, bye!', ['startinv'])
-        
+
 
 class OrcaJob(Job):
     def __init__(self, *args, **kwargs):
@@ -647,14 +647,14 @@ if __name__ == '__main__':
             print(e)
 
 
-    # with ADFFragmentJob() as job:
-    #     mol = plams.Molecule('./test/xyz/NH3BH3.xyz')
-    #     job.rundir = 'tmp/NH3BH3/EDA'
-    #     job.sbatch(p='tc', ntasks_per_node=15)
-    #     job.functional('r2SCAN')
-    #     job.basis_set('TZ2P')
-    #     job.add_fragment(mol.atoms[:4], 'Donor')
-    #     job.add_fragment(mol.atoms[4:], 'Acceptor')
+    with ADFFragmentJob() as job:
+        mol = plams.Molecule('./test/xyz/NH3BH3.xyz')
+        job.rundir = 'tmp/NH3BH3/EDA'
+        job.sbatch(p='tc', ntasks_per_node=15)
+        job.functional('r2SCAN')
+        job.basis_set('TZ2P')
+        job.add_fragment(mol.atoms[:4], 'Donor')
+        job.add_fragment(mol.atoms[4:], 'Acceptor')
 
     # with ADFFragmentJob() as job:
     #     mol = plams.Molecule('./test/xyz/SN2_TS.xyz')
