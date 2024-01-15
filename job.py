@@ -68,6 +68,14 @@ class Job:
     def add_preamble(self, line):
         self._preambles.append(line)
 
+    def dependency(self, otherjob: 'Job'):
+        if hasattr(otherjob, 'slurm_job_id'):
+            self.sbatch(dependency=f'afterok:{otherjob.slurm_job_id}')
+
+    @property
+    def workdir(self):
+        return j(os.path.abspath(self.rundir), self.name)
+
 
 class ADFJob(Job):
     # for some functionals there are no default dispersion parameters in ADF
@@ -463,14 +471,6 @@ class ADFJob(Job):
 
         # set the slurm job id for this calculation
         self.slurm_job_id = slurm.workdir_info(self.workdir).id
-
-    def dependency(self, otherjob: Job):
-        if hasattr(otherjob, 'slurm_job_id'):
-            self.sbatch(dependency=f'afterok:{otherjob.slurm_job_id}')
-
-    @property
-    def workdir(self):
-        return j(os.path.abspath(self.rundir), self.name)
 
     @property
     def output_mol_path(self):
