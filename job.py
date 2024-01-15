@@ -134,7 +134,7 @@ class ADFJob(Job):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.functional('LDA')
+        self.functional('PW92')
         self.basis_set('TZ2P')
         self.quality('Good')
         self.SCF_converge(1e-8)
@@ -711,20 +711,94 @@ class OrcaJob(Job):
             run.write(repr(self))
 
 
+class NMRJob(Job):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.pre_nmr_job = ADFJob()
+        self.pre_nmr_job.functional('SAOP')
+        self.pre_nmr_job.basis_set('TZ2P')
+        self.pre_nmr_job.settings.input.adf.save = 'TAPE10'
+        self.nics_points = []
+
+    def get_runscript(self):
+        preamble = '\n'.join(self._preambles)
+        return f'''#!/bin/sh
+{preamble}
+$AMSBIN/nmr {j(self.workdir, f"{self.name}.in")} < /dev/null
+        '''
+
+    def get_input(self):
+        ghost_block = ''
+        if len(self.nics_points) > 0:
+            ghost_block += 'Ghosts\n'
+
+        for point in self.nics_points:
+            ghost_block += f'    {point[0]} {point[1]} {point[2]}\n'
+
+        if len(self.nics_points) > 0:
+            ghost_block += 'SubEnd\n'
+
+        r = f'''
+ADFFile {j(self.pre_nmr_job.workdir, "adf.rkf")}
+TAPE10File {j(self.pre_nmr_job.workdir, "TAPE10")}
+NMR
+    out all
+    {ghost_block}
+End
+        '''
+
+        return r
+
+    def add_nics_point(self, p):
+        self.nics_points.append(p)
+
+    def molecule(self, *args, **kwargs):
+        self.pre_nmr_job.molecule(*args, **kwargs)
+
+    def run(self):
+        os.makedirs(self.workdir, exist_ok=True)
+
+        self.pre_nmr_job.name = self.name + '_pre'
+        self.pre_nmr_job.rundir = self.rundir
+        self.pre_nmr_job.run()
+
+        self.dependency(self.pre_nmr_job)
+
+        with open(j(self.workdir, f'{self.name}.in'), 'w+') as inpf:
+            inpf.write(self.get_input())
+
+        with open(j(self.workdir, f'{self.name}.run'), 'w+') as runf:
+            runf.write(self.get_runscript())
+
+        cmd = self.get_sbatch_command() + f'-D {self.workdir} -J {self.rundir}/{self.name} -o ams.out {self.name}.run'
+        with open(j(self.workdir, 'submit'), 'w+') as cmd_file:
+            cmd_file.write(cmd)
+
+        if not self.test_mode:
+            with open(os.devnull, 'wb') as devnull:
+                sp.run(cmd.split(), stdout=devnull, stderr=sp.STDOUT)
+
+        # set the slurm job id for this calculation
+        self.slurm_job_id = slurm.workdir_info(self.workdir).id
+
+
 if __name__ == '__main__':
-    for i, func in enumerate(ADFJob.available_functionals()):
-        try:
-            with ADFJob() as job:
-                job.molecule('./test/xyz/H2O.xyz')
-                job.rundir = 'tmp/functional_test'
-                job.name = f'{i}.{func}'
-                job.sbatch(p='tc', ntasks_per_node=15)
-                # job.optimization()
-                job.functional(func)
-                job.basis_set('TZ2P')
-                job.add_preamble('module load ams/2023.101')
-        except Exception as e:
-            print(e)
+    # for i, func in enumerate(ADFJob.available_functionals()):
+    #     try:
+    #         with ADFJob() as job:
+    #             job.molecule('./test/xyz/H2O.xyz')
+    #             job.rundir = 'tmp/functional_test'
+    #             job.name = f'{i}.{func}'
+    #             job.sbatch(p='tc', ntasks_per_node=15)
+    #             # job.optimization()
+    #             job.functional(func)
+    #             job.basis_set('TZ2P')
+    #             job.add_preamble('module load ams/2023.101')
+    #     except Exception as e:
+    #         print(e)
+
+    with NMRJob() as job:
+        job.molecule('./test/xyz/H2O.xyz')
 
     # with ADFFragmentJob() as job:
     #     mol = plams.Molecule('./test/xyz/NH3BH3.xyz')
