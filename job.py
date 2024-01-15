@@ -18,6 +18,7 @@ class Job:
         self.rundir = 'tmp'
         self.test_mode = test_mode
         self._preambles = []
+        self._postambles = []
 
     def __enter__(self):
         return self
@@ -67,6 +68,9 @@ class Job:
 
     def add_preamble(self, line):
         self._preambles.append(line)
+
+    def add_postamble(self, line):
+        self._postambles.append(line)
 
     def dependency(self, otherjob: 'Job'):
         if hasattr(otherjob, 'slurm_job_id'):
@@ -460,6 +464,7 @@ class ADFJob(Job):
             runf.write('#!/bin/sh\n\n')
             runf.write('\n'.join(self._preambles) + '\n\n')
             runf.write(job.get_runscript())
+            runf.write('\n'.join(self._postambles))
 
         cmd = self.get_sbatch_command() + f'-D {self.workdir} -J {self.rundir}/{self.name} -o ams.out {self.name}.run'
         with open(j(self.workdir, 'submit'), 'w+') as cmd_file:
@@ -722,9 +727,11 @@ class NMRJob(Job):
 
     def get_runscript(self):
         preamble = '\n'.join(self._preambles)
+        postamble = '\n'.join(self._postambles)
         return f'''#!/bin/sh
 {preamble}
 $AMSBIN/nmr {j(self.workdir, f"{self.name}.in")} < /dev/null
+{postamble}
         '''
 
     def get_input(self):
@@ -738,9 +745,7 @@ $AMSBIN/nmr {j(self.workdir, f"{self.name}.in")} < /dev/null
         if len(self.nics_points) > 0:
             ghost_block += 'SubEnd\n'
 
-        r = f'''ADFFile {j(self.pre_nmr_job.workdir, "adf.rkf")}
-TAPE10File {j(self.pre_nmr_job.workdir, "TAPE10")}
-NMR
+        r = f'''NMR
     out all
     {ghost_block}
 End
@@ -760,9 +765,12 @@ End
         self.pre_nmr_job.name = self.name + '_pre'
         self.pre_nmr_job.rundir = self.rundir
         self.pre_nmr_job.sbatch(**self._sbatch)
+        self.pre_nmr_job.add_postamble(f'cp {j(self.pre_nmr_job.workdir, "adf.rkf")} {j(self.workdir, "TAPE21")}')
+        self.pre_nmr_job.add_postamble(f'cp {j(self.pre_nmr_job.workdir, "TAPE10")} {j(self.workdir, "TAPE10")}')
         self.pre_nmr_job.run()
 
         self.dependency(self.pre_nmr_job)
+        self.add_postamble(f'mv {j(self.workdir, "TAPE21")} {j(self.workdir, "adf.rkf")}')
 
         with open(j(self.workdir, f'{self.name}.in'), 'w+') as inpf:
             inpf.write(self.get_input())
