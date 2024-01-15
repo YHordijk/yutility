@@ -135,7 +135,8 @@ class ADFJob(Job):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.functional('LDA')
-        self.basis_set('DZ')
+        self.basis_set('TZ2P')
+        self.quality('Good')
         self.single_point()
         self.solvent('vacuum')
 
