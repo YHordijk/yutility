@@ -145,6 +145,7 @@ class ADFJob(Job):
     def basis_set(self, typ, core='None'):
         if self._functional == 'r2SCAN-3c' and typ != 'mTZ2P':
             log.warn(f'Basis set {typ} is not allowed with r2SCAN-3c, switching to mTZ2P.')
+            typ = 'mTZ2P'
         self._basis_set = typ
         self.settings.input.adf.basis.type = typ
         self.settings.input.adf.basis.core = core
