@@ -738,8 +738,7 @@ $AMSBIN/nmr {j(self.workdir, f"{self.name}.in")} < /dev/null
         if len(self.nics_points) > 0:
             ghost_block += 'SubEnd\n'
 
-        r = f'''
-ADFFile {j(self.pre_nmr_job.workdir, "adf.rkf")}
+        r = f'''ADFFile {j(self.pre_nmr_job.workdir, "adf.rkf")}
 TAPE10File {j(self.pre_nmr_job.workdir, "TAPE10")}
 NMR
     out all
@@ -800,6 +799,8 @@ if __name__ == '__main__':
 
     with NMRJob() as job:
         job.molecule('./test/xyz/H2O.xyz')
+        job.rundir = 'tmp/NMR'
+        job.name = 'H2O'
         job.sbatch(p='tc', ntasks_per_node=15)
 
     # with ADFFragmentJob() as job:
