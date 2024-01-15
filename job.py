@@ -646,7 +646,6 @@ if __name__ == '__main__':
         except Exception as e:
             print(e)
 
-
     with ADFFragmentJob() as job:
         mol = plams.Molecule('./test/xyz/NH3BH3.xyz')
         job.rundir = 'tmp/NH3BH3/EDA'
@@ -655,6 +654,18 @@ if __name__ == '__main__':
         job.basis_set('TZ2P')
         job.add_fragment(mol.atoms[:4], 'Donor')
         job.add_fragment(mol.atoms[4:], 'Acceptor')
+
+    with ADFFragmentJob() as job:
+        mol = plams.Molecule('./test/xyz/propyne.xyz')
+        job.rundir = 'tmp/propyne/EDA'
+        job.sbatch(p='tc', ntasks_per_node=15)
+        job.functional('BP86')
+        job.basis_set('TZ2P')
+        job.quality('VeryGood')
+        job.add_fragment(mol.atoms[:-1], 'Alkyne')
+        job.add_fragment(mol.atoms[-1], 'Hydrogen')
+        job.Alkyne.spin_polarization(-1)
+        job.Hydrogen.spin_polarization(1)
 
     # with ADFFragmentJob() as job:
     #     mol = plams.Molecule('./test/xyz/SN2_TS.xyz')
