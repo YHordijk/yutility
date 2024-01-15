@@ -799,6 +799,7 @@ if __name__ == '__main__':
 
     with NMRJob() as job:
         job.molecule('./test/xyz/H2O.xyz')
+        job.sbatch(p='tc', ntasks_per_node=15)
 
     # with ADFFragmentJob() as job:
     #     mol = plams.Molecule('./test/xyz/NH3BH3.xyz')
