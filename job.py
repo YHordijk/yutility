@@ -376,7 +376,7 @@ class ADFJob(Job):
                 sp.run(cmd.split(), stdout=devnull, stderr=sp.STDOUT)
 
         # set the slurm job id for this calculation
-        self.slurm_job_id = sq.workdir_info(self.workdir).id
+        self.slurm_job_id = slurm.workdir_info(self.workdir).id
 
     def dependency(self, otherjob):
         if hasattr(otherjob, 'slurm_job_id'):
