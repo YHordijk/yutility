@@ -129,13 +129,22 @@ class ADFJob(Job):
         self.functional('LDA')
         self.basis_set('TZ2P')
         self.quality('Good')
+        self.SCF_converge(1e-8)
         self.single_point()
         self.solvent('vacuum')
 
     def __str__(self):
         return f'{self._task}({self._functional}/{self._basis_set}), running in {os.path.join(os.path.abspath(self.rundir), self.name)}'
 
-    def basis_set(self, typ, core='None'):
+    def basis_set(self, typ: str = 'TZ2P', core: str = 'None'):
+        '''
+        Set the basis-set type and frozen core approximation for this calculation.
+        Note: If the selected functional is the r2SCAN-3c functional, then the basis-set will be set to mTZ2P.
+
+        Args:
+            typ: the type of basis-set to use. Default is TZ2P.
+            core: the size of the frozen core approximation. Default is None.
+        '''
         if self._functional == 'r2SCAN-3c' and typ != 'mTZ2P':
             log.warn(f'Basis set {typ} is not allowed with r2SCAN-3c, switching to mTZ2P.')
             typ = 'mTZ2P'
@@ -144,10 +153,23 @@ class ADFJob(Job):
         self.settings.input.adf.basis.core = core
 
     def single_point(self):
+        '''
+        Set the task of the job to single point.
+        '''
         self._task = 'SP'
         self.settings.input.ams.task = 'SinglePoint'
 
-    def transition_state(self, distances=None, angles=None, coordinates=None, dihedrals=None, ModeToFollow=1):
+    def transition_state(self, distances: list = None, angles: list = None, dihedrals: list = None, ModeToFollow: int = 1):
+        '''
+        Set the task of the job to transition state search. Optionally you can give some TS coordinates to accelerate convergence.
+        By default also calculates the normal modes after convergence.
+
+        Args:
+            distances: sequence of tuples or lists containing [atom_index1, atom_index2, factor]. Atom indices start at 1. 
+            angles: sequence of tuples or lists containing [atom_index1, atom_index2, atom_index3, factor]. Atom indices start at 1.
+            dihedrals: sequence of tuples or lists containing [atom_index1, atom_index2, atom_index3, atom_index4, factor]. Atom indices start at 1.
+            ModeToFollow: the vibrational mode to follow during optimization.
+        '''
         self._task = 'TS'
         self.settings.input.ams.task = 'TransitionStateSearch'
 
@@ -157,8 +179,6 @@ class ADFJob(Job):
             self.settings.input.ams.TransitionStateSearch.ReactionCoordinate.Distance = [" ".join([str(x) for x in dist]) for dist in distances]
         if angles is not None:
             self.settings.input.ams.TransitionStateSearch.ReactionCoordinate.Angle = [" ".join([str(x) for x in ang]) for ang in angles]
-        if coordinates is not None:
-            self.settings.input.ams.TransitionStateSearch.ReactionCoordinate.Coordinate = [" ".join([str(x) for x in coord]) for coord in coordinates]
         if dihedrals is not None:
             self.settings.input.ams.TransitionStateSearch.ReactionCoordinate.Dihedral = [" ".join([str(x) for x in dihedral]) for dihedral in dihedrals]
 
@@ -167,34 +187,79 @@ class ADFJob(Job):
         self.vibrations(True)  # also calculate vibrations by default
 
     def optimization(self):
+        '''
+        Set the task of the job to transition state search. By default also calculates the normal modes after convergence.
+        '''
         self._task = 'GO'
         self.settings.input.ams.task = 'GeometryOptimization'
         self.vibrations(True)
 
-    def vibrations(self, enable=True, PESPointCharacter=True, NegativeFrequenciesTolerance=-5, ReScanFreqRange='-10000000.0 10.0'):
+    def vibrations(self, enable: bool = True, PESPointCharacter: bool = True, NegativeFrequenciesTolerance: float = -5, ReScanFreqRange: tuple[float ,float] = [-10000000.0, 10.0]):
+        '''
+        Set the calculation of vibrational modes. 
+
+        Args:
+            enable: whether to calculate the vibrational modes.
+            PESPointCharacter: whether to report the PES character in the output.
+            NegativeFrequenciesTolerance: the tolerance for negative modes. Modes above this value will not be counted as imaginary. Use this option when you experience a lot of numerical noise.
+            ReScanFreqRange: the rescan range. Any mode that has a frequency in this range will be refined.
+        '''
         self.settings.input.ams.Properties.NormalModes = 'Yes' if enable else 'No'
         self.settings.input.ams.Properties.PESPointCharacter = 'Yes' if enable else 'No'
         self.settings.input.ams.PESPointCharacter.NegativeFrequenciesTolerance = NegativeFrequenciesTolerance
-        self.settings.input.ams.NormalModes.ReScanFreqRange = ReScanFreqRange
+        self.settings.input.ams.NormalModes.ReScanFreqRange = ' '.join([str(x) for x in ReScanFreqRange])
 
-    def charge(self, val):
+    def charge(self, val: int):
+        '''
+        Set the charge of the system.
+        '''
         self.settings.input.ams.System.Charge = val
 
-    def spin_polarization(self, val):
+    def spin_polarization(self, val: int):
+        '''
+        Set the spin-polarization of the system. If the value is not zero the calculation will also be unrestricted.
+        '''
         self.settings.input.adf.SpinPolarization = val
         if val != 0:
             self.settings.input.adf.Unrestricted = 'Yes'
 
-    def multiplicity(self, val):
+    def multiplicity(self, val: int):
+        '''
+        Set the multiplicity of the system. If the value is not one the calculation will also be unrestricted.
+        We use the following values:
+            1: singlet
+            2: doublet
+            3: triplet
+            ...
+        The multiplicity is equal to 2*S+1 for spin-polarization of S.
+        '''
         self.settings.input.adf.SpinPolarization = (val - 1)//2
-        if val != 0:
+        if val != 1:
             self.settings.input.adf.Unrestricted = 'Yes'
 
-    def unrestricted(self, val):
+    def unrestricted(self, val: bool):
+        '''
+        Whether the calculation should be unrestricted.
+        '''
         self.settings.input.adf.Unrestricted = 'Yes' if val else 'No'
 
-    def quality(self, val='Normal'):
+    def quality(self, val: str = 'Good'):
+        '''
+        Set the numerical quality of the calculation. Defaults to Good.
+
+        Args:
+            val: the numerical quality value to set to. This is the same as the ones used in the ADF GUI.
+        '''
         self.settings.input.adf.NumericalQuality = val
+
+    def SCF_converge(self, val: float = 1e-8):
+        '''
+        Set the convergence criterion for the SCF procedure. ADF default is 1e-6, but we use a stricter 1e-8 criterion.
+
+        Args:
+            val: the value of the criterion, default value = 1e-8.
+        '''
+        self.settings.input.adf.SCF.converge = val
 
     @classmethod
     def available_functionals(cls):
@@ -208,7 +273,14 @@ class ADFJob(Job):
         functionals.extend(cls.custom_disp_params.keys())
         return functionals
 
-    def functional(self, val):
+    def functional(self, val: str):
+        '''
+        Set the functional to be used by the calculation. This also sets the dispersion if it is specified in the functional name.
+        Note: setting the functional to r2SCAN-3c will automatically set the basis-set to mTZ2P.
+
+        Args:
+            val: the value to set the functional to. The value can be the same as the ones used in the ADF GUI. There are also extra functionals described in ADFJob.custom_disp_params. The keys of this dictionary are also valid functions. For a full list of functionals please see the ADFJob.available_functionals class-method.
+        '''
         # before adding the new functional we should clear any previous functional settings
         self.settings.input.adf.pop('XC', None)
 
@@ -219,6 +291,9 @@ class ADFJob(Job):
         if functional == 'r2SCAN-3c' and self._basis_set != 'mTZ2P':
             log.warn(f'Switching basis set from {self._basis_set} to mTZ2P for r2SCAN-3c.')
             self.basis_set('mTZ2P')
+
+        if functional not in ADFJob.available_functionals():
+            log.warn(f'Functional {functional} is not defined in ADF or in ADFJob.custom_disp_params. Please make sure you know what you are doing.')
 
         # split the functional and dispersion term
         for suffix, disp_name in self.disp_map.items():
@@ -279,10 +354,16 @@ class ADFJob(Job):
         log.warn(f'XC-functional {functional} not defined. Defaulting to using LibXC.')
         self.settings.input.adf.XC.LibXC = functional
 
-    def relativity(self, level='Scalar'):
+    def relativity(self, level: str = 'Scalar'):
+        '''
+        Set the treatment of relativistic effects for this calculation. By default it is set to Scalar.
+
+        Args:
+            level: the level to set. Can be the same as the values in the ADF GUI.
+        '''
         self.settings.input.adf.relativity.level = level
 
-    def solvent(self, name=None, eps=None, rad=None, use_klamt=False):
+    def solvent(self, name: str = None, eps: float = None, rad: float = None, use_klamt: bool = False):
         if name:
             self._solvent = name
         else:
@@ -369,7 +450,7 @@ class ADFJob(Job):
 
         with open(j(self.workdir, f'{self.name}.run'), 'w+') as runf:
             runf.write('#!/bin/sh\n\n')
-            runf.write('\n'.join(self._preambles) + '\n')
+            runf.write('\n'.join(self._preambles) + '\n\n')
             runf.write(job.get_runscript())
 
         cmd = self.get_sbatch_command() + f'-D {self.workdir} -J {self.rundir}/{self.name} -o ams.out {self.name}.run'
@@ -383,7 +464,7 @@ class ADFJob(Job):
         # set the slurm job id for this calculation
         self.slurm_job_id = slurm.workdir_info(self.workdir).id
 
-    def dependency(self, otherjob):
+    def dependency(self, otherjob: Job):
         if hasattr(otherjob, 'slurm_job_id'):
             self.sbatch(dependency=f'afterok:{otherjob.slurm_job_id}')
 
