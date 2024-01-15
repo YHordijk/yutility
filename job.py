@@ -384,6 +384,7 @@ class ADFJob(Job):
                 sp.run(cmd.split(), stdout=devnull, stderr=sp.STDOUT)
 
         sq = slurm.squeue()
+        print(sq)
         slurm_idx = sq.directory.index(self.workdir)
         self.slurm_job_id = sq.id[slurm_idx]
 
