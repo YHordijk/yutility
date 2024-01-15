@@ -760,6 +760,7 @@ End
 
         self.pre_nmr_job.name = self.name + '_pre'
         self.pre_nmr_job.rundir = self.rundir
+        self.pre_nmr_job.sbatch(**self._sbatch)
         self.pre_nmr_job.run()
 
         self.dependency(self.pre_nmr_job)
