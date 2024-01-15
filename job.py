@@ -17,6 +17,7 @@ class Job:
         self.name = 'calc'
         self.rundir = 'tmp'
         self.test_mode = test_mode
+        self._preambles = []
 
     def __enter__(self):
         return self
@@ -63,6 +64,9 @@ class Job:
 
     def run(self):
         NotImplemented
+
+    def add_preamble(self, line):
+        self._preambles.append(line)
 
 
 class ADFJob(Job):
@@ -365,6 +369,7 @@ class ADFJob(Job):
 
         with open(j(self.workdir, f'{self.name}.run'), 'w+') as runf:
             runf.write('#!/bin/sh\n\n')
+            runf.write('\n'.join(self._preambles) + '\n')
             runf.write(job.get_runscript())
 
         cmd = self.get_sbatch_command() + f'-D {self.workdir} -J {self.rundir}/{self.name} -o ams.out {self.name}.run'
@@ -636,6 +641,7 @@ if __name__ == '__main__':
                 # job.optimization()
                 job.functional(func)
                 job.basis_set('TZ2P')
+                job.add_preamble('module load ams/2023.101')
         except Exception as e:
             print(e)
 
