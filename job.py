@@ -7,18 +7,6 @@ from typing import Union
 j = os.path.join
 
 
-# def squeue():
-#     try:
-#         output = sp.check_output(['squeue', '--me', '--format', "%Z %A"]).decode()
-#         output = [line for line in output.splitlines()[1:] if line.strip()]
-#         slurm_dirs, slurm_ids = [line.split()[0] for line in output], [line.split()[1] for line in output]
-#     except:
-#         slurm_dirs = []
-#         slurm_ids = []
-
-#     return slurm_dirs, slurm_ids
-
-
 class Job:
     '''This is the base Job class used to build more advanced classes such as AMSJob and ORCAJob.
     The base class contains an empty DotDict object that holds the settings. It also provides __enter__ and __exit__ methods to make use of context manager syntax.'''
@@ -361,6 +349,10 @@ class ADFJob(Job):
             self._molecule.add_atom(mol)
 
     def run(self):
+        '''
+        Run this calculation. This method will write the input and run files and then calls sbatch with the provided settings.
+        You can run this manually, or preferably use the context manager syntax for these jobs.
+        '''
         os.makedirs(self.rundir, exist_ok=True)
 
         sett = self.settings.as_plams_settings()
@@ -383,8 +375,8 @@ class ADFJob(Job):
             with open(os.devnull, 'wb') as devnull:
                 sp.run(cmd.split(), stdout=devnull, stderr=sp.STDOUT)
 
+        # set the slurm job id for this calculation
         sq = slurm.squeue()
-        print(sq)
         slurm_idx = sq.directory.index(self.workdir)
         self.slurm_job_id = sq.id[slurm_idx]
 
