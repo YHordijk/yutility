@@ -203,8 +203,9 @@ def get_available_functionals():
 
 functionals = get_available_functionals()
 
-# from pprint import pprint
+from pprint import pprint
 # print('BMK-D3(BJ)' in functionals)
+pprint(functionals.VWN)
 # pprint(functionals['BMK-D3(BJ)'])
 # pprint(get_available_functionals()['HartreeFock-D4'])
 # pprint(get_available_functionals()['MetaGGA:SSB-D'])
@@ -376,8 +377,8 @@ class ADFJob(Job):
         else:
             func = functionals[functional]
             self.settings.input.adf.update(func.adf_settings)
-
-        self.settings.input.adf.XC.LibXC = functional
+            
+        # self.settings.input.adf.XC.LibXC = functional
 
 
     def relativity(self, level: str = 'Scalar'):
@@ -806,17 +807,17 @@ End
 
 
 if __name__ == '__main__':
-    for i, func in enumerate(get_available_functionals()):
+    for i, (func_name, func_data) in enumerate(get_available_functionals().items()):
         try:
             with ADFJob() as job:
                 job.molecule('./test/xyz/H2O.xyz')
                 job.rundir = 'tmp/functional_test'
-                job.name = f'{i}.{func}'
+                job.name = f'{i}.{func_data.path_safe_name}'
                 job.sbatch(p='tc', ntasks_per_node=32)
-                # job.optimization()
-                job.functional(func)
+                job.functional(func_name)
                 job.basis_set('TZ2P')
                 job.add_preamble('module load ams/2023.101')
+                print(job.settings)
         except Exception as e:
             print(e)
 
@@ -883,17 +884,17 @@ if __name__ == '__main__':
     #     job.basis_set('TZ2P')
     #     job.quality('Good')
 
-    with ADFJob() as opt_job:
-        opt_job.molecule('./test/xyz/SN2_TS.xyz')
-        opt_job.charge(-1)
+    # with ADFJob() as opt_job:
+    #     opt_job.molecule('./test/xyz/SN2_TS.xyz')
+    #     opt_job.charge(-1)
 
-        opt_job.rundir = 'tmp/SN2'
-        opt_job.name = 'TS_OPT'
-        opt_job.sbatch(p='tc', ntasks_per_node=15)
-        opt_job.functional('BMK-D3(BJ)')
-        opt_job.basis_set('DZP')
-        opt_job.optimization()
-        exit()
+    #     opt_job.rundir = 'tmp/SN2'
+    #     opt_job.name = 'TS_OPT'
+    #     opt_job.sbatch(p='tc', ntasks_per_node=15)
+    #     opt_job.functional('BMK-D3(BJ)')
+    #     opt_job.basis_set('DZP')
+    #     opt_job.optimization()
+    #     exit()
 
     # with ADFJob() as sp_job:
     #     sp_job.dependency(opt_job)  # this job will only run when opt_job finishes
