@@ -115,8 +115,8 @@ class ADFJob(Job):
         'OPBE-D4':     'GRIMME4 s6=1.0000 s8=3.06917417 a1=0.68267534 a2=2.22849018',
         'M06-D4':      'GRIMME4 s6=1.0000 s8=0.16366729 a1=0.53456413 a2=6.06192174',
         'M06L-D4':     'GRIMME4 s6=1.0000 s8=0.59493760 a1=0.71422359 a2=6.35314182',
-        'WB97-D4':     'GRIMME4 s6=1.0000 s8=1.12736363 a1=0.75396590 a2=7.31052961',
-        'WB97X-D4':    'GRIMME4 s6=1.0000 s8=0.35040501 a1=0.56974796 a2=6.44327794',   
+        'WB97-D4':     'GRIMME4 s6=1.0000 s8=6.55792598 a1=0.76666802 a2=8.36027334',
+        'WB97X-D4':    'GRIMME4 s6=1.0000 s8=-0.07519516 a1=0.45094893 a2=6.78425255',   
     }
 
     # This dictionary maps human readable to ADF translation of dispersion corrections
