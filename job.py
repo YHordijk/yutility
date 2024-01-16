@@ -185,6 +185,7 @@ def get_available_functionals():
         # separate the functional name from the line
         functional_name = line[2:].split('!')[0].split(',')[0].strip()
         func.name = functional_name
+        func.path_safe_name = functional_name.replace(')', '').replace('(', '').replace('*', 's')
 
         # check if custom params were given for dispersion
         if 'GRIMME' in line:
