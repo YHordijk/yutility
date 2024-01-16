@@ -81,6 +81,14 @@ class Job:
         return j(os.path.abspath(self.rundir), self.name)
 
 
+def get_available_functionals():
+    functionals = []
+    with open(j(os.path.split(__file__)[0], 'available_functionals.txt')) as file:
+        [functionals.append(line.strip()) for line in file.readlines() if line.startswith('- ')]
+    functionals.extend(cls.custom_disp_params.keys())
+    return functionals
+
+
 class ADFJob(Job):
     # for some functionals there are no default dispersion parameters in ADF
     # we will set those here, they will later be used to create the settings
@@ -138,7 +146,8 @@ class ADFJob(Job):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.functional('PW92')
+        # self.functional('PW92')
+        self._functional = None
         self.basis_set('TZ2P')
         self.quality('Good')
         self.SCF_converge(1e-8)
@@ -304,7 +313,8 @@ class ADFJob(Job):
             log.warn(f'Switching basis set from {self._basis_set} to mTZ2P for r2SCAN-3c.')
             self.basis_set('mTZ2P')
 
-        if functional == 'SSB-D'
+        if functional == 'SSB-D':
+            log.warn(f'There are two functionals called SSB-D, please use "GGA:SSB-D" or "MetaGGA:SSB-D".')
 
         if functional not in ADFJob.available_functionals():
             log.warn(f'Functional {functional} is not defined in ADF or in ADFJob.custom_disp_params. Please make sure you know what you are doing.')
@@ -476,12 +486,13 @@ class ADFJob(Job):
         with open(j(self.workdir, 'submit'), 'w+') as cmd_file:
             cmd_file.write(cmd)
 
-        if not self.test_mode:
-            with open(os.devnull, 'wb') as devnull:
-                sp.run(cmd.split(), stdout=devnull, stderr=sp.STDOUT)
+        # if not self.test_mode:
+        #     with open(os.devnull, 'wb') as devnull:
+        #         sp.run(cmd.split(), stdout=devnull, stderr=sp.STDOUT)
 
-        # set the slurm job id for this calculation
-        self.slurm_job_id = slurm.workdir_info(self.workdir).id
+        # # set the slurm job id for this calculation
+        # self.slurm_job_id = slurm.workdir_info(self.workdir).id
+        self.slurm_job_id = None
 
     @property
     def output_mol_path(self):
