@@ -486,13 +486,13 @@ class ADFJob(Job):
         with open(j(self.workdir, 'submit'), 'w+') as cmd_file:
             cmd_file.write(cmd)
 
-        # if not self.test_mode:
-        #     with open(os.devnull, 'wb') as devnull:
-        #         sp.run(cmd.split(), stdout=devnull, stderr=sp.STDOUT)
+        if not self.test_mode:
+            with open(os.devnull, 'wb') as devnull:
+                sp.run(cmd.split(), stdout=devnull, stderr=sp.STDOUT)
 
-        # # set the slurm job id for this calculation
-        # self.slurm_job_id = slurm.workdir_info(self.workdir).id
-        self.slurm_job_id = None
+        # set the slurm job id for this calculation
+        self.slurm_job_id = slurm.workdir_info(self.workdir).id
+        # self.slurm_job_id = None
 
     @property
     def output_mol_path(self):
