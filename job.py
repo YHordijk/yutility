@@ -147,6 +147,10 @@ def get_available_functionals():
             func.adf_settings.XC.MetaGGA = 'SSB-D'
             return
 
+        if func.name == 'HartreeFock':
+            func.adf_settings.XC.HartreeFock = ''
+            return
+
         if func.name == 'MP2':
             func.adf_settings.XC.MP2 = ''
             return
@@ -201,11 +205,11 @@ def get_available_functionals():
 
     return functionals
 
-functionals = get_available_functionals()
+functional_data = get_available_functionals()
 
-from pprint import pprint
+# from pprint import pprint
 # print('BMK-D3(BJ)' in functionals)
-pprint(functionals.VWN)
+# pprint(functionals.VWN)
 # pprint(functionals['BMK-D3(BJ)'])
 # pprint(get_available_functionals()['HartreeFock-D4'])
 # pprint(get_available_functionals()['MetaGGA:SSB-D'])
@@ -372,12 +376,12 @@ class ADFJob(Job):
             log.error(f'There are two functionals called SSB-D, please use "GGA:SSB-D" or "MetaGGA:SSB-D".')
             return
 
-        if functional not in functionals:
+        if functional not in functional_data:
             log.warn(f'XC-functional {functional} not found. Please warn your local developer. Adding functional as LibXC.')
         else:
-            func = functionals[functional]
+            func = functional_data[functional]
             self.settings.input.adf.update(func.adf_settings)
-            
+
         # self.settings.input.adf.XC.LibXC = functional
 
 
@@ -807,7 +811,7 @@ End
 
 
 if __name__ == '__main__':
-    for i, (func_name, func_data) in enumerate(get_available_functionals().items()):
+    for i, (func_name, func_data) in enumerate(functional_data.items()):
         try:
             with ADFJob() as job:
                 job.molecule('./test/xyz/H2O.xyz')
