@@ -304,6 +304,8 @@ class ADFJob(Job):
             log.warn(f'Switching basis set from {self._basis_set} to mTZ2P for r2SCAN-3c.')
             self.basis_set('mTZ2P')
 
+        if functional == 'SSB-D'
+
         if functional not in ADFJob.available_functionals():
             log.warn(f'Functional {functional} is not defined in ADF or in ADFJob.custom_disp_params. Please make sure you know what you are doing.')
 
@@ -359,8 +361,12 @@ class ADFJob(Job):
             self.settings.input.adf.XC.RANGESEP = ''
             return
 
-        if functional == 'SSB':
+        if functional == 'GGA:SSB':
             self.settings.input.adf.XC.GGA = 'SSB-D'
+            return
+
+        if functional == 'MetaGGA:SSB':
+            self.settings.input.adf.XC.MetaGGA = 'SSB-D'
             return
 
         log.warn(f'XC-functional {functional} not defined. Defaulting to using LibXC.')
