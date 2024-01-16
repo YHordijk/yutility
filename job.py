@@ -82,71 +82,136 @@ class Job:
 
 
 def get_available_functionals():
-    functionals = []
+    '''
+    Function that returns a dictionary of all available XC-functionals.
+    '''
+    def set_dispersion(func):
+        disp_map = {
+            '-D4': 'GRIMME4',
+            '-D3(BJ)': 'GRIMME3 BJDAMP',
+            '-D3BJ': 'GRIMME3 BJDAMP',
+            '-D3': 'GRIMME3',
+            '-dDsC': 'dDsC',
+            '-dUFF': 'UFF',
+            '-MBD': 'MBD',
+            '-MBD@rsSC': 'MBD',
+            '-D': 'DEFAULT'
+        }
+
+        # set some default values for useful parameters
+        func.name_no_disp = func.name
+        func.dispersion = None
+        func.dispersion_name = None
+
+        # go through every dispersion correction and check if we are using it
+        for disp_suffix, disp_name in disp_map.items():
+            if func.name.endswith(disp_suffix):
+                # dispersion will be the suffix without the -
+                func.dispersion = disp_suffix[1:]
+                func.dispersion_name = disp_name
+
+                # check if the functional already includes the dispersion correction
+                if func.includes_disp:
+                    break
+
+                # else we set the name of the functional without dispersion for later
+                func.name_no_disp = func.name[:-len(disp_suffix)]
+                # get the dispersion settings for ADF. Try to get custom values if they were provided.
+                func.adf_settings.XC.Dispersion = func.disp_params or disp_name
+                break
+
+    def set_functional(func):
+        # set the functional settings for ADF
+        # first go through some special functionals that require special settings
+        if func.name_no_disp == 'BMK':
+            func.adf_settings.XC.LibXC = 'HYB_MGGA_X_BMK GGA_C_BMK'
+            return
+
+        if func.name in ['LCY-BLYP', 'LCY-BP86', 'LCY-PBE']:
+            func.adf_settings.XC.GGA = func.name.split('-')[1]
+            func.adf_settings.XC.RANGESEP = ''
+            func.adf_settings.XC.xcfun = ''
+            return
+
+        if func.name in ['CAMY-B3LYP']:
+            func.adf_settings.XC.Hybrid = 'CAMY-B3LYP'
+            func.adf_settings.XC.RANGESEP = ''
+            func.adf_settings.XC.xcfun = ''
+            return
+
+        if func.name == 'GGA:SSB-D':
+            func.adf_settings.XC.GGA = 'SSB-D'
+            return
+
+        if func.name == 'MetaGGA:SSB-D':
+            func.adf_settings.XC.MetaGGA = 'SSB-D'
+            return
+
+        if func.name == 'MP2':
+            func.adf_settings.XC.MP2 = ''
+            return
+
+        if func.name in ['SOS-MP2', 'SCS-MP2']:
+            func.adf_settings.XC.MP2 = ''
+            func.adf_settings.XC.EmpiricalScaling = func.name[:-4]
+            return
+
+        # the normal functionals are defined based on their category, or selected from libxc
+        if func.use_libxc:
+            func.adf_settings.XC.LibXC = func.name_no_disp
+        else:
+            func.adf_settings.XC[func.category] = func.name_no_disp
+
+    # gather all data about available functionals
+    functionals = results.Result()  # store all info in this dict
+
     with open(j(os.path.split(__file__)[0], 'available_functionals.txt')) as file:
-        [functionals.append(line.strip()) for line in file.readlines() if line.startswith('- ')]
-    functionals.extend(cls.custom_disp_params.keys())
+        lines = file.readlines()
+
+    for line in lines:
+        if not line.strip():
+            continue
+
+        # functional names are given starting with -
+        # category names without -
+        if not line.startswith('- '):
+            curr_category = line.strip()
+            continue
+
+        # store data about the func in a dict
+        func = results.Result()
+        func.category = curr_category
+
+        # separate the functional name from the line
+        functional_name = line[2:].split('!')[0].split(',')[0].strip()
+        func.name = functional_name
+
+        # check if custom params were given for dispersion
+        if 'GRIMME' in line:
+            func.disp_params = line.split('!')[0].split(',')[1].strip().strip("'")
+
+        func.use_libxc = '!libxc' in line
+        func.includes_disp = '!includesdisp' in line
+
+        set_dispersion(func)
+        set_functional(func)
+
+        functionals[functional_name] = func
+
     return functionals
+
+functionals = get_available_functionals()
+
+# from pprint import pprint
+# print('BMK-D3(BJ)' in functionals)
+# pprint(functionals['BMK-D3(BJ)'])
+# pprint(get_available_functionals()['HartreeFock-D4'])
+# pprint(get_available_functionals()['MetaGGA:SSB-D'])
 
 
 class ADFJob(Job):
-    # for some functionals there are no default dispersion parameters in ADF
-    # we will set those here, they will later be used to create the settings
-    custom_disp_params = {
-        # Grimme3 dispersion correction
-        # https://www.chemie.uni-bonn.de/grimme/de/software/dft-d3/zero_damping
-        'OLYP-D3':     'GRIMME3 PAR1=1.0000 PAR2=0.806 PAR3=1.764',
-        'OPBE-D3':     'GRIMME3 PAR1=1.0000 PAR2=0.837 PAR3=2.055',
-        'M06-D3':      'GRIMME3 PAR1=1.0000 PAR2=1.325 PAR3=0.000',
-        'M06L-D3':     'GRIMME3 PAR1=1.0000 PAR2=1.581 PAR3=0.000',
-        'M06-2X-D3':   'GRIMME3 PAR1=1.0000 PAR2=1.619 PAR3=0.000',
-        'M06-HF-D3':   'GRIMME3 PAR1=1.0000 PAR2=1.446 PAR3=0.000',
-        'BMK-D3':      'GRIMME3 PAR1=1.0000 PAR2=1.931 PAR3=2.168',
-
-        # Grimme3 dispersion correction with BJ dampening
-        # https://www.chemie.uni-bonn.de/grimme/de/software/dft-d3/bj_damping
-        'OLYP-D3(BJ)': 'GRIMME3 BJDAMP PAR1=1.0000 PAR2=0.5299 PAR3=2.6205 PAR4=2.8065',
-        'OPBE-D3(BJ)': 'GRIMME3 BJDAMP PAR1=1.0000 PAR2=0.5512 PAR3=3.3816 PAR4=2.9444',
-        'BMK-D3(BJ)':  'GRIMME3 BJDAMP PAR1=1.0000 PAR2=0.1940 PAR3=2.0860 PAR4=5.9197',
-
-        # Grimme4 dispersion correction
-        # Table A4: Caldeweyher, E.; Ehlert, S.; Hansen, A.; Neugebauer, H.; Spicher, S.; Bannwarth, C.; Grimme, S. J. Chem. Phys. 2019, 150 (15).
-        'OLYP-D4':     'GRIMME4 s6=1.0000 s8=2.74836820 a1=0.60184498 a2=2.53292167',
-        'OPBE-D4':     'GRIMME4 s6=1.0000 s8=3.06917417 a1=0.68267534 a2=2.22849018',
-        'M06-D4':      'GRIMME4 s6=1.0000 s8=0.16366729 a1=0.53456413 a2=6.06192174',
-        'M06L-D4':     'GRIMME4 s6=1.0000 s8=0.59493760 a1=0.71422359 a2=6.35314182',
-        'WB97-D4':     'GRIMME4 s6=1.0000 s8=6.55792598 a1=0.76666802 a2=8.36027334',
-        'WB97X-D4':    'GRIMME4 s6=1.0000 s8=-0.07519516 a1=0.45094893 a2=6.78425255',   
-    }
-
-    # This dictionary maps human readable to ADF translation of dispersion corrections
-    disp_map = {
-        '-D4': 'GRIMME4',
-        '-D3(BJ)': 'GRIMME3 BJDAMP',
-        '-D3BJ': 'GRIMME3 BJDAMP',
-        '-D3': 'GRIMME3',
-        '-dDsC': 'dDsC',
-        '-dUFF': 'UFF',
-        '-MBD': 'MBD',
-        '-MBD@rsSC': 'MBD',
-        '-D': 'DEFAULT'
-    }
-
-    # This dictionary maps human readable functional names to the XC type ADF uses
-    functional_categories = {
-        'LDA': ['VWN', 'PW92'],
-        'GGA': ['S12g', 'BLYP', 'BP86', 'GAM', 'HTBS', 'KT1', 'KT2', 'mPW', 'mPBE', 'N12', 'OLYP', 'OPBE', 'PBE', 'PBEsol', 'PW91', 'revPBE', 'RPBE', 'BEE'],
-        'Hybrid': ['B3LYP', 'B1LYP', 'B1PW91', 'B3LYP*', 'BHandH', 'BHandHLYP', 'KMLYP', 'MPW1PW', 'MPW1K', 'O3LYP', 'OPBE0', 'PBE0', 'S12h', 'X3LYP', 'HTBS'],
-        'MetaGGA': ['M06L', 'MVS', 'SCAN', 'revTPSS', 'TASKxc', 'TASKCC', 'TPSS', 'r2SCAN-3c'],
-        'LibXC': ['rSCAN', 'revSCAN', 'r2SCAN'] + ['CAM-B3LYP', 'CAMY-B3LYP', 'HSE03', 'HSE06', 'M11', 'MN12-SX', 'N12-SX', 'WB97', 'WB97X', 'MN15', 'MN15-L'] + ['revSCAN0'],
-        'DoubleHybrid': ['rev-DOD-PBEP86', 'rev-DOD-BLYP', 'rev-DOD-PBE', 'B2PLYP', 'B2GPPLYP'],
-        'MetaHybrid': ['M06', 'M06-2X', 'M06-HF', 'TPSSH'],
-        'model': ['SAOP', 'GRAC', 'LB94'],
-    }
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # self.functional('PW92')
         self._functional = None
         self.basis_set('TZ2P')
         self.quality('Good')
@@ -282,18 +347,6 @@ class ADFJob(Job):
         '''
         self.settings.input.adf.SCF.converge = val
 
-    @classmethod
-    def available_functionals(cls):
-        '''
-        Returns a list of all functionals that are available for ADF. This assumes you are using version AMS2023.104.
-        Optionally give categories that are to be returned.
-        '''
-        functionals = []
-        with open(j(os.path.split(__file__)[0], 'available_functionals.txt')) as file:
-            [functionals.append(line.strip()) for line in file.readlines()]
-        functionals.extend(cls.custom_disp_params.keys())
-        return functionals
-
     def functional(self, val: str):
         '''
         Set the functional to be used by the calculation. This also sets the dispersion if it is specified in the functional name.
@@ -314,73 +367,17 @@ class ADFJob(Job):
             self.basis_set('mTZ2P')
 
         if functional == 'SSB-D':
-            log.warn(f'There are two functionals called SSB-D, please use "GGA:SSB-D" or "MetaGGA:SSB-D".')
-
-        if functional not in ADFJob.available_functionals():
-            log.warn(f'Functional {functional} is not defined in ADF or in ADFJob.custom_disp_params. Please make sure you know what you are doing.')
-
-        # split the functional and dispersion term
-        for suffix, disp_name in self.disp_map.items():
-            # check if the user requests the dispersion correction
-            if not functional.endswith(suffix):
-                continue
-
-            # set the correct dispersion settings for ADF
-            # first check if there are custom dispersion parameters we have to load
-            if functional in self.custom_disp_params:
-                self.settings.input.adf.XC.Dispersion = self.custom_disp_params[functional]
-            # else we use the default ADF ones
-            else:
-                self.settings.input.adf.XC.Dispersion = disp_name
-
-            # remove the disp correction from the functional name
-            # we would use str.removesuffix, but that is only since python 3.9, so we just use slicing instead
-            functional = functional[:-len(suffix)]
-
-        # handle the XC functional part
-        for category, functionals in self.functional_categories.items():
-            if functional in functionals:
-                self.settings.input.adf.XC[category] = functional
-                return
-
-        # define some preset functionals
-        if functional == 'BMK':
-            self.settings.input.adf.XC.LibXC = 'HYB_MGGA_X_BMK GGA_C_BMK'
+            log.error(f'There are two functionals called SSB-D, please use "GGA:SSB-D" or "MetaGGA:SSB-D".')
             return
 
-        # LDA is the standard functional
-        if functional == 'LDA':
-            return
+        if functional not in functionals:
+            log.warn(f'XC-functional {functional} not found. Please warn your local developer. Adding functional as LibXC.')
+        else:
+            func = functionals[functional]
+            self.settings.input.adf.update(func.adf_settings)
 
-        if functional == 'MP2':
-            self.settings.input.adf.XC.MP2 = ''
-            return
-
-        if functional == 'SOS-MP2':
-            self.settings.input.adf.XC.MP2 = ''
-            self.settings.input.adf.XC.EmpiricalScaling = 'SOS'
-            return
-
-        if functional == 'Hartree-Fock':
-            self.settings.input.adf.XC.HartreeFock = ''
-            return
-
-        if functional in ['LCY-BP86', 'LCY-PBE', 'LCY-BLYP']:
-            self.settings.input.adf.XC.GGA = functional.split('-')[1]
-            self.settings.input.adf.XC.xcfun = ''
-            self.settings.input.adf.XC.RANGESEP = ''
-            return
-
-        if functional == 'GGA:SSB':
-            self.settings.input.adf.XC.GGA = 'SSB-D'
-            return
-
-        if functional == 'MetaGGA:SSB':
-            self.settings.input.adf.XC.MetaGGA = 'SSB-D'
-            return
-
-        log.warn(f'XC-functional {functional} not defined. Defaulting to using LibXC.')
         self.settings.input.adf.XC.LibXC = functional
+
 
     def relativity(self, level: str = 'Scalar'):
         '''
@@ -808,25 +805,26 @@ End
 
 
 if __name__ == '__main__':
-    # for i, func in enumerate(ADFJob.available_functionals()):
-    #     try:
-    #         with ADFJob() as job:
-    #             job.molecule('./test/xyz/H2O.xyz')
-    #             job.rundir = 'tmp/functional_test'
-    #             job.name = f'{i}.{func}'
-    #             job.sbatch(p='tc', ntasks_per_node=15)
-    #             # job.optimization()
-    #             job.functional(func)
-    #             job.basis_set('TZ2P')
-    #             job.add_preamble('module load ams/2023.101')
-    #     except Exception as e:
-    #         print(e)
+    for i, func in enumerate(get_available_functionals()):
+        try:
+            with ADFJob() as job:
+                job.molecule('./test/xyz/H2O.xyz')
+                job.rundir = 'tmp/functional_test'
+                job.name = f'{i}.{func}'
+                job.sbatch(p='tc', ntasks_per_node=32)
+                # job.optimization()
+                job.functional(func)
+                job.basis_set('TZ2P')
+                job.add_preamble('module load ams/2023.101')
+        except Exception as e:
+            print(e)
 
-    with NMRJob() as job:
-        job.molecule('./test/xyz/H2O.xyz')
-        job.rundir = 'tmp/NMR'
-        job.name = 'H2O'
-        job.sbatch(p='tc', ntasks_per_node=15)
+    # with NMRJob() as job:
+    #     job.molecule('./test/xyz/H2O.xyz')
+    #     job.rundir = 'tmp/NMR'
+    #     job.name = 'H2O'
+    #     job.sbatch(p='tc', ntasks_per_node=15)
+
 
     # with ADFFragmentJob() as job:
     #     mol = plams.Molecule('./test/xyz/NH3BH3.xyz')
@@ -884,16 +882,17 @@ if __name__ == '__main__':
     #     job.basis_set('TZ2P')
     #     job.quality('Good')
 
-    # with ADFJob() as opt_job:
-    #     opt_job.molecule('./test/xyz/SN2_TS.xyz')
-    #     opt_job.charge(-1)
+    with ADFJob() as opt_job:
+        opt_job.molecule('./test/xyz/SN2_TS.xyz')
+        opt_job.charge(-1)
 
-    #     opt_job.rundir = 'tmp/SN2'
-    #     opt_job.name = 'TS_OPT'
-    #     opt_job.sbatch(p='tc', ntasks_per_node=15)
-    #     opt_job.functional('OLYP')
-    #     opt_job.basis_set('DZP')
-    #     opt_job.optimization()
+        opt_job.rundir = 'tmp/SN2'
+        opt_job.name = 'TS_OPT'
+        opt_job.sbatch(p='tc', ntasks_per_node=15)
+        opt_job.functional('BMK-D3(BJ)')
+        opt_job.basis_set('DZP')
+        opt_job.optimization()
+        exit()
 
     # with ADFJob() as sp_job:
     #     sp_job.dependency(opt_job)  # this job will only run when opt_job finishes
