@@ -205,15 +205,6 @@ def get_available_functionals():
 
     return functionals
 
-functional_data = get_available_functionals()
-
-# from pprint import pprint
-# print('BMK-D3(BJ)' in functionals)
-# pprint(functionals.VWN)
-# pprint(functionals['BMK-D3(BJ)'])
-# pprint(get_available_functionals()['HartreeFock-D4'])
-# pprint(get_available_functionals()['MetaGGA:SSB-D'])
-
 
 class ADFJob(Job):
     def __init__(self, *args, **kwargs):
@@ -810,6 +801,10 @@ End
         self.slurm_job_id = slurm.workdir_info(self.workdir).id
 
 
+
+functional_data = get_available_functionals()
+
+
 if __name__ == '__main__':
     for i, (func_name, func_data) in enumerate(functional_data.items()):
         try:
@@ -821,7 +816,6 @@ if __name__ == '__main__':
                 job.functional(func_name)
                 job.basis_set('TZ2P')
                 job.add_preamble('module load ams/2023.101')
-                print(job.settings)
         except Exception as e:
             print(e)
 
