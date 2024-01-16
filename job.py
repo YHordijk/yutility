@@ -147,7 +147,7 @@ def get_available_functionals():
             func.adf_settings.XC.MetaGGA = 'SSB-D'
             return
 
-        if func.name == 'HartreeFock':
+        if func.name_no_disp == 'HartreeFock':
             func.adf_settings.XC.HartreeFock = ''
             return
 
