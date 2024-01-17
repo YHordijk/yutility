@@ -87,6 +87,7 @@ def split_all(path):
         parts.append(b)
         path = a
 
+
 def get_subdirectories(root):
     dirs = [root]
     subdirs = set()
@@ -103,3 +104,29 @@ def get_subdirectories(root):
 
     return subdirs
 
+
+def match_paths(root, pattern):
+    import re
+
+    substitutions = re.findall(r'{(\w+)}', pattern)
+    for sub in substitutions:
+        pattern = pattern.replace('{' + sub + '}', '([a-zA-Z0-9_-]+)')
+
+    substitution_vals = {sub: [] for sub in substitutions}
+    ret = []
+    subdirs = get_subdirectories(root)
+    subdirs = [j(*split_all(subdir[1:])) for subdir in subdirs]
+    for subdir in subdirs:
+        match = re.fullmatch(pattern, subdir)
+        if match:
+            ret.append(subdir)
+            [substitution_vals[sub].append(match.group(i+1)) for i, sub in enumerate(substitutions)]
+
+    return ret, substitution_vals
+
+
+if __name__ == '__main__':
+    dirs, groups = match_paths('pathfunc_test', '{system}/{functional}_{basis_set}')
+    print(groups)
+    for d in dirs:
+        print(d)
