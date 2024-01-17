@@ -88,7 +88,7 @@ def split_all(path):
         path = a
 
 
-def get_subdirectories(root):
+def get_subdirectories(root, include_intermediates=False):
     dirs = [root]
     subdirs = set()
 
