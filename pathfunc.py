@@ -109,28 +109,87 @@ def get_subdirectories(root, include_intermediates=False):
     return subdirs
 
 
-def match_paths(root, pattern):
-    import re
+class PathMatches:
+    def __init__(self):
+        self.directories = []
+        self.data = {}
+        self._keys = set()
 
+    def add(self, directory, **data):
+        self.directories.append(directory)
+        self.data[directory] = data
+        [self._keys.add(k) for k in data.keys()]
+
+    def __iter__(self):
+        return iter(self.data.keys())
+
+    def __getitem__(self, key):
+        if key in self._keys:
+            return {d: self.data[d][key] for d in self}
+        if isinstance(key, int):
+            d = self.directories[key]
+            ret = self.data[d].copy()
+            ret['directory'] = d
+            return ret
+
+    def __getattr__(self, key):
+        return self[key]
+
+    def keys(self):
+        return ['directory'] + list(self._keys)
+
+    def items(self):
+        return self.data.items()
+
+    def rows(self):
+        keys = self.keys()[1:]
+        ret = []
+        for directory, data in self.items():
+            ret.append([directory] + [data[key] for key in keys])
+        return ret
+
+    def print(self):
+        log.table(self.rows(), self.keys())
+
+    def __len__(self):
+        return len(self.directories)
+
+
+def match(root, pattern):
+    '''
+    Find and return PathMatches object of root that match the given pattern.
+    '''
+
+    # get the number and names of substitutions in the given pattern
     substitutions = re.findall(r'{(\w+)}', pattern)
+    # the pattern should resolve to words and may contain - and _
+    # replace them here
     for sub in substitutions:
         pattern = pattern.replace('{' + sub + '}', '([a-zA-Z0-9_-]+)')
 
-    substitution_vals = {sub: [] for sub in substitutions}
-    ret = []
-    subdirs = get_subdirectories(root)
-    subdirs = [j(*split_all(subdir[1:])) for subdir in subdirs]
+    ret = PathMatches()
+    root_length = len(split_all(root))
+    subdirs = get_subdirectories(root, include_intermediates=True)
+    subdirs = [j(*split_all(subdir)[root_length:]) for subdir in subdirs if len(split_all(subdir)[root_length:]) > 0]
     for subdir in subdirs:
         match = re.fullmatch(pattern, subdir)
         if match:
-            ret.append(subdir)
-            [substitution_vals[sub].append(match.group(i+1)) for i, sub in enumerate(substitutions)]
+            p = j(root, subdir)
+            ret.add(p, **{substitutions[i]: match.group(i+1) for i in range(len(substitutions))})
 
-    return ret, substitution_vals
+    return ret
 
 
 if __name__ == '__main__':
-    dirs, groups = match_paths('pathfunc_test', '{system}/{functional}_{basis_set}')
-    print(groups)
-    for d in dirs:
-        print(d)
+    from tcutility import log
+
+    path_matches = match('pathfunc_test', '{system}/{functional}_{basis_set}')
+    path_matches.print()
+
+    # for p in path_matches:
+    #     print(p, path_matches.basis_set[p])
+
+    print(path_matches.directories)
+
+    for i in range(len(path_matches)):
+        print(path_matches[i])
