@@ -808,7 +808,7 @@ functional_data = get_available_functionals()
 if __name__ == '__main__':
     for i, (func_name, func_data) in enumerate(functional_data.items()):
         try:
-            with ADFJob() as job:
+            with ADFJob(test_mode=True) as job:
                 job.molecule('./test/xyz/H2O.xyz')
                 job.rundir = 'tmp/functional_test'
                 job.name = f'{i}.{func_data.path_safe_name}'
@@ -818,6 +818,18 @@ if __name__ == '__main__':
                 job.add_preamble('module load ams/2023.101')
         except Exception as e:
             print(e)
+
+    from yutility import pathfunc
+    from tcutility import log
+
+    dirs, groups = pathfunc.match('tmp/functional_test', '{idx}.{functional}')
+    group_keys = groups.keys()
+
+    rows = []
+    for i, d in enumerate(dirs):
+        rows.append([d] + [groups[key][i] for key in group_keys])
+    log.table(rows, ['Directory'] + list(group_keys))
+
 
     # with NMRJob() as job:
     #     job.molecule('./test/xyz/H2O.xyz')
