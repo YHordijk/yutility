@@ -87,3 +87,19 @@ def split_all(path):
         parts.append(b)
         path = a
 
+def get_subdirectories(root):
+    dirs = [root]
+    subdirs = set()
+
+    while len(dirs) > 0:
+        _dirs = []
+        for cdir in dirs:
+            csubdirs = [j(cdir, d) for d in os.listdir(cdir) if os.path.isdir(j(cdir, d))]
+            if len(csubdirs) == 0:
+                subdirs.add(cdir)
+            else:
+                _dirs.extend(csubdirs)
+        dirs = _dirs
+
+    return subdirs
+
