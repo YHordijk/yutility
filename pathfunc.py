@@ -1,5 +1,6 @@
 import os
 from yutility import log
+import re
 
 j = os.path.join
 
@@ -99,7 +100,10 @@ def get_subdirectories(root, include_intermediates=False):
             if len(csubdirs) == 0:
                 subdirs.add(cdir)
             else:
+                if include_intermediates:
+                    subdirs.add(cdir)
                 _dirs.extend(csubdirs)
+
         dirs = _dirs
 
     return subdirs
