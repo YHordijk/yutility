@@ -111,53 +111,6 @@ def get_subdirectories(root, include_intermediates=False):
     return subdirs
 
 
-# class PathMatches:
-#     def __init__(self):
-#         self.directories = []
-#         self.data = {}
-#         self._keys = set()
-
-#     def add(self, directory, **data):
-#         self.directories.append(directory)
-#         self.data[directory] = data
-#         [self._keys.add(k) for k in data.keys()]
-
-#     def __iter__(self):
-#         return iter(self.data.keys())
-
-#     def __getitem__(self, key):
-#         if key in self._keys:
-#             return {d: self.data[d][key] for d in self}
-
-#         if isinstance(key, int):
-#             d = self.directories[key]
-#             ret = self.data[d].copy()
-#             ret['directory'] = d
-#             return ret
-
-#     def __getattr__(self, key):
-#         return self[key]
-
-#     def keys(self):
-#         return ['directory'] + list(self._keys)
-
-#     def items(self):
-#         return self.data.items()
-
-#     def rows(self):
-#         keys = self.keys()[1:]
-#         ret = []
-#         for directory, data in self.items():
-#             ret.append([directory] + [data[key] for key in keys])
-#         return ret
-
-#     def print(self):
-#         log.table(self.rows(), self.keys())
-
-#     def __len__(self):
-#         return len(self.directories)
-
-
 def match(root, pattern: Union[str, list[str]]):
     '''
     Find and return PathMatches object of root that match the given pattern.
@@ -172,24 +125,27 @@ def match(root, pattern: Union[str, list[str]]):
         pattern = pattern.replace('{' + sub + '}', f'([a-zA-Z0-9_-]{quantifier})')
 
     ret = results.Result()
+    # root dir can be any level deep. We should count how many directories are in root
     root_length = len(split_all(root))
+    # get all subdirectories first, we can loop through them later
     subdirs = get_subdirectories(root, include_intermediates=True)
+    # remove the root from the subdirectories. We cannot use str.removeprefix because it was added in python 3.9
     subdirs = [j(*split_all(subdir)[root_length:]) for subdir in subdirs if len(split_all(subdir)[root_length:]) > 0]
     for subdir in subdirs:
+        # check if we get a match with our pattern
         match = re.fullmatch(pattern, subdir)
-        if match:
-            p = j(root, subdir)
-            # ret.add(p, **{substitutions[i]: match.group(i+1) for i in range(len(substitutions))})
-            ret[p] = results.Result(directory=p, **{substitutions[i]: match.group(i+1) for i in range(len(substitutions))})
+        if not match:
+            continue
+
+        p = j(root, subdir)
+        # get the group data and add it to the return dictionary. We skip the first group because it is the full directory path
+        ret[p] = results.Result(directory=p, **{substitutions[i]: match.group(i+1) for i in range(len(substitutions))})
 
     return ret
 
 
 if __name__ == '__main__':
     from tcutility import log
-
-    # path_matches = match('pathfunc_test', '{system}/{functional}_{basis_set}')
-    # path_matches.print()
 
     systems = match('tmp', '{system}/EDA')
     systems.print()
