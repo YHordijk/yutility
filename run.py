@@ -1,6 +1,9 @@
 import scm.plams as plams
 from yutility import units, log, settings, pathfunc, plotfunc
-from TCutility import results
+try:
+    from TCutility import results
+except:
+    from tcutility import results
 import os
 import numpy as np
 import subprocess
@@ -346,7 +349,7 @@ def nmr(mol, dft_settings=None, folder=None, path=DEFAULT_RUN_PATH, do_init=True
         return NMRResults(j(workdir(), 'nmr', 'adf.rkf'))
 
 
-def orbital_cub(rkf_path, name, orbtype='SCF', symlabel='All', overwrite=False, grid='medium'):
+def orbital_cub(rkf_path, name, orbtype='SCF', symlabel='All', overwrite=False, gridsize='medium'):
     from tcintegral import grid
     
     def get_cub_file():
@@ -366,7 +369,7 @@ def orbital_cub(rkf_path, name, orbtype='SCF', symlabel='All', overwrite=False, 
         infile.write(f'cd {os.path.split(rkf_path)[0]}\n')
         infile.write('"$AMSBIN/densf" << eor\n')
         infile.write(f'ADFFile {os.path.split(rkf_path)[1]}\n')
-        infile.write(f'GRID {grid}\nEND\n')
+        infile.write(f'GRID {gridsize}\nEND\n')
         infile.write(f'Orbitals {orbtype}\n')
         infile.write(f'    {symlabel} {name}\n')
         infile.write('END\n')
