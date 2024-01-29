@@ -1,7 +1,18 @@
 import numpy as np
 
 
-def lev(a, b, max_dist=None):
+def naive_iterative(a: str, b: str):
+    '''
+    The naïve iterative algorithm to obtain the Levenshtein distance between two strings.
+    We do not recommend using this algorithm as it is quite slow and faster alternatives exist.
+
+    Args:
+        a, b: strings to compare.
+
+    .. seealso::
+        :func:`wagner_fischer`
+            A more efficient algorithm to obtain the Levenshtein distance (up to 25x faster).
+    '''
     if len(b) == 0:
         return len(a)
     if len(a) == 0:
@@ -11,13 +22,23 @@ def lev(a, b, max_dist=None):
         return s[1:]
 
     if a[0] == b[0]:
-        return lev(tail(a), tail(b))
+        return naive_iterative(tail(a), tail(b))
 
-    d = 1 + min(lev(tail(a), b), lev(a, tail(b)), lev(tail(a), tail(b)))
+    d = 1 + min(naive_iterative(tail(a), b), naive_iterative(a, tail(b)), naive_iterative(tail(a), tail(b)))
     return d
 
 
-def WagnerFischer(a, b):
+def wagner_fischer(a: str, b: str):
+    '''
+    Return the Levenshtein distance using the Wagner-Fischer algorithm.
+
+    Args:
+        a, b: strings to compare.
+
+    .. seealso::
+        :func:`naive_iterative`
+            An alternative (and slower) algorithm to obtain the Levenshtein distance.
+    '''
     d = np.zeros((len(a)+1, len(b)+1)).astype(int)
 
     for i in range(len(a)):
@@ -29,6 +50,8 @@ def WagnerFischer(a, b):
         for j in range(1, len(b)+1):
             if a[i-1] == b[j-1]:
                 cost = 0
+            elif a[i-1].lower() == b[j-1].lower():
+                cost = .1
             else:
                 cost = 1
 
@@ -37,7 +60,22 @@ def WagnerFischer(a, b):
     return d[-1, -1]
 
 
-def get_closest(a, others, compare_func=WagnerFischer, ignore_case=False, ignore_chars='', maximum_distance=None):
+def get_closest(a: str, others: list[str], compare_func=wagner_fischer, ignore_case: bool = False, ignore_chars: str = '', maximum_distance: int = None):
+    '''
+    Return strings that are similar to an input string using the Levenshtein distance.
+
+    Args:
+        a: the string to compare the rest to.
+        others: a collection of strings to compare to a. The returned strings will be taken from this collection.
+        compare_func: the function to use to compare the strings. Defaults to the efficient :func:`wagner_fischer` algorithm.
+        ignore_case: whether the case of the strings is taken into account. If enabled, all strings are turned to lower-case before comparison.
+        ignore_chars: a strings specifying characters that should be ignored.
+        maximum_distance: the maximum Levenshtein distance to allow. If it is lower than the lowest distance for the collection of strings, we return the strings with the lowest distance.
+
+    Returns:
+        A collection of strings that have a Levenshtein distance to ``a`` below ``maximum_distance`` 
+        or have the lowest distance to ``a`` if all strings have a distance greater than ``maximum_distance``.
+    '''
     if ignore_case:
         a = a.lower()
     a = a.replace(ignore_chars, '')
@@ -49,8 +87,26 @@ def get_closest(a, others, compare_func=WagnerFischer, ignore_case=False, ignore
         other = other.replace(ignore_chars, '')
         dists.append(compare_func(a, other))
 
+    if maximum_distance is None:
+        maximum_distance = -1
     lowest_strs = [other for dist, other in zip(dists, others) if dist <= max(maximum_distance, min(dists))]
     return lowest_strs
+
+
+def make_suggestion(a: str, others: list[str], compare_func=wagner_fischer, ignore_case: bool = False, ignore_chars: str = '', maximum_distance: int = None):
+    '''
+    Return a string that gives suggestions of which strings are closest to a given string.
+    '''
+    closest = get_closest(a, others, compare_func=compare_func, ignore_case=ignore_case, ignore_chars=ignore_chars, maximum_distance=maximum_distance)
+
+    if len(closest) > 1:
+        closest_string = " or ".join([", ".join(closest[:-1]), closest[-1]])
+    else:
+        closest_string = closest[0]
+
+    # return closest_string
+    log.warn(f'Could not find "{a}". Did you mean {closest_string}?', caller_level=3)
+
 
 
 if __name__ == '__main__':
@@ -72,24 +128,19 @@ if __name__ == '__main__':
         ret = funcs[functional_name]
         if not ret:
             funcs.prune()
-            closest = get_closest(functional_name, funcs.keys(), ignore_case=True, ignore_chars='-', maximum_distance=2)
-            if len(closest) > 1:
-                closest_string = " or ".join([", ".join(closest[:-1]), closest[-1]])
-            else:
-                closest_string = closest[0]
-            log.warn(f'Could not find functional "{functional_name}". Did you mean {closest_string}?')
+            make_suggestion(functional_name, funcs.keys(), ignore_case=True, ignore_chars="-", maximum_distance=None)
 
         return ret
 
-    get('lyp')
+    get('LYP-D3(BJ)')
     get('blyp-d3(bj)')
 
-    for _ in range(200):
+    for _ in range(2000):
         with timer.Timer('Wagner-Fischer'):
-            WagnerFischer('sitting', 'kitten')
+            wagner_fischer('sitting', 'kitten')
     
-    for _ in range(200):
+    for _ in range(2000):
         with timer.Timer('Naïve'):
-            lev('sitting', 'kitten')
+            naive_iterative('sitting', 'kitten')
 
     timer.print_timings2()
