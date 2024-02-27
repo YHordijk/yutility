@@ -427,6 +427,24 @@ class DataBase:
         )"""
         print(command)
 
+    def write_excel(self, out_file: str = None):
+        '''
+        Write the data stored in this DBSelectResult object to an Excel file.
+        '''
+
+        out_file = out_file or self.db_path.replace('.db', '.xlsx')
+        # open a new notebook
+        wb = xl.Workbook()
+
+        for table in self.get_table_names():
+            sheet = wb.create_sheet(table)
+            sheet = self.select(table).make_excel_sheet(sheet)
+
+        if 'Sheet' in wb.sheetnames:
+            wb.remove(wb['Sheet'])
+
+        wb.save(out_file)
+
 
 def merge_databases(databases, new_name):
     databases = ensure_list(databases)
