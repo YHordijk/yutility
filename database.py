@@ -3,6 +3,11 @@ from yutility import log, ensure_list, dictfunc, plotfunc, listfunc, edit_distan
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+import openpyxl as xl
+try:
+    from openpyxl.cell import get_column_letter
+except ImportError:
+    from openpyxl.utils import get_column_letter
 
 
 python_to_sql_types = {
@@ -196,18 +201,22 @@ class DBSelectResult:
         '''
         Write the data stored in this DBSelectResult object to an Excel file.
         '''
-        import openpyxl as xl
-        try:
-            from openpyxl.cell import get_column_letter
-        except ImportError:
-            from openpyxl.utils import get_column_letter
-
         out_file = out_file or self.db_path.replace('.db', '.xlsx')
         # open a new notebook
         wb = xl.Workbook()
 
         sheet = wb.create_sheet('Data')
+        sheet = self.make_excel_sheet(sheet)
 
+        if 'Sheet' in wb.sheetnames:
+            wb.remove(wb['Sheet'])
+
+        wb.save(out_file)
+
+    def make_excel_sheet(self, sheet: xl.worksheet) -> xl.worksheet:
+        '''
+        Write the data stored in this DBSelectResult object to an Excel file.
+        '''
         # dim_holder will be used to auto-format the columns
         dim_holder = xl.worksheet.dimensions.DimensionHolder(worksheet=sheet)
 
@@ -230,10 +239,8 @@ class DBSelectResult:
         sheet.column_dimensions = dim_holder
         sheet.freeze_panes = sheet['A2']
 
-        if 'Sheet' in wb.sheetnames:
-            wb.remove(wb['Sheet'])
+        return sheet
 
-        wb.save(out_file)
 
 
 class DataBase:
