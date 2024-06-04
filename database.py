@@ -84,8 +84,10 @@ class DBSelectResult:
     def uniques(self, key: str):
         return set(self[key])
 
-    def where(self, *masks):
-        masks = ensure_list(masks)
+    def where(self, *masks, **selection):
+        masks = list(masks)
+        for col, val in selection.items():
+            masks.append(self[col] == val)
 
         return DBSelectResult([x for i, x in enumerate(self) if all(mask[i] for mask in masks)], self.columns, self.types, self.db_path)
 
