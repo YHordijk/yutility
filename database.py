@@ -8,6 +8,8 @@ try:
     from openpyxl.cell import get_column_letter
 except ImportError:
     from openpyxl.utils import get_column_letter
+from tcutility import results
+
 
 
 python_to_sql_types = {
@@ -26,6 +28,16 @@ sql_to_python_types = {
     'NULL': None,
     'BOOL': bool
 }
+
+
+def parse_type(typ):
+    if isinstance(typ, str):
+        return typ
+    if isinstance(typ, np.generic):
+        typ = typ.item()
+    else:
+        return python_to_sql_types[typ]
+
 
 
 class DBSelectResult:
@@ -63,16 +75,27 @@ class DBSelectResult:
         if isinstance(key, int):
             # assert len(self.data[key]) == len(values), f'Cannot set values with length {len(self.data[key])} at index {key} with length {len(values)}'
             self.data[key] = values
-        
-        col_idx = self.columns.index(key)
-        # assert len(self.data[key]) == len(values), f'Cannot set values with length {len(self.data[key])} at column {key} with length {len(values)}'
+            return
+        if key in self.columns:
+            col_idx = self.columns.index(key)
+            # assert len(self.data[key]) == len(values), f'Cannot set values with length {len(self.data[key])} at column {key} with length {len(values)}'
+            newdata = []
+            for val, row in zip(values, self.data):
+                row = list(row)
+                row[col_idx] = val
+                newdata.append(row)
+            self.data = newdata
+            return
+
+        # the key is not in the columns
+        self.types.append(parse_type(values[0]))
+        self.columns = self.columns + [key]
         newdata = []
         for val, row in zip(values, self.data):
-            row = list(row)
-            row[col_idx] = val
+            row = list(row) + [val]
             newdata.append(row)
         self.data = newdata
-            
+
     def groupby(self, mask_key: str):
         mask_data = self[mask_key]
         unqs = set(mask_data)
@@ -242,6 +265,37 @@ class DBSelectResult:
         sheet.freeze_panes = sheet['A2']
 
         return sheet
+
+    def interpolate(self, **kwargs):
+        if len(kwargs) != 1:
+            raise ValueError(f'You can only give one axis to interpolate on, not {len(kwargs)}!')
+
+        key, target_x = list(kwargs.keys())[0], list(kwargs.values())[0]
+
+        if key not in self.columns:
+            raise KeyError(f'Key {key} is not present in this database.')
+
+        if self.column_type(key) in [str, bool]:
+            raise KeyError(f'Key {key} must be of type float or int, not {self.column_type(key)}.')
+
+        x_vals = self[key]
+        x_min, x_max = min(x_vals), max(x_vals)
+
+        # if x_min <= target_x <= x_max:
+        closest_idx = np.argsort(np.abs(x_vals - target_x))[:2]
+        closest_idx = closest_idx[np.argsort(x_vals[closest_idx])]
+        closest_vals = x_vals[closest_idx]
+
+        f = (target_x - min(closest_vals)) / (max(closest_vals) - min(closest_vals))
+
+        res = results.Result()
+        min_row, max_row = self.data[closest_idx[0]], self.data[closest_idx[1]]
+        for col in self.column_of_type((float, int)):
+            i = self.columns.index(col)
+            res[col] = min_row[i] + f * (max_row[i] - min_row[i])
+
+        return res
+
 
 
 
